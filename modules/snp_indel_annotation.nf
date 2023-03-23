@@ -1,0 +1,336 @@
+// List of functions and processes used to annotate snp and indel from whole exome sequences
+
+
+/*
+For somatic mutation annotation:
+1. fixvcf: fix vcf header in case of dragen vcf. 
+2. rename_somatic_vcf: rename vcf file to have standard naming system.
+3. somatic_annotate_snp_indel: annotate vcf with funcotator and cancervar and output to maf format
+*/
+
+
+// channel of vcf file 
+def extractInfo(tsvFile) {
+    Channel.from(tsvFile)
+        .splitCsv(sep: '\t')
+        .map { row ->
+            def tumor_type = row[0]
+            def vcf        = row[1]
+
+            [tumor_type, vcf]
+        }
+}
+
+// fix vcf header in case of dragen vcf, remove split multi allelic and remove 0 af multi allelic from ION 
+process fixvcf{
+    cpus 1
+    memory "1 G"
+
+    input:
+        tuple val(tumor), path(vcf)
+    output:
+        tuple val(tumor), file("${vcf.baseName}.fix.gz"), file("${vcf.baseName}.fix.gz.tbi")
+    script:
+    if (params.pipeline.toUpperCase() != "SAREK")
+        if (params.tumoronly)
+            """
+            fix_vcf_header4funcotator.sh -i $vcf -o "tmp.vcf" -t
+            
+            # normalise and split multiallelic
+            bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
+
+            # remove 0 allele frequency and wt genotype
+            awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${vcf.baseName}
+            bgzip -c ${vcf.baseName} > ${vcf.baseName}.fix.gz
+            tabix -p vcf ${vcf.baseName}.fix.gz
+            """
+        else
+            """
+            fix_vcf_header4funcotator.sh -i $vcf -o "tmp.vcf" 
+            bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
+            awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${vcf.baseName}
+            # split_multiallelic.py -i "tmp.vcf" -o ${vcf.baseName}
+            bgzip -c ${vcf.baseName} > ${vcf.baseName}.fix.gz
+            tabix -p vcf ${vcf.baseName}.fix.gz
+            """
+
+
+    else
+        """
+        zcat $vcf > tmp.vcf
+        bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
+        awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${vcf.baseName}
+        # split_multiallelic.py -i "tmp.vcf" -o ${vcf.baseName}
+        bgzip -c ${vcf.baseName} > ${vcf.baseName}.fix.gz
+        tabix -p vcf ${vcf.baseName}.fix.gz
+        """
+}
+
+// rename vcf file to have standard naming system.
+process rename_somatic_vcf {
+    cpus 1
+    memory "1 G"
+    tag "rename"
+
+    input:
+        tuple val(tumor), file(vcf), file(index)
+    output:
+        tuple val(tumor), file("*.vcf.gz"), file("*.vcf.gz.tbi")
+    script:
+        """
+        tumor="\$(zcat ${vcf} | grep 'tumor_sample'  | cut -d'=' -f2)"
+        cp $vcf \${tumor}.vcf.gz
+        cp $index \${tumor}.vcf.gz.tbi
+        """
+}
+
+
+// annotate vcf with funcotator and cancervar and output to maf format
+process somatic_annotate_snp_indel{
+    cpus 1
+    maxRetries = 2
+    memory { 8.GB * task.attempt }
+    publishDir "${params.output}/${params.date}/annotation/somatic/${vcf.simpleName}", mode: "copy"
+    // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/somatic/", mode: "copy"
+    tag "vcf2maf"
+
+    input:
+        tuple val(tumor_type), file(vcf), file(index)
+    output:
+        file("${vcf.simpleName}.small_mutations.cancervar.escat.maf")
+        file("filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv")
+    script:
+    """
+    set -e
+    normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
+    tumor="\$(zcat ${vcf} | grep 'tumor_sample'  | cut -d'=' -f2)"
+    zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${vcf.baseName}
+
+    zcat ${vcf} | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
+    for file in `ls tmp_*vcf`; do
+        cat header \$file > file.vcf
+        bgzip -c file.vcf > file.vcf.gz
+        tabix -p vcf file.vcf.gz
+
+        # GATK funcotator
+        gatk Funcotator \
+            -L ${params.target} \
+            -R ${params.fasta} \
+            -V file.vcf.gz \
+            -O ${vcf.simpleName}.maf \
+            --annotation-default Matched_Norm_Sample_Barcode:\${normal} \
+            --annotation-default Tumor_Sample_Barcode:\${tumor} \
+            --annotation-default Tumor_type:${tumor_type} \
+            --remove-filtered-variants true \
+            --output-file-format MAF \
+            --data-sources-path ${params.somatic.funcotator_db}\
+            --ref-version ${params.build}
+
+
+        # cancervar call
+        cp ${params.cancervar_init} config.init
+        sed -i "s,INPUTYPE,${params.cancervar.input_type},g" config.init
+        sed -i "s,BUILD,${params.build},g" config.init
+        sed -i "s,INPUTFILE,file.vcf,g" config.init
+        sed -i "s,OUTFILE,cancervar,g" config.init
+        sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
+        sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
+        sed -i "s,CANCERVARDB,${params.cancervar.db},g" config.init
+        python ${params.cancervar_folder}/CancerVar.py -c config.init --cancer_type=${tumor_type}
+
+        # merge cancervar and funcotator
+        if [ ${params.tumoronly} == "true" ]; then
+            cancervar_file="cancervar.${params.build}_multianno.txt.cancervar"
+        else
+            cancervar_file="\$(ls cancervar.${vcf.simpleName}*.${params.build}_multianno.txt.cancervar)"
+        fi
+        add_cancervar_escat_to_maf.py -m ${vcf.simpleName}.maf \
+            -c \${cancervar_file} \
+            -cc config.init \
+            -o tmp \
+            -t ${tumor_type} \
+            -p ${params.projectid} \
+            -d ${params.date}
+        
+        if ! [ -f ${vcf.simpleName}.small_mutations.cancervar.escat.maf ]; then
+            cp tmp ${vcf.simpleName}.small_mutations.cancervar.escat.maf
+        else
+            awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${vcf.simpleName}.small_mutations.cancervar.escat.maf
+        fi
+
+        if ! [ -f filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv ]; then
+            mytest=`awk 'BEGIN{getline; bool=-1; if(!(\$0 ~/EMPTY/)) bool=1; print bool}' filtered.tmp.tsv`
+            if [ \$mytest -eq 1 ]; then
+                cp filtered.tmp.tsv filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv
+            fi
+        else
+            awk '{if((!(\$0 ~/Hugo_Symbol/) && !(\$0 ~/EMPTY/))) print \$0}' >> filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv
+        fi
+
+
+    done
+
+    if ! [ -f filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv ]; then
+        echo "No variant passing filters!" > filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv
+    fi
+    """
+}
+
+
+// For germline mutation annotation 
+
+process filter_variants {
+    cpus 1
+    memory "4 G"
+    tag "filter_variants"
+
+    input:
+        file(vcf) 
+    output:
+        file("*.vcf.gz") 
+    script:
+        """
+        tabix -p vcf ${vcf}
+        gatk VariantFiltration \
+            -V ${vcf} \
+            -filter "QD < 2.0" --filter-name "QD2" \
+            -filter "QUAL < 30.0" --filter-name "QUAL30" \
+            -filter "SOR > 3.0" --filter-name "SOR3" \
+            -filter "FS > 60.0" --filter-name "FS60" \
+            -filter "MQ < 40.0" --filter-name "MQ40" \
+            -filter "MQRankSum < -12.5" --filter-name "MQRankSum-12.5" \
+            -filter "ReadPosRankSum < -8.0" --filter-name "ReadPosRankSum-8" \
+            -O filtered.vcf.gz
+        """
+}
+
+process normalise_rename_germline_vcf {
+    cpus 1
+    memory "1 G"
+    tag "rename_and_index"
+
+    input:
+        file(vcf)
+    output:
+        tuple file("*.vcf1.gz"), file("*.vcf1.gz.tbi")
+    script:
+        """
+        name="\$(zcat $vcf | awk '{if(\$1 =="#CHROM"){print \$NF; exit} }')"
+        zcat $vcf > tmp.vcf
+        rm $vcf
+        bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
+        awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > tmp2.vcf
+        bgzip -c tmp2.vcf > \${name}.vcf1.gz
+        tabix -p vcf \${name}.vcf1.gz
+        """
+}
+
+
+process germline_annotate_snp_indel{
+    cpus 1
+    maxRetries = 2
+    memory { 8.GB * task.attempt }
+    // publishDir "${params.output}/${params.date}/annotation/germline/${vcf.simpleName}", mode: "copy"
+    // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/germline/", mode: "copy"
+    tag "vcf2maf"
+
+    input:
+        tuple file(vcf), file(index) 
+    output:
+        tuple file("${vcf.simpleName}.small_mutations.intervar.escat.maf"), file("filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv"), file("${vcf.simpleName}.vcf")
+    script:
+    """
+    set -e
+    zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${vcf.simpleName}.vcf
+
+    cat ${vcf.simpleName}.vcf | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
+    
+    for file in `ls tmp_*vcf`; do
+        cat header \$file > file.vcf
+        bgzip -c file.vcf > file.vcf.gz
+        tabix -p vcf file.vcf.gz
+
+        # GATK funcotator
+        gatk Funcotator \
+            -L ${params.target} \
+            -R ${params.fasta} \
+            -V file.vcf.gz \
+            -O ${vcf.simpleName}.maf \
+            --annotation-default Matched_Norm_Sample_Barcode:${vcf.simpleName} \
+            --remove-filtered-variants true \
+            --output-file-format MAF \
+            --data-sources-path ${params.germline.funcotator_db}\
+            --ref-version ${params.build}
+
+
+        # intervar call
+        cp ${params.intervar_init} config.init
+        sed -i "s,INPUTYPE,${params.intervar.input_type},g" config.init
+        sed -i "s,BUILD,${params.build},g" config.init
+        sed -i "s,INPUTFILE,file.vcf,g" config.init
+        sed -i "s,OUTFILE,intervar,g" config.init
+        sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
+        sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
+        sed -i "s,INTERVARDB,${params.intervar.db},g" config.init
+        python ${params.intervar_folder}/Intervar.py -c config.init
+
+        # merge intervar and funcotator
+        # intervarfile="\$(ls intervar.${vcf.simpleName}*.${params.build}_multianno.txt.intervar)"
+        intervarfile="intervar.${params.build}_multianno.txt.intervar"
+        add_cancervar_escat_to_maf.py -m ${vcf.simpleName}.maf \
+            -c \${intervarfile} \
+            -cc config.init \
+            -o tmp \
+            --germline \
+            -p ${params.projectid} \
+            -d ${params.date}
+        
+        if ! [ -f ${vcf.simpleName}.small_mutations.intervar.escat.maf ]; then
+            cp tmp ${vcf.simpleName}.small_mutations.intervar.escat.maf
+        else
+            awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${vcf.simpleName}.small_mutations.intervar.escat.maf
+        fi
+
+        if ! [ -f filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv ]; then
+            mytest=`awk 'BEGIN{getline; bool=-1; if(!(\$0 ~/EMPTY/)) bool=1; print bool}' filtered.tmp.tsv`
+            if [ \$mytest -eq 1 ]; then
+                cp filtered.tmp.tsv filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv
+            fi
+        else
+            awk '{if((!(\$0 ~/Hugo_Symbol/) && !(\$0 ~/EMPTY/))) print \$0}' >> filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv
+        fi
+    done
+
+    if ! [ -f filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv ]; then
+        echo "No variant passing filters!" > filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv
+    fi
+    """
+}
+
+
+process germline_renovo_annotation{
+    cpus 1
+    maxRetries = 2
+    memory { 1.GB * task.attempt }
+    publishDir "${params.output}/${params.date}/annotation/germline/${maf.simpleName}", mode: "copy"
+    // publishDir "${params.output}/${params.date}/${maf.simpleName}/annotation/germline/", mode: "copy"
+    tag "vcf2maf"
+
+    input:
+        tuple file(maf), file(filtered_maf), file(vcf) 
+    output:
+        file("${maf.baseName}.renovo.maf")
+        file("filtered.${maf.baseName}.renovo.maf.tsv")
+    script:
+    """
+        python ${params.renovo.path}/ReNOVo.py \
+        -p . -a ${params.cancervar.annovar_folder} \
+        -d ${params.cancervar.annovar_db_folder} \
+        -b ${params.build} 
+        
+        add_renovo_to_maf.py -m ${maf} \
+         -r ReNOVo_output/${vcf.baseName}_ReNOVo_and_ANNOVAR_implemented.txt \
+         --filtered_maf ${filtered_maf} \
+         -o ${maf.baseName}.renovo.maf 
+    """
+}

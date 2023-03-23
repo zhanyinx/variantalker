@@ -1,0 +1,173 @@
+gene,cancer,cancer_long_name,mutation_type,mutation,ESCAT,transcript_exon,info,tissue,official,reference,DOI
+EGFR,NSCLC,non-squamous non-small-cell lung cancer,SNP,L858R,IA,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.014
+EGFR,NSCLC,non-squamous non-small-cell lung cancer,DEL,deletion,IA,19,deletion in exon 19,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.015
+EGFR,NSCLC,non-squamous non-small-cell lung cancer,SNP,T790M,IA,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.016
+EGFR,NSCLC,non-squamous non-small-cell lung cancer,SNP,G719X,IB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.017
+EGFR,NSCLC,non-squamous non-small-cell lung cancer,SNP,L861Q,IB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.018
+EGFR,NSCLC,non-squamous non-small-cell lung cancer,SNP,S768I,IB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.019
+EGFR,NSCLC,non-squamous non-small-cell lung cancer,INS,insertion,IA,20,insertion in exon 20,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.020
+ALK,NSCLC,non-squamous non-small-cell lung cancer,FUS,fusion,IA,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.021
+MET,NSCLC,non-squamous non-small-cell lung cancer,SNP,mutation,IB,14,mutations in exon 14,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.022
+MET,NSCLC,non-squamous non-small-cell lung cancer,CNV,amplification,IIB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.023
+BRAF,NSCLC,non-squamous non-small-cell lung cancer,SNP,V600E,IB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.024
+ROS1,NSCLC,non-squamous non-small-cell lung cancer,FUS,fusion,IB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.025
+NTRK,NSCLC,non-squamous non-small-cell lung cancer,FUS,fusion,IC,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.026
+RET,NSCLC,non-squamous non-small-cell lung cancer,FUS,fusion,IC,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.027
+KRAS,NSCLC,non-squamous non-small-cell lung cancer,SNP,G12C,IIB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.028
+ERBB2,NSCLC,non-squamous non-small-cell lung cancer,SNP,mutation,IIB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.029
+ERBB2,NSCLC,non-squamous non-small-cell lung cancer,CNV,amplification,IIB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.030
+BRCA1,NSCLC,non-squamous non-small-cell lung cancer,SNP,mutation,IIIA,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.031
+BRCA2,NSCLC,non-squamous non-small-cell lung cancer,SNP,mutation,IIIA,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.032
+PIK3CA,NSCLC,non-squamous non-small-cell lung cancer,SNP,mutation,IIIA,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.033
+NRG1,NSCLC,non-squamous non-small-cell lung cancer,FUS,fusion,IIIB,,,Lung,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.034
+ERBB2,mBC,metastatic breast cancer,CNV,amplification,IA,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.035
+ERBB2,mBC,metastatic breast cancer,SNP,mutation,IIB,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.036
+PIK3CA,mBC,metastatic breast cancer,SNP,mutation,IA,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.037
+BRCA1,mBC,metastatic breast cancer,SNP,mutation,IIIA,,somatic,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.038
+BRCA2,mBC,metastatic breast cancer,SNP,mutation,IIIA,,somatic,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.039
+BRCA1,mBC,metastatic breast cancer,SNP,mutation,IA,,germline,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.040
+BRCA2,mBC,metastatic breast cancer,SNP,mutation,IA,,germline,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.041
+PALB2,mBC,metastatic breast cancer,SNP,mutation,IIA,,germline,Breast,yes,Gennari A et al. Annal Oncol 2021; 32(12):1475-1495,https://doi.org/10.1016/j.annonc.2020.07.042
+,mBC,metastatic breast cancer,MSI-H,microsatellite_instability,IC,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.043
+,mBC,metastatic breast cancer,MSI-H,microsatellite_instability,IC,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.044
+NTRK,mBC,metastatic breast cancer,FUS,fusion,IC,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.045
+ESR1,mBC,metastatic breast cancer,SNP,mutation,IIA,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.046
+PTEN,mBC,metastatic breast cancer,SNP,mutation,IIA,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.047
+AKT1,mBC,metastatic breast cancer,SNP,E17K,IIB,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.048
+MDM2,mBC,metastatic breast cancer,CNV,amplification,IIIA,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.049
+ERBB3,mBC,metastatic breast cancer,SNP,mutation,IIIB,,,Breast,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.050
+BRAF,mCRC,metastatic colorectal cancer,SNP,V600E,IA,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.051
+,mCRC,metastatic colorectal cancer,MSI-H,microsatellite_instability,IA,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.052
+NTRK1,mCRC,metastatic colorectal cancer,FUS,fusion,IC,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.053
+ERBB2,mCRC,metastatic colorectal cancer,CNV,amplification,IIB,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.054
+PIK3CA,mCRC,metastatic colorectal cancer,SNP,mutation,IIIA,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.055
+ATM,mCRC,metastatic colorectal cancer,SNP,mutation,IIIA,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.056
+MET,mCRC,metastatic colorectal cancer,CNV,amplification,IIIA,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.057
+AKT1,mCRC,metastatic colorectal cancer,SNP,E17K,IIIA,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.058
+RET,mCRC,metastatic colorectal cancer,FUS,fusion,IIIA,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.059
+ALK,mCRC,metastatic colorectal cancer,FUS,fusion,IIIA,,,Colorectal,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.060
+BRCA1,PC,Prostate cancer,SNP,mutation,IA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.061
+BRCA2,PC,Prostate cancer,SNP,mutation,IA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.062
+BRCA1,PC,Prostate cancer,DEL,deletion,IA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.063
+BRCA2,PC,Prostate cancer,DEL,deletion,IA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.064
+,PC,Prostate cancer,MSI-H,microsatellite_instability,IC,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.065
+PTEN,PC,Prostate cancer,SNP,mutation,IIA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.066
+PTEN,PC,Prostate cancer,DEL,deletion,IIA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.067
+ATM,PC,Prostate cancer,SNP,mutation,IIA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.068
+ATM,PC,Prostate cancer,DEL,deletion,IIA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.069
+PALB2,PC,Prostate cancer,SNP,mutation,IIB,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.070
+PIK3CA,PC,Prostate cancer,SNP,mutation,IIIA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.071
+AKT1,PC,Prostate cancer,SNP,E17K,IIIA,,,Prostate,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.072
+ERBB2,mGC,metastatic gastric cancer,CNV,amplification,IA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.073
+ERBB2,mGC,metastatic gastric cancer,SNP,mutation,IIIA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.074
+,mGC,metastatic gastric cancer,MSI-H,microsatellite_instability,IC,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.075
+NTRK,mGC,metastatic gastric cancer,FUS,fusion,IC,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.076
+EGFR,mGC,metastatic gastric cancer,CNV,amplification,IIB,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.077
+MET,mGC,metastatic gastric cancer,CNV,amplification,IIB,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.078
+MET,mGC,metastatic gastric cancer,SNP,mutation,IIIA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.079
+PIK3CA,mGC,metastatic gastric cancer,SNP,mutation,IIIA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.080
+FGFR2,mGC,metastatic gastric cancer,CNV,amplification,IIIA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.081
+ATM,mGC,metastatic gastric cancer,SNP,mutation,IIIA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.082
+BRCA1,mGC,metastatic gastric cancer,SNP,mutation,IIIA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.083
+BRCA2,mGC,metastatic gastric cancer,SNP,mutation,IIIA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.084
+ROS1,mGC,metastatic gastric cancer,FUS,fusion,IIIA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.085
+RET,mGC,metastatic gastric cancer,FUS,fusion,IIIA,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.086
+ERBB3,mGC,metastatic gastric cancer,SNP,mutation,IIIB,,,Stomach,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.087
+BRCA1,PDAC,pancreatic ductal adenocarcinoma,SNP,mutation,IIIB,,somatic,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.088
+BRCA2,PDAC,pancreatic ductal adenocarcinoma,SNP,mutation,IIIB,,somatic,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.089
+BRCA1,PDAC,pancreatic ductal adenocarcinoma,SNP,mutation,IA,,germline,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.090
+BRCA2,PDAC,pancreatic ductal adenocarcinoma,SNP,mutation,IA,,germline,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.091
+,PDAC,pancreatic ductal adenocarcinoma,MSI-H,microsatellite_instability,IC,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.092
+NTRK,PDAC,pancreatic ductal adenocarcinoma,FUS,fusion,IC,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.093
+KRAS,PDAC,pancreatic ductal adenocarcinoma,SNP,mutation,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.094
+PIK3CA,PDAC,pancreatic ductal adenocarcinoma,SNP,mutation,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.095
+BRAF,PDAC,pancreatic ductal adenocarcinoma,SNP,V600E,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.096
+MDM2,PDAC,pancreatic ductal adenocarcinoma,CNV,amplification,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.097
+ERBB2,PDAC,pancreatic ductal adenocarcinoma,CNV,amplification,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.098
+ERBB2,PDAC,pancreatic ductal adenocarcinoma,SNP,mutation,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.099
+NRG1,PDAC,pancreatic ductal adenocarcinoma,FUS,fusion,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.100
+ALK,PDAC,pancreatic ductal adenocarcinoma,FUS,fusion,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.101
+RET,PDAC,pancreatic ductal adenocarcinoma,FUS,fusion,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.102
+ROS1,PDAC,pancreatic ductal adenocarcinoma,FUS,fusion,IIIA,,,Pancreas,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.103
+NTRK,HCC,hepatocellular carcinoma,FUS,fusion,IC,,,Liver,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.104
+,HCC,hepatocellular carcinoma,MSI-H,microsatellite_instability,IC,,,Liver,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.105
+PIK3CA,HCC,hepatocellular carcinoma,SNP,mutation,IIIA,,,Liver,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.106
+MET,HCC,hepatocellular carcinoma,CNV,amplification,IIIA,,,Liver,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.107
+RAS,HCC,hepatocellular carcinoma,SNP,mutation,IIIA,,,Liver,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.108
+IDH1,CC,cholangiocarcinoma,SNP,mutation,IA,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.109
+FGFR2,CC,cholangiocarcinoma,FUS,fusion,IB,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.110
+,CC,cholangiocarcinoma,MSI-H,microsatellite_instability,IC,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.111
+NTRK,CC,cholangiocarcinoma,FUS,fusion,IC,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.112
+BRAF,CC,cholangiocarcinoma,SNP,V600E,IIB,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.113
+ERBB2,CC,cholangiocarcinoma,CNV,amplification,IIIA,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.114
+ERBB2,CC,cholangiocarcinoma,SNP,mutation,IIIA,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.115
+PIK3CA,CC,cholangiocarcinoma,SNP,mutation,IIIA,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.116
+BRCA1,CC,cholangiocarcinoma,SNP,mutation,IIIA,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.117
+BRCA2,CC,cholangiocarcinoma,SNP,mutation,IIIA,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.118
+MET,CC,cholangiocarcinoma,CNV,amplification,IIIA,,,Bile_Duct,yes,Mosele F et al. Annal Oncol 2020; 31(11):1491-1505,https://doi.org/10.1016/j.annonc.2020.07.119
+PIK3CA,HNSCC,head and neck squamous cell carcinoma,SNP,E542K,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.280
+PIK3CA,HNSCC,head and neck squamous cell carcinoma,SNP,E545K,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.281
+PIK3CA,HNSCC,head and neck squamous cell carcinoma,SNP,E545A,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.282
+PIK3CA,HNSCC,head and neck squamous cell carcinoma,SNP,H1047R,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.283
+PIK3CA,HNSCC,head and neck squamous cell carcinoma,SNP,H1047L,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.284
+PIK3CA,HNSCC,head and neck squamous cell carcinoma,CNV,amplification,IIIB,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.285
+PIK3CA,HNSCC,head and neck squamous cell carcinoma,SNP,mutation,IIIB,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.286
+PTEN,HNSCC,head and neck squamous cell carcinoma,CNV,deletion,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.287
+PTEN,HNSCC,head and neck squamous cell carcinoma,SNP,mutation,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.288
+HRAS,HNSCC,head and neck squamous cell carcinoma,SNP,mutation,IB,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.289
+CDKN2A,HNSCC,head and neck squamous cell carcinoma,SNP,mutation,IIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.290
+CDKN2A,HNSCC,head and neck squamous cell carcinoma,CNV,deletion,IIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.291
+EGFR,HNSCC,head and neck squamous cell carcinoma,CNV,amplification,IIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.292
+ERBB2,HNSCC,head and neck squamous cell carcinoma,CNV,amplification,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.293
+FGFR1,HNSCC,head and neck squamous cell carcinoma,CNV,amplification,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.294
+FGFR3,HNSCC,head and neck squamous cell carcinoma,SNP,mutation,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.295
+MET,HNSCC,head and neck squamous cell carcinoma,CNV,amplification,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.296
+NTRK,HNSCC,head and neck squamous cell carcinoma,FUS,fusion,IC,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.297
+TP53,HNSCC,head and neck squamous cell carcinoma,SNP,mutation,V,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.298
+BRCA1,HNSCC,head and neck squamous cell carcinoma,SNP,mutation,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.299
+BRCA2,HNSCC,head and neck squamous cell carcinoma,SNP,mutation,IIIA,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.300
+,HNSCC,head and neck squamous cell carcinoma,MSI-H,microsatellite_instability,IC,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.301
+,HNSCC,head and neck squamous cell carcinoma,TMB-H,TMB,IC,,,Head_and_Neck,yes,Marret G et al. JCO Precision Oncology 2021; 5:215-226,https://doi.org/10.1200/PO.20.302
+KIT,GIST,Gastrointestinal stromal tumors,CNV,deletion,IA,11,deletion in exon 11,Soft_Tissue,yes,Casali PG et al. Annal Oncol 2022; 33(1):20-33,https://doi.org/10.1016/j.annonc.2021.09.005
+KIT,GIST,Gastrointestinal stromal tumors,SNP,mutation,IA,,,Soft_Tissue,yes,Casali PG et al. Annal Oncol 2022; 33(1):20-33,https://doi.org/10.1016/j.annonc.2021.09.006
+PDGFRA,GIST,Gastrointestinal stromal tumors,SNP,D842V,IB,,,Soft_Tissue,yes,Casali PG et al. Annal Oncol 2022; 33(1):20-33,https://doi.org/10.1016/j.annonc.2021.09.007
+NTRK,GIST,Gastrointestinal stromal tumors,FUS,fusion,IC,,,Soft_Tissue,yes,Casali PG et al. Annal Oncol 2022; 33(1):20-33,https://doi.org/10.1016/j.annonc.2021.09.008
+BRAF,GIST,Gastrointestinal stromal tumors,SNP,mutation,IIIA,,,Soft_Tissue,yes,Casali PG et al. Annal Oncol 2022; 33(1):20-33,https://doi.org/10.1016/j.annonc.2021.09.009
+BRAF,TC,Advance thyroid cancer,SNP,mutation,IB,,,Thyroid,yes,Filetti S et al. Annal Oncol 2022; 33(7):674-684,https://doi.org/10.1016/j.annonc.2022.04.009
+NTRK,TC,Advance thyroid cancer,FUS,fusion,IC,,,Thyroid,yes,Filetti S et al. Annal Oncol 2022; 33(7):674-684,https://doi.org/10.1016/j.annonc.2022.04.010
+RET,TC,Advance thyroid cancer,SNP,mutation,IB,,,Thyroid,yes,Filetti S et al. Annal Oncol 2022; 33(7):674-684,https://doi.org/10.1016/j.annonc.2022.04.011
+RET,TC,Advance thyroid cancer,FUS,fusion,IB,,,Thyroid,yes,Filetti S et al. Annal Oncol 2022; 33(7):674-684,https://doi.org/10.1016/j.annonc.2022.04.012
+ERBB2,GC,Gastric cancer,CNV,amplification,IA,,,Stomach,yes,In press: Lordick F et al. Annal Oncol 2022,https://doi.org/10.1016/j.annonc.2022.07.004
+,GC,Gastric cancer,MSI-H,microsatellite_instability,IB,,,Stomach,yes,In press: Lordick F et al. Annal Oncol 2022,https://doi.org/10.1016/j.annonc.2022.07.004
+ERBB2,,Oesophageal cancer,CNV,amplification,IA,,,Esophagus,yes,In press: Obermannova' R et al. Annal Oncol 2022,https://doi.org/10.1016/j.annonc.2022.07.003
+,,Oesophageal cancer,MSI-H,microsatellite_instability,IC,,,Esophagus,yes,In press: Obermannova' R et al. Annal Oncol 2022,https://doi.org/10.1016/j.annonc.2022.07.003
+PML-RARA,AML,Acute myeloid leukemia,FUS,fusion,IA,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.018
+FLT3-ITD,AML,Acute myeloid leukemia,FUS,fusion,IA,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.019
+FLT3,AML,Acute myeloid leukemia,SNP,mutation,IA,,in TDK (tyrosin kinase domain),Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.020
+RUNX1-RUNX1T1,AML,Acute myeloid leukemia,FUS,fusion,IA,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.021
+CBFB-MYH11,AML,Acute myeloid leukemia,FUS,fusion,IA,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.022
+ASXL1,AML,Acute myeloid leukemia,SNP,mutation,IA,,AML with myelodysplasia-related gene mutations for treatment with CPX-351,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.023
+BCOR,AML,Acute myeloid leukemia,SNP,mutation,IA,,AML with myelodysplasia-related gene mutations for treatment with CPX-351,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.024
+EZH2,AML,Acute myeloid leukemia,SNP,mutation,IA,,AML with myelodysplasia-related gene mutations for treatment with CPX-351,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.025
+RUNX1,AML,Acute myeloid leukemia,SNP,mutation,IA,,AML with myelodysplasia-related gene mutations for treatment with CPX-351,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.026
+SF3B1,AML,Acute myeloid leukemia,SNP,mutation,IA,,AML with myelodysplasia-related gene mutations for treatment with CPX-351,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.027
+SRSF2,AML,Acute myeloid leukemia,SNP,mutation,IA,,AML with myelodysplasia-related gene mutations for treatment with CPX-351,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.028
+STAG2,AML,Acute myeloid leukemia,SNP,mutation,IA,,AML with myelodysplasia-related gene mutations for treatment with CPX-351,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.029
+U2AF1,AML,Acute myeloid leukemia,SNP,mutation,IA,,AML with myelodysplasia-related gene mutations for treatment with CPX-351,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.030
+ZRSR2,AML,Acute myeloid leukemia,SNP,mutation,IA,,AML with myelodysplasia-related gene mutations for treatment with CPX-351,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.031
+IDH1,AML,Acute myeloid leukemia,SNP,R132C,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.032
+IDH1,AML,Acute myeloid leukemia,SNP,R132H,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.033
+IDH1,AML,Acute myeloid leukemia,SNP,R132G,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.034
+IDH1,AML,Acute myeloid leukemia,SNP,R132S,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.035
+IDH1,AML,Acute myeloid leukemia,SNP,R132L,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.036
+IDH2,AML,Acute myeloid leukemia,SNP,R140Q,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.037
+IDH2,AML,Acute myeloid leukemia,SNP,R140W,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.038
+IDH2,AML,Acute myeloid leukemia,SNP,R140L,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.039
+IDH2,AML,Acute myeloid leukemia,SNP,R140G,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.040
+IDH2,AML,Acute myeloid leukemia,SNP,V147I,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.041
+IDH2,AML,Acute myeloid leukemia,SNP,R172K,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.042
+IDH2,AML,Acute myeloid leukemia,SNP,R172W,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.043
+IDH2,AML,Acute myeloid leukemia,SNP,R172N,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.044
+IDH2,AML,Acute myeloid leukemia,INS,insertion,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.045
+IDH2,AML,Acute myeloid leukemia,DEL,deletion,IIIB,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.046
+BCR-ABL,AML,Acute myeloid leukemia,FUS,fusion,IIA,,,Bone_Marrow,yes,Heuser M et al. Annal Oncol 2020; 31(6):697-712,https://doi.org/10.1016/j.annonc.2020.02.047
