@@ -24,7 +24,9 @@ Clone the repo
 git clone git@github.com:zhanyinx/variantalker.git
 ```
 
-Update the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db)
+variantalker relies on [Annovar](https://annovar.openbioinformatics.org/en/latest/) software and [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) databases. Follow the instructions at the [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) and [Annovar](https://annovar.openbioinformatics.org/en/latest/) webpage to get the databases and softwares.
+
+Update the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
 
 ## Documentation
 The pipeline employs two tools to annotate and prioritize variants: [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) and [CancerVar](https://github.com/WGLab/CancerVar) for somatic variants and InterVar for germline variants, both of which rely on [Annovar](https://annovar.openbioinformatics.org/en/latest/). To ensure the accuracy of the pipeline, the databases for Funcotator and Annovar must be regularly updated using the provided tools found here: [update utilities](https://github.com/zhanyinx/variantalker/tree/main/update_db).
