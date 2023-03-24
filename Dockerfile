@@ -21,7 +21,7 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 
 RUN conda install -c bioconda --yes bedtools 
 RUN conda install -c bioconda --yes biopython
-RUN conda install -c bioconda --yes gatk4
+RUN conda install -c bioconda/label/main --yes gatk4
 RUN conda install -c conda-forge --yes pyvcf=0.6.8
 
 RUN pip install cnvkit scipy matplotlib reportlab pyfaidx pysam 
