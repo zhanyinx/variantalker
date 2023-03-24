@@ -1,7 +1,12 @@
-from utils import *
+import base64
+import io
+
+import numpy as np
+import pandas as pd
 import streamlit as st
 
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode
+from utils import KEEP, download_csv, convert_df, read_maf
 
 
 def main():
@@ -9,7 +14,10 @@ def main():
     This is the main function.
     """
 
-    st.title("Navigate maf file")
+    st.title("MAFigate app")
+    st.markdown(
+        "This application enables users to view MAF files, apply filtering, and save their results. With this tool, users can easily navigate through MAF files and perform customized filtering to extract relevant information. The saved results can be conveniently accessed and shared for further analysis or reporting purposes."
+    )
 
     # Upload a list of files
     uploaded_file = st.sidebar.file_uploader(
@@ -19,78 +27,49 @@ def main():
     )
 
     if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file, sep="\t", low_memory=False)
+        content = uploaded_file.read().decode("utf-8")
+        file_buffer = io.StringIO(content)
+        data = read_maf(file_buffer)
         data[" CancerVar: CancerVar and Evidence "] = data[
             " CancerVar: CancerVar and Evidence "
         ].str.extract(r"[\d]#(Tier_[\w\W]+) E")
         out = data.copy()
 
-        keep = [
-            "Tumor_Sample_Barcode",
-            "Matched_Norm_Sample_Barcode",
-            "project_id",
-            "date",
-            "Hugo_Symbol",
-            "HGNC_RefSeq_IDs",
-            "Chromosome",
-            "Start_Position",
-            "End_Position",
-            "Variant_Classification",
-            "Variant_Type",
-            "Reference_Allele",
-            "Tumor_Seq_Allele1",
-            "Tumor_Seq_Allele2",
-            "cDNA_Change",
-            "Codon_Change",
-            "Protein_Change",
-            "tumor_f",
-            "t_alt_count",
-            "t_ref_count",
-            "n_alt_count",
-            "n_ref_count",
-            "ClinVar_VCF_CLNSIG",
-            "CancerVar",
-            "ESCAT",
-            "ESCAT_TISSUE",
-            "ESCAT_CANCER",
-            "InterVar",
-            "RENOVO_Class",
-            "RENOVO_pls",
-            "Otherinfo",
-            "tumor_tissue",
-            "COSMIC_total_alterations_in_gene",
-            "cosmic",
-            "Freq_ExAC_ALL",
-            "Freq_esp6500siv2_all",
-            "Freq_1000g2015aug_all",
-            "gnomAD_exome_AF",
-            "dbSNP_ID",
-        ]
-
-        keep = [x for x in keep if x in data.columns]
+        keep = np.array([x for x in KEEP if x in data.columns])
 
         columns2keep = st.sidebar.multiselect(
-            "Choose the columns to keep", data.columns, default=keep
+            "Choose extra columns to keep", data.columns.drop(keep)
+        )
+        vaf = float(st.sidebar.text_input("VAF threshold", "0.05"))
+        out = out.loc[(out["tumor_f"] > vaf), np.append(keep, columns2keep)]
+        genes2keep = st.sidebar.multiselect(
+            "Choose list of interesting genes",
+            data["Hugo_Symbol"].unique(),
+            default=None,
         )
 
-        clinvar_keep = st.multiselect(
+        clinvar_options = data["ClinVar_VCF_CLNSIG"].dropna()
+        clinvar_keep = st.sidebar.multiselect(
             "Clinvar class to keep",
             data["ClinVar_VCF_CLNSIG"].unique(),
+            default=clinvar_options[~clinvar_options.str.contains("enign")].unique(),
         )
 
-        cancervar_keep = st.multiselect(
+        cancervar_keep = st.sidebar.multiselect(
             "Cancervar class to keep",
-            data[" CancerVar: CancerVar and Evidence "].unique(),
+            data["CancerVar"].unique(),
+            default=["Tier_I_strong", "Tier_II_potential", "Tier_III_Uncertain"],
         )
 
         out = out[
-            (out[" CancerVar: CancerVar and Evidence "].isin(cancervar_keep))
-            | (out["ClinVar_VCF_CLNSIG"].isin(clinvar_keep))
+            (
+                (out["CancerVar"].isin(cancervar_keep))
+                | (out["ClinVar_VCF_CLNSIG"].isin(clinvar_keep))
+            )
         ]
 
-        vaf = float(st.text_input("VAF threshold", "0"))
-
-        out = out.loc[(out["tumor_f"] > vaf), columns2keep]
+        if genes2keep != []:
+            out = out[out["Hugo_Symbol"].isin(genes2keep)]
 
         gb = GridOptionsBuilder.from_dataframe(out)
         gb.configure_default_column(
@@ -102,7 +81,8 @@ def main():
 
         response = AgGrid(
             out,
-            height=200,
+            height=800,
+            width=1500,
             gridOptions=gridoptions,
             enable_enterprise_modules=True,
             update_mode=GridUpdateMode.MODEL_CHANGED,

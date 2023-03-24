@@ -1,7 +1,53 @@
 import base64
+import io
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+
+# columns to keep by default
+
+KEEP = [
+    "Hugo_Symbol",
+    "ClinVar_VCF_CLNSIG",
+    "CancerVar",
+    "InterVar",
+    "RENOVO_Class",
+    "ESCAT",
+    "tumor_f",
+    "HGNC_RefSeq_IDs",
+    "Chromosome",
+    "Start_Position",
+    "End_Position",
+    "Variant_Classification",
+    "Variant_Type",
+    "Reference_Allele",
+    "Tumor_Seq_Allele1",
+    "Tumor_Seq_Allele2",
+    "cDNA_Change",
+    "Codon_Change",
+    "Protein_Change",
+    "t_alt_count",
+    "t_ref_count",
+    "n_alt_count",
+    "n_ref_count",
+    "ESCAT_TISSUE",
+    "ESCAT_CANCER",
+    "RENOVO_pls",
+    "Otherinfo",
+    "tumor_tissue",
+    "COSMIC_total_alterations_in_gene",
+    "cosmic",
+    "Freq_ExAC_ALL",
+    "Freq_esp6500siv2_all",
+    "Freq_1000g2015aug_all",
+    "gnomAD_exome_AF",
+    "dbSNP_ID",
+    "Tumor_Sample_Barcode",
+    "Matched_Norm_Sample_Barcode",
+    "project_id",
+    "date",
+]
 
 
 def download_csv(
@@ -19,27 +65,19 @@ def download_csv(
     return href
 
 
-def read_in_chunks(file_object, chunk_size=10):
-    """Lazy function (generator) to read a file piece by piece.
-    Default chunk size: 1k."""
-    while True:
-        data = file_object.read(chunk_size)
-        if not data:
-            break
-        yield data
-
-
-def read_maf(file: str) -> pd.DataFrame:
+def read_maf(file: io.StringIO) -> pd.DataFrame:
     # count comment lines
     c = 0
-    with open(file.read(), "r") as f:
-        print(f)
+    for line in file:
+        if line.startswith("#"):
+            c = c + 1
 
+    file.seek(0)  # reset the file cursor to the beginning
     maf = pd.read_csv(file, header=c, sep="\t", low_memory=False)
-    return
+    return maf
 
 
-@st.cache
+@st.cache_data
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv(index=False).encode("utf-8")
