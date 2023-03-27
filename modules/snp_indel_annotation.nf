@@ -135,7 +135,7 @@ process somatic_annotate_snp_indel{
         sed -i "s,OUTFILE,cancervar,g" config.init
         sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
         sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
-        sed -i "s,CANCERVARDB,${params.cancervar.db},g" config.init
+        sed -i "s,CANCERVARDB,${params.cancervar_db},g" config.init
         python ${params.cancervar_folder}/CancerVar.py -c config.init --cancer_type=${tumor_type}
 
         # merge cancervar and funcotator
@@ -271,7 +271,7 @@ process germline_annotate_snp_indel{
         sed -i "s,OUTFILE,intervar,g" config.init
         sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
         sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
-        sed -i "s,INTERVARDB,${params.intervar.db},g" config.init
+        sed -i "s,INTERVARDB,${params.intervar_db},g" config.init
         python ${params.intervar_folder}/Intervar.py -c config.init
 
         # merge intervar and funcotator

@@ -11,6 +11,8 @@ params.cancervar_folder = "$projectDir/resources/CancerVar"
 params.intervar_folder = "$projectDir/resources/InterVar"
 params.cancervar_init = "$projectDir/resources/configs/config.init.CancerVar"
 params.intervar_init = "$projectDir/resources/configs/config.init.intervar"
+params.cancervar_db = "$projectDir/resources/CancerVar/cancervardb"
+params.intervar_db = "$projectDir/resources/InterVar/intervardb"
 
 
 /*
