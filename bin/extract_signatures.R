@@ -2,17 +2,6 @@
 # Usage
 # Rscript extract_signatures.R --bs_genome <hg19/hg38> --fname_maf <FNAME> --fname_out <FNAME>
 
-# Package installation
-# if (!require("BiocManager", quietly = TRUE))
-  # install.packages("BiocManager")
-# BiocManager::install("BSgenome")
-# BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
-# BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")
-# install.packages("deconstructSigs")
-# install.packages("getopt")
-# install.packages("mutSignatures")
-# install.packages("tidyverse")
-
 # Import packages
 library(BSgenome.Hsapiens.UCSC.hg19)
 library(BSgenome.Hsapiens.UCSC.hg38)
