@@ -14,6 +14,13 @@ params.intervar_init = "$projectDir/resources/configs/config.init.intervar"
 params.cancervar_db = "$projectDir/resources/CancerVar/cancervardb"
 params.intervar_db = "$projectDir/resources/InterVar/intervardb"
 
+if (!params.cancervar.evidence_file || params.cancervar.evidence_file.isEmpty()) {
+    params.cancervar.evidence_file = "None"
+}
+
+if (!params.intervar.evidence_file || params.intervar.evidence_file.isEmpty()) {
+    params.intervar.evidence_file = "None"
+}
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
