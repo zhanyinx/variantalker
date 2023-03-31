@@ -71,9 +71,6 @@ process ascat_calling{
             # create patient specific input file and run nf sarek with ascat 
             echo \${header} > tmp.csv
             awk -F ',' '{if(\$1 == "'"\$patient"'") {printf "%s", \$1; for(i=2;i<=NF-1;i++) printf ",%s", \$i; print "";}}' ${samp} >> tmp.csv 
-            cp ${conf} tmp.config
-            sed -i 's,ASCATPATH,${params.biomarkers.ascat.igenome_path},g' tmp.config
-            sed -i 's,BUILD,${params.build},g' tmp.config
 
             if [[ ${params.build} == "hg19" ]]; then
                 cp ${params.target} intervals.bed
@@ -82,7 +79,7 @@ process ascat_calling{
                 -profile singularity \
                 --input tmp.csv \
                 -resume \
-                -c tmp.config \
+                -c ${conf} \
                 --genome "GATK.GRCh37" \
                 --step variant_calling \
                 --intervals intervals.bed
@@ -91,7 +88,7 @@ process ascat_calling{
                 -profile singularity \
                 --input tmp.csv \
                 -resume \
-                -c tmp.config \
+                -c ${conf} \
                 --genome "GATK.GRCh38" \
                 --step variant_calling \
                 --intervals ${params.target}
