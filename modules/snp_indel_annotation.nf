@@ -135,7 +135,16 @@ process somatic_annotate_snp_indel{
         sed -i "s,OUTFILE,cancervar,g" config.init
         sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
         sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
-        sed -i "s,CANCERVARDB,${params.cancervar.db},g" config.init
+        sed -i "s,CANCERVARDB,${params.cancervar_db},g" config.init
+
+        if ! [ ${params.cancervar.evidence_file} == "None" ]; then
+            if ! [ -f ${params.cancervar.evidence_file} ]; then
+                echo "${params.cancervar.evidence_file} cancervar evidence file does not exist!"
+                exit
+            fi
+            sed -i "s,None,${params.cancervar.evidence_file},g" config.init
+        fi
+
         python ${params.cancervar_folder}/CancerVar.py -c config.init --cancer_type=${tumor_type}
 
         # merge cancervar and funcotator
@@ -271,7 +280,16 @@ process germline_annotate_snp_indel{
         sed -i "s,OUTFILE,intervar,g" config.init
         sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
         sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
-        sed -i "s,INTERVARDB,${params.intervar.db},g" config.init
+        sed -i "s,INTERVARDB,${params.intervar_db},g" config.init
+        if ! [ ${params.intervar.evidence_file} == "None" ]; then
+            if ! [ -f ${params.intervar.evidence_file} ]; then
+                echo "${params.intervar.evidence_file} intervar evidence file does not exist!"
+                exit
+            fi
+            sed -i "s,None,${params.intervar.evidence_file},g" config.init
+        fi
+
+
         python ${params.intervar_folder}/Intervar.py -c config.init
 
         # merge intervar and funcotator

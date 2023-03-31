@@ -5,7 +5,11 @@ import os
 import sys
 import argparse
 
-from utils import *
+import numpy as np
+import pandas as pd
+import pyranges
+
+from utils import read_maf, filter_maf4tmb
 
 
 def _parse_args():
@@ -29,7 +33,7 @@ def _parse_args():
         "-ac",
         "--ascat_cellularity",
         type=str,
-        required=True,
+        required=False,
         help="ascat cellularity count file from sarek.",
     )
     parser.add_argument(

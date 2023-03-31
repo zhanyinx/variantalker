@@ -55,10 +55,8 @@ process calculate_tmb_signature{
     """
 }
 
-
 process ascat_calling{
     tag "ascat_calling"
-    conda "/hpcnfs/data/PGP/zhan/miniconda3/envs/pyclone-vi"
     input:
         file(samp)
         file(conf)
@@ -66,33 +64,33 @@ process ascat_calling{
         path("*.clonalTMB.txt")
     script:
     """     
-        header="\$(awk 'BEGIN{OFS = ","; getline; print \$1,\$2,\$3,\$4,\$5,\$6,\$7}' ${samp})" # get header for sarek input file
+        header="\$(awk -F ',' 'BEGIN{getline; printf "%s", \$1; for(i=2;i<=NF-1;i++) printf ",%s", \$i; print "";}' ${samp})" # get header for sarek input file
 
         # loop over patients
-        for patient in `awk 'BEGIN{getline}{print \$1}' ${samp} | sort | uniq`; do 
+        for patient in `awk -F ',' 'BEGIN{getline}{print \$1}' ${samp} | sort | uniq`; do 
             # create patient specific input file and run nf sarek with ascat 
             echo \${header} > tmp.csv
-            awk 'BEGIN{OFS = ","}{if(\$1 == "'"\$patient"'") print \$1,\$2,\$3,\$4,\$5,\$6,\$7}' ${samp} >> tmp.csv 
+            awk -F ',' '{if(\$1 == "'"\$patient"'") {printf "%s", \$1; for(i=2;i<=NF-1;i++) printf ",%s", \$i; print "";}}' ${samp} >> tmp.csv 
 
             if [[ ${params.build} == "hg19" ]]; then
                 cp ${params.target} intervals.bed
                 sed -i 's/chr//g' intervals.bed
-                nextflow run nf-core/sarek -r 3.0.1 \
+                nextflow run nf-core/sarek -r 3.1.2 \
                 -profile singularity \
                 --input tmp.csv \
-                -with-tower \
                 -resume \
                 -c ${conf} \
                 --genome "GATK.GRCh37" \
+                --step variant_calling \
                 --intervals intervals.bed
             else
-                nextflow run nf-core/sarek -r 3.0.1 \
+                nextflow run nf-core/sarek -r 3.1.2 \
                 -profile singularity \
                 --input tmp.csv \
-                -with-tower \
                 -resume \
                 -c ${conf} \
                 --genome "GATK.GRCh38" \
+                --step variant_calling \
                 --intervals ${params.target}
             fi
 
@@ -108,18 +106,18 @@ process ascat_calling{
             ascat_file="\$(ls results/variant_calling/ascat/\${tumor}_vs_\${normal}/*cnvs.txt)"
 
             # create output folder
-            if ! [ -d ${launchDir}/${params.output}/biomarkers/\${name}/ ]; then
-                mkdir -p ${launchDir}/${params.output}/biomarkers/\${name}/
+            if ! [ -d ${launchDir}/${params.output}/${params.date}/biomarkers/\${name}/ ]; then
+                mkdir -p ${launchDir}/${params.output}/${params.date}/biomarkers/\${name}/
             fi
 
             # if ascat files do not exist, can't calculate clonal TMB, set it to NA
             if [ -z \${ascat_file} ]; then
                 echo "Clonal TMB: NA" > \${name}.clonalTMB.txt
-                cp \${name}.clonalTMB.txt ${launchDir}/${params.output}/biomarkers/\${name}/
+                cp \${name}.clonalTMB.txt ${launchDir}/${params.output}/${params.date}/biomarkers/\${name}/
                 continue
             fi
 
-            maf_file="\$(ls ${launchDir}/${params.output}/annotation/somatic/\$name/\$name*maf)"
+            maf_file="\$(ls ${launchDir}/${params.output}/${params.date}/annotation/somatic/\$name/\$name*maf)"
 
             if ! [ -z \$cellularity ]; then
                 create_input4pyclone.py -as \${ascat_file} -c \${cellularity} -m \${maf_file} -o \${patient}.pyclone.tsv
@@ -143,7 +141,7 @@ process ascat_calling{
                 }
             }END{print "Clonal TMB: ", ncount}' \${patient}.pyclone.output.tsv > \${name}.clonalTMB.txt
 
-            cp \${name}.clonalTMB.txt ${launchDir}/${params.output}/biomarkers/\${name}/
+            cp \${name}.clonalTMB.txt ${launchDir}/${params.output}/${params.date}/biomarkers/\${name}/
 
         done
     """
