@@ -123,7 +123,7 @@ process somatic_annotate_snp_indel{
             --annotation-default Tumor_type:${tumor_type} \
             --remove-filtered-variants true \
             --output-file-format MAF \
-            --data-sources-path ${params.somatic.funcotator_db}\
+            --data-sources-path ${params.funcotator.somatic_db}\
             --ref-version ${params.build}
 
 
@@ -133,8 +133,8 @@ process somatic_annotate_snp_indel{
         sed -i "s,BUILD,${params.build},g" config.init
         sed -i "s,INPUTFILE,file.vcf,g" config.init
         sed -i "s,OUTFILE,cancervar,g" config.init
-        sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
-        sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
+        sed -i "s,ANNOVARDB,${params.annovar.db},g" config.init
+        sed -i "s,ANNOVAR,${params.annovar.software_folder},g" config.init
         sed -i "s,CANCERVARDB,${params.cancervar_db},g" config.init
 
         if ! [ ${params.cancervar.evidence_file} == "None" ]; then
@@ -268,7 +268,7 @@ process germline_annotate_snp_indel{
             --annotation-default Matched_Norm_Sample_Barcode:${vcf.simpleName} \
             --remove-filtered-variants true \
             --output-file-format MAF \
-            --data-sources-path ${params.germline.funcotator_db}\
+            --data-sources-path ${params.funcotator.germline_db}\
             --ref-version ${params.build}
 
 
@@ -278,8 +278,8 @@ process germline_annotate_snp_indel{
         sed -i "s,BUILD,${params.build},g" config.init
         sed -i "s,INPUTFILE,file.vcf,g" config.init
         sed -i "s,OUTFILE,intervar,g" config.init
-        sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
-        sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
+        sed -i "s,ANNOVARDB,${params.annovar.db},g" config.init
+        sed -i "s,ANNOVAR,${params.annovar.software_folder},g" config.init
         sed -i "s,INTERVARDB,${params.intervar_db},g" config.init
         if ! [ ${params.intervar.evidence_file} == "None" ]; then
             if ! [ -f ${params.intervar.evidence_file} ]; then
@@ -342,8 +342,8 @@ process germline_renovo_annotation{
     script:
     """
         python ${params.renovo.path}/ReNOVo.py \
-        -p . -a ${params.cancervar.annovar_folder} \
-        -d ${params.cancervar.annovar_db_folder} \
+        -p . -a ${params.annovar.software_folder} \
+        -d ${params.annovar.db} \
         -b ${params.build} 
         
         add_renovo_to_maf.py -m ${maf} \
