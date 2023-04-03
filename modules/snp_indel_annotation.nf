@@ -1,26 +1,5 @@
 // List of functions and processes used to annotate snp and indel from whole exome sequences
 
-
-/*
-For somatic mutation annotation:
-1. fixvcf: fix vcf header in case of dragen vcf. 
-2. rename_somatic_vcf: rename vcf file to have standard naming system.
-3. somatic_annotate_snp_indel: annotate vcf with funcotator and cancervar and output to maf format
-*/
-
-
-// channel of vcf file 
-def extractInfo(tsvFile) {
-    Channel.from(tsvFile)
-        .splitCsv(sep: '\t')
-        .map { row ->
-            def tumor_type = row[0]
-            def vcf        = row[1]
-
-            [tumor_type, vcf]
-        }
-}
-
 // fix vcf header in case of dragen vcf, remove split multi allelic and remove 0 af multi allelic from ION 
 process fixvcf{
     cpus 1
@@ -194,9 +173,9 @@ process filter_variants {
     tag "filter_variants"
 
     input:
-        file(vcf) 
+        path(vcf) 
     output:
-        file("*.vcf.gz") 
+        path("*.vcf.gz") 
     script:
         """
         tabix -p vcf ${vcf}
@@ -219,7 +198,7 @@ process normalise_rename_germline_vcf {
     tag "rename_and_index"
 
     input:
-        file(vcf)
+        path(vcf)
     output:
         tuple file("*.vcf1.gz"), file("*.vcf1.gz.tbi")
     script:
