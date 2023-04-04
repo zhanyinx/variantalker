@@ -8,8 +8,18 @@ nextflow.enable.dsl=2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// WorkflowMain.initialise(workflow, params, log)
+// Validate input parameters
+WorkflowMain.initialise(workflow, params, log)
 
+// Check input path parameters to see if they exist
+def checkPathParamList = [ 
+    params.input, params.fasta, params.funcotator.somatic_db, params.funcotator.germline_db, 
+    params.target, params.annovar.db, params.annovar.software_folder, 
+    params.cancervar.evidence_file, params.intervar.evidence_file, params.cancervar_folder,
+    params.intervar_folder, params.cancervar_init, params.intervar_init, params.cancervar_db, params.intervar_db
+    ]
+
+for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
