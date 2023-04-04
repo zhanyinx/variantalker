@@ -6,9 +6,9 @@ All processes to extract biomarkers from maf files
 
 // process to extract transcript per milion (tpm) from rnaseq count data from dragen
 process extract_tpm{
-    cpus 5
+    cpus 1
     maxRetries = 2
-    memory { 10.GB * task.attempt }
+    memory { 1.GB * task.attempt }
     publishDir "${params.output}/${params.date}/biomarkers/${counts.simpleName}", mode: "copy"
     // publishDir "${params.output}/${params.date}/${counts.simpleName}/biomarkers/", mode: "copy"
 
@@ -29,8 +29,9 @@ process extract_tpm{
 
 // process to extract mutational signature, total and nmd-escapees tumor mutational burden from maf file 
 process calculate_tmb_signature{
-    cpus 2
-    memory "2 G"
+    cpus 1
+    maxRetries = 2
+    memory { 1.GB * task.attempt }
     publishDir "${params.output}/${params.date}/biomarkers/${maf.simpleName}/", mode: "copy"
     // publishDir "${params.output}/${params.date}/${maf.simpleName}/biomarkers/", mode: "copy"
     tag "tmb calculation"
