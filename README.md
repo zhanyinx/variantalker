@@ -67,7 +67,7 @@ variantalker takes as input a csv samplesheet with 3 columns
 
 
 
-__IMPORTANT: DO NOT INCLUDE THE HEADER__ 
+__IMPORTANT: HEADER is required__ 
 
 | tumor_tissue   | sample_file       | sample_type  |
 | -------------- | ----------------- | -------------|
