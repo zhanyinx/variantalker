@@ -1,5 +1,7 @@
 [![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A522.10.1-23aa62.svg)](https://www.nextflow.io/)
 [![Active Development](https://img.shields.io/badge/Maintenance%20Level-Actively%20Developed-brightgreen.svg)](https://gist.github.com/cheerfulstoic/d107229326a01ff0f333a1d3476e068d)
+[![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
+[![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
 
 # Variant annotation and prioritization pipeline
 
@@ -56,43 +58,31 @@ Update in the configuration file (nextflow.config) the path to the databases:
 
 
 ```bash
-nextflow run path_to/main.nf -c yourconfig
+nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --output outdir
 ```
 
 ## Input
 
-### Somatic small variant (snp, indel)
+variantalker takes as input a csv samplesheet with 3 columns
 
-```bash
-nextflow run path_to/main.nf -c yourconfig --somatic.input_snp_indel samples.tsv
-```
 
-Two columns: first column is cancertype, second column is the vcf.gz file.
-
-Available cancertype: Adrenal_Gland Bile_Duct Bladder Blood Bone Bone_Marrow Brain Breast Cancer_all Cervix Colorectal Esophagus Eye Head_and_Neck Inflammatory Intrahepatic Kidney Liver Lung Lymph_Nodes Nervous_System Other Ovary Pancreas Pleura Prostate Skin Soft_Tissue Stomach Testis Thymus Thyroid Uterus
 
 __IMPORTANT: DO NOT INCLUDE THE HEADER__ 
 
-| tumor type     | path to vcf.gz    |
-| -------------- | ----------------- |
-| Lung           | path/tumor.vcf.gz |
-| .....          | .....             | 
+| tumor_tissue   | sample_file       | sample_type  |
+| -------------- | ----------------- | -------------|
+| Lung           | path/tumor.vcf.gz | somatic      |
+| .....          | .....             | .....        |
 
+Available sample_type are: somatic, germline, cnv. 
 
-### Somatic CNV annotation
+- somatic sample type: it can be tumor_only (single sample) or tumor_normal (multi sample) vcf.gz file. Requires tumor_tissue to be specified
 
-__DRAGEN SUPPORT ONLY__
+- germline: single sample vcf.gz file. It does not require tumor_tissue
 
-```bash
-nextflow run path_to/main.nf -c yourconfig --somatic.input_cnv path/to/*/multiple/*vcf.gz
-```
+- cnv: for nfcore/sarek, CNVKit output is supported (cnr file). For dragen, vcf.gz file required. It does not require tumor_tissue 
 
-
-### Germline small variant
-
-```bash
-nextflow run path_to/main.nf -c yourconfig --germline.input_snp_indel path/to/*/multiple/*vcf.gz
-```
+Available tumor_tissue are: Adrenal_Gland Bile_Duct Bladder Blood Bone Bone_Marrow Brain Breast Cancer_all Cervix Colorectal Esophagus Eye Head_and_Neck Inflammatory Intrahepatic Kidney Liver Lung Lymph_Nodes Nervous_System Other Ovary Pancreas Pleura Prostate Skin Soft_Tissue Stomach Testis Thymus Thyroid Uterus
 
 ## Output
 
@@ -105,10 +95,12 @@ params.output
 |       |-- germline
 |       |   `-- sampleid
 |       |       |-- filtered.sampleid.small_mutations.intervar.escat.renovo.maf.tsv
+|       |       |-- sampleid.cnv.annotated.tsv
 |       |       `-- sampleid.small_mutations.intervar.escat.renovo.maf
 |       `-- somatic
 |           `-- sampleid
 |               |-- filtered.sampleid.small_mutations.cancervar.escat.maf.tsv
+|       |       |-- sampleid.cnv.annotated.tsv
 |               `-- sampleid.small_mutations.cancervar.escat.maf
 ```
 
