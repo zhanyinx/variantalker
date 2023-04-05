@@ -102,26 +102,26 @@ process somatic_annotate_snp_indel{
             --annotation-default Tumor_type:${tumor_type} \
             --remove-filtered-variants true \
             --output-file-format MAF \
-            --data-sources-path ${params.funcotator.somatic_db}\
+            --data-sources-path ${params.funcotator_somatic_db}\
             --ref-version ${params.build}
 
 
         # cancervar call
         cp ${params.cancervar_init} config.init
-        sed -i "s,INPUTYPE,${params.cancervar.input_type},g" config.init
+        sed -i "s,INPUTYPE,${params.cancervar_input_type},g" config.init
         sed -i "s,BUILD,${params.build},g" config.init
         sed -i "s,INPUTFILE,file.vcf,g" config.init
         sed -i "s,OUTFILE,cancervar,g" config.init
-        sed -i "s,ANNOVARDB,${params.annovar.db},g" config.init
-        sed -i "s,ANNOVAR,${params.annovar.software_folder},g" config.init
+        sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
+        sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
         sed -i "s,CANCERVARDB,${params.cancervar_db},g" config.init
 
-        if ! [ ${params.cancervar.evidence_file} == "None" ]; then
-            if ! [ -f ${params.cancervar.evidence_file} ]; then
-                echo "${params.cancervar.evidence_file} cancervar evidence file does not exist!"
+        if ! [ ${params.cancervar_evidence_file} == "None" ]; then
+            if ! [ -f ${params.cancervar_evidence_file} ]; then
+                echo "${params.cancervar_evidence_file} cancervar evidence file does not exist!"
                 exit
             fi
-            sed -i "s,None,${params.cancervar.evidence_file},g" config.init
+            sed -i "s,None,${params.cancervar_evidence_file},g" config.init
         fi
 
         python ${params.cancervar_folder}/CancerVar.py -c config.init --cancer_type=${tumor_type}
@@ -247,25 +247,25 @@ process germline_annotate_snp_indel{
             --annotation-default Matched_Norm_Sample_Barcode:${vcf.simpleName} \
             --remove-filtered-variants true \
             --output-file-format MAF \
-            --data-sources-path ${params.funcotator.germline_db}\
+            --data-sources-path ${params.funcotator_germline_db}\
             --ref-version ${params.build}
 
 
         # intervar call
         cp ${params.intervar_init} config.init
-        sed -i "s,INPUTYPE,${params.intervar.input_type},g" config.init
+        sed -i "s,INPUTYPE,${params.intervar_input_type},g" config.init
         sed -i "s,BUILD,${params.build},g" config.init
         sed -i "s,INPUTFILE,file.vcf,g" config.init
         sed -i "s,OUTFILE,intervar,g" config.init
-        sed -i "s,ANNOVARDB,${params.annovar.db},g" config.init
-        sed -i "s,ANNOVAR,${params.annovar.software_folder},g" config.init
+        sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
+        sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
         sed -i "s,INTERVARDB,${params.intervar_db},g" config.init
-        if ! [ ${params.intervar.evidence_file} == "None" ]; then
-            if ! [ -f ${params.intervar.evidence_file} ]; then
-                echo "${params.intervar.evidence_file} intervar evidence file does not exist!"
+        if ! [ ${params.intervar_evidence_file} == "None" ]; then
+            if ! [ -f ${params.intervar_evidence_file} ]; then
+                echo "${params.intervar_evidence_file} intervar evidence file does not exist!"
                 exit
             fi
-            sed -i "s,None,${params.intervar.evidence_file},g" config.init
+            sed -i "s,None,${params.intervar_evidence_file},g" config.init
         fi
 
 
@@ -320,9 +320,9 @@ process germline_renovo_annotation{
         file("filtered.${maf.baseName}.renovo.maf.tsv")
     script:
     """
-        python ${params.renovo.path}/ReNOVo.py \
-        -p . -a ${params.annovar.software_folder} \
-        -d ${params.annovar.db} \
+        python ${params.renovo_path}/ReNOVo.py \
+        -p . -a ${params.annovar_software_folder} \
+        -d ${params.annovar_db} \
         -b ${params.build} 
         
         add_renovo_to_maf.py -m ${maf} \

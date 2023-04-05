@@ -9,13 +9,13 @@ process cnvkit_call{
     output:
         path("${cnr.baseName}.call.cnv")
     script:
-        if(!params.cnvkit.cellularity)
+        if(!params.cnvkit_cellularity || params.cnvkit_cellularity.isEmpty())
         """
-        cnvkit.py call ${cnr} --drop-low-coverage -m threshold --t=${params.cnvkit.threshold} -o ${cnr.baseName}.call.cnv
+        cnvkit.py call ${cnr} --drop-low-coverage -m threshold --t=${params.cnvkit_threshold} -o ${cnr.baseName}.call.cnv
         """
         else
         """
-        cnvkit.py call ${cnr} -y -m clonal --purity ${params.cnvkit.cellularity} -o ${cnr.baseName}.call.cnv
+        cnvkit.py call ${cnr} -y -m clonal --purity ${params.cnvkit_cellularity} -o ${cnr.baseName}.call.cnv
         """
 }
 
@@ -44,7 +44,7 @@ process annotate_cnv {
         awk '{print \$1, \$2, \$3 +1, \$4}' \$name > appo
         mv appo \$name
         sed -i 's/ /\\t/g' \$name
-        python ${params.classifyCNV.folder}/ClassifyCNV.py --infile \$name --GenomeBuild ${params.build} --cores 5 --outdir tmp
+        python ${params.classifyCNV_folder}/ClassifyCNV.py --infile \$name --GenomeBuild ${params.build} --cores 5 --outdir tmp
         mv tmp/Scoresheet.txt ${input.simpleName}.cnv.annotated.tsv
 
         """
@@ -52,7 +52,7 @@ process annotate_cnv {
         """
         awk 'BEGIN{getline;}{if(\$4!="Antitarget"){if(\$6>3) print  \$1, \$2,\$3, "DUP"; if(\$6<1) print \$1, \$2,\$3, "DEL"}}' ${input} > appo
         sed -i 's/ /\\t/g' appo
-        python ${params.classifyCNV.folder}/ClassifyCNV.py --infile appo --GenomeBuild ${params.build} --cores 5 --outdir tmp
+        python ${params.classifyCNV_folder}/ClassifyCNV.py --infile appo --GenomeBuild ${params.build} --cores 5 --outdir tmp
         mv tmp/Scoresheet.txt ${input.simpleName}.cnv.annotated.tsv
         """
 }

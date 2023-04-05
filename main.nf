@@ -13,10 +13,9 @@ WorkflowMain.initialise(workflow, params, log)
 
 // Check input path parameters to see if they exist
 def checkPathParamList = [ 
-    params.input, params.fasta, params.funcotator.somatic_db, params.funcotator.germline_db, 
-    params.target, params.annovar.db, params.annovar.software_folder, 
-    params.cancervar.evidence_file, params.intervar.evidence_file, params.cancervar_folder,
-    params.intervar_folder, params.cancervar_init, params.intervar_init, params.cancervar_db, params.intervar_db
+    params.input, params.fasta, params.funcotator_somatic_db, params.funcotator_germline_db, 
+    params.target, params.annovar_db, params.annovar_software_folder, 
+    params.cancervar_evidence_file, params.intervar_evidence_file
     ]
 
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
