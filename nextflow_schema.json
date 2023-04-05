@@ -12,7 +12,7 @@
             "description": "Define where the pipeline should find input data and save output data.",
             "required": [
                 "input",
-                "outdir"
+                "output"
             ],
             "properties": {
                 "input": {
@@ -25,7 +25,7 @@
                     "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row. See [usage docs](https://nf-co.re/variantalker/usage#samplesheet-input).",
                     "fa_icon": "fas fa-file-csv"
                 },
-                "outdir": {
+                "output": {
                     "type": "string",
                     "format": "directory-path",
                     "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
@@ -68,6 +68,20 @@
                     "fa_icon": "fas fa-ban",
                     "hidden": true,
                     "help_text": "Do not load `igenomes.config` when running the pipeline. You may choose this option if you observe clashes between custom parameters and those supplied in `igenomes.config`."
+                },
+                "build": {
+                    "type": "string",
+                    "description": "Build of the genome, e.g. hg19, hg38",
+                    "help_text": "Build of the genome, e.g. hg19, hg38",
+                    "fa_icon": "far fa-build"
+                },
+                "target": {
+                    "type": "string",
+                    "format": "file-path",
+                    "mimetype": "text/plain",
+                    "description": "Path to exome capture bed file.",
+                    "help_text": "Provide the bed file with region covered by WES. If WGS, put full chromosome size file with chr, start end",
+                    "fa_icon": "far fa-file-target"
                 }
             }
         },
@@ -154,12 +168,47 @@
                 }
             }
         },
+        "databases": {
+            "title": "Public databases to use",
+            "type": "object",
+            "fa_icon": "fab fa-databases-tracker",
+            "description": "Select public databases",
+            "help_text": "Updated public databases are essential for proper functional annotations. Update frequently your databases.",
+            "required": [
+                "annovar_db",
+                "funcotator_germline_db",
+                "funcotator_somatic_db"
+            ],
+            "properties": {
+                "annovar_db": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Path to the folder containing annovar databases, e.g. humandb",
+                    "fa_icon": "fas fa-folder-anno-db"
+                },
+                "funcotator_germline_db": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Path to the folder containing funcotator germline databases",
+                    "fa_icon": "fas fa-folder-anno-db"
+                },
+                "funcotator_somatic_db": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Path to the folder containing funcotator germline databases",
+                    "fa_icon": "fas fa-folder-anno-db"
+                }
+            }
+        },
         "generic_options": {
             "title": "Generic options",
             "type": "object",
             "fa_icon": "fas fa-file-import",
             "description": "Less common options for the pipeline, typically set in a config file.",
             "help_text": "These options are common to all nf-core pipelines and allow you to customise some of the core preferences for how the pipeline runs.\n\nTypically these options would be set in a Nextflow config file loaded for all pipeline runs, such as `~/.nextflow/config`.",
+            "required": [
+                "annovar_software_folder"
+            ],
             "properties": {
                 "help": {
                     "type": "boolean",
@@ -244,7 +293,7 @@
                 "tracedir": {
                     "type": "string",
                     "description": "Directory to keep pipeline Nextflow logs and reports.",
-                    "default": "${params.outdir}/pipeline_info",
+                    "default": "${params.output}/pipeline_info",
                     "fa_icon": "fas fa-cogs",
                     "hidden": true
                 },
@@ -261,6 +310,72 @@
                     "description": "Show all params when using `--help`",
                     "hidden": true,
                     "help_text": "By default, parameters set as _hidden_ in the schema are not shown on the command line when a user runs with `--help`. Specifying this option will tell the pipeline to show all parameters."
+                },
+                "pipeline": {
+                    "type": "string",
+                    "description": "Pipeline from which VCF has been generated: DRAGEN, sarek or iontorrent supported.",
+                    "fa_icon": "fas fa-pipe"
+                },
+                "projectid": {
+                    "type": "string",
+                    "description": "The project the VCF sample belongs to. Used to add column to maf file so that VCF from sample projects have the same projectid",
+                    "default": "test",
+                    "fa_icon": "fas fa-proid"
+                },
+                "analysis": {
+                    "type": "string",
+                    "description": "Type of analysis to do: annotation (default), biomarkers (beta version) or clonal_tmb (beta version)",
+                    "default": "annotation",
+                    "fa_icon": "fas fa-analysis"
+                },
+                "tumoronly": {
+                    "type": "boolean",
+                    "description": "Boolean whether provided somatic VCF are tumor only or rather tumor_normal.",
+                    "default": "false",
+                    "fa_icon": "fas fa-tumo"
+                },
+                "cnvkit_threshold": {
+                    "type": "string",
+                    "description": "Hard thresholds for calling each integer copy number, separated by commas",
+                    "default": "-1.1,-0.4,0.3,0.7",
+                    "fa_icon": "fas fa-cnvkit-threshold"
+                },
+                "intervar_input_type": {
+                    "type": "string",
+                    "description": "Type of vcf input (VCF for single sample VCF, VCF_m for multiple sample VCF)",
+                    "default": "VCF",
+                    "fa_icon": "fas fa-intervar-in-type"
+                },
+                "intervar_evidence_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Evidence file for InterVar, default null",
+                    "default": null,
+                    "fa_icon": "fas fa-intervar-evidence"
+                },
+                "cancervar_input_type": {
+                    "type": "string",
+                    "description": "Type of vcf input (VCF for single sample VCF, VCF_m for multiple sample VCF)",
+                    "default": "VCF",
+                    "fa_icon": "fas fa-cancervar-in-type"
+                },
+                "cancervar_evidence_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Evidence file for CancerVar, default null",
+                    "default": null,
+                    "fa_icon": "fas fa-cancervar-evidence"
+                },
+                "cnvkit_cellularity": {
+                    "type": "number",
+                    "description": "Tumor purity used to call interger copy number in cnvkit",
+                    "fa_icon": "fas fa-cnvkit-purity"
+                },
+                "annovar_software_folder": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Path to the folder containing annovar software",
+                    "fa_icon": "fas fa-folder-anno"
                 }
             }
         }
@@ -277,6 +392,9 @@
         },
         {
             "$ref": "#/definitions/max_job_request_options"
+        },
+        {
+            "$ref": "#/definitions/databases"
         },
         {
             "$ref": "#/definitions/generic_options"

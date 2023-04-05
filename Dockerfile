@@ -69,9 +69,6 @@ RUN pip install git+https://github.com/Roth-Lab/pyclone-vi.git
 # nextflow
 RUN conda install -c bioconda nextflow -y
 
-# ascat config
-COPY resources/docker/configs/ascat.sarek.config /data
-
 # db updates
 RUN pip install bs4 lxml
 RUN pip install gsutil
