@@ -8,8 +8,17 @@ nextflow.enable.dsl=2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// WorkflowMain.initialise(workflow, params, log)
+// Validate input parameters
+WorkflowMain.initialise(workflow, params, log)
 
+// Check input path parameters to see if they exist
+def checkPathParamList = [ 
+    params.input, params.fasta, params.funcotator_somatic_db, params.funcotator_germline_db, 
+    params.target, params.annovar_db, params.annovar_software_folder, 
+    params.cancervar_evidence_file, params.intervar_evidence_file
+    ]
+
+for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -30,12 +39,15 @@ process help {
     echo "This pipeline performs whole exome sequencing clinical annotation (snp, indel, cnv)."
     echo ""
     echo "Options:"
+    echo "  --input samplesheet.csv                      CSV file with 4 columns: patient, tumor_tissue, sample_file, sample_type." 
+    echo "                                               Available sample_type: somatic, germline and cnv. For somatic and germline" 
+    echo "                                               vcf.gz file is accepted for sample_file. For CNV, either cnr from CNVkit or" 
+    echo "                                               vcf.gz file from dragen is accepted." 
+    echo "                                               For available tumor type, checkout https://github.com/zhanyinx/variantalker/blob/main/README.md" 
     echo "  --analysis <analysis>                        Type of analysis: annotation (default), biomarkers, clonal_tmb." 
-    echo "  --somatic.input_snp_indel <input_snp_indel>  A tab-separated file with two columns: tumor_type and path to VCF file containing somatic SNPs/Indels." 
-    echo "  --germline.input_snp_indel <input_snp_indel> The input germline SNP/INDEL VCF file."
-    echo "  --somatic.input_cnv <input_cnv>              The input somatic CNV file."
+    echo "  --pipeline <pipeline>                        The pipeline used to generate the input data (options: 'Sarek', 'DRAGEN'"
+    echo "                                               or 'Iontorrent' (only SNP/INDEL), default: 'Sarek')." 
     echo "  --tumoronly                                  Flag to indicate that the input is tumor-only (default: false)."
-    echo "  --pipeline <pipeline>                        The pipeline used to generate the input data (options: 'Sarek', 'DRAGEN' or 'Iontorrent' (only SNP/INDEL), default: 'Sarek')."
     echo ""
     """
 }

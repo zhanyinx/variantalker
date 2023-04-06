@@ -22,11 +22,11 @@ ENV PATH=$CONDA_DIR/bin:$PATH
 RUN conda install -c bioconda --yes bedtools 
 RUN conda install -c bioconda --yes biopython
 RUN conda install -c bioconda/label/main --yes gatk4
-RUN conda install -c conda-forge --yes pyvcf=0.6.8
+RUN conda install -c conda-forge --yes pyvcf
 
 RUN pip install cnvkit scipy matplotlib reportlab pyfaidx pysam 
-RUN pip install numpy==1.22.3
-RUN pip install pandas==1.4.1
+RUN pip install numpy
+RUN pip install pandas
 
 RUN apt-get update && apt install -y procps g++ && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -48,7 +48,10 @@ RUN apt-get update -qq && apt-get -y --no-install-recommends install \
     libgs-dev \
     imagemagick \
     ghostscript \
-    qpdf
+    qpdf \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    r-cran-ragg
 
 RUN mkdir /Rscripts
 RUN mkdir data software
@@ -66,9 +69,6 @@ RUN pip install git+https://github.com/Roth-Lab/pyclone-vi.git
 # nextflow
 RUN conda install -c bioconda nextflow -y
 
-# ascat config
-COPY resources/docker/configs/ascat.sarek.config /data
-
 # db updates
 RUN pip install bs4 lxml
 RUN pip install gsutil
@@ -80,3 +80,4 @@ RUN conda install -c bioconda bcftools -y
 COPY resources/docker/ClassifyCNV /software/ClassifyCNV
 COPY resources/docker/escat_tiering.csv /data/escat_tiering.csv
 COPY resources/docker/nmd_final_grange.tsv /data
+

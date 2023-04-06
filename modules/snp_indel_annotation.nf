@@ -1,35 +1,14 @@
 // List of functions and processes used to annotate snp and indel from whole exome sequences
 
-
-/*
-For somatic mutation annotation:
-1. fixvcf: fix vcf header in case of dragen vcf. 
-2. rename_somatic_vcf: rename vcf file to have standard naming system.
-3. somatic_annotate_snp_indel: annotate vcf with funcotator and cancervar and output to maf format
-*/
-
-
-// channel of vcf file 
-def extractInfo(tsvFile) {
-    Channel.from(tsvFile)
-        .splitCsv(sep: '\t')
-        .map { row ->
-            def tumor_type = row[0]
-            def vcf        = row[1]
-
-            [tumor_type, vcf]
-        }
-}
-
 // fix vcf header in case of dragen vcf, remove split multi allelic and remove 0 af multi allelic from ION 
 process fixvcf{
     cpus 1
     memory "1 G"
 
     input:
-        tuple val(tumor), path(vcf)
+        tuple val(patient), val(tumor), path(vcf)
     output:
-        tuple val(tumor), file("${vcf.baseName}.fix.gz"), file("${vcf.baseName}.fix.gz.tbi")
+        tuple val(patient), val(tumor), file("${patient}.vcf.fix.gz"), file("${patient}.vcf.fix.gz.tbi")
     script:
     if (params.pipeline.toUpperCase() != "SAREK")
         if (params.tumoronly)
@@ -40,18 +19,17 @@ process fixvcf{
             bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
 
             # remove 0 allele frequency and wt genotype
-            awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${vcf.baseName}
-            bgzip -c ${vcf.baseName} > ${vcf.baseName}.fix.gz
-            tabix -p vcf ${vcf.baseName}.fix.gz
+            awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${patient}.vcf
+            bgzip -c ${patient}.vcf > ${patient}.vcf.fix.gz
+            tabix -p vcf ${patient}.vcf.fix.gz
             """
         else
             """
             fix_vcf_header4funcotator.sh -i $vcf -o "tmp.vcf" 
             bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
-            awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${vcf.baseName}
-            # split_multiallelic.py -i "tmp.vcf" -o ${vcf.baseName}
-            bgzip -c ${vcf.baseName} > ${vcf.baseName}.fix.gz
-            tabix -p vcf ${vcf.baseName}.fix.gz
+            awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${patient}.vcf
+            bgzip -c ${patient}.vcf > ${patient}.vcf.fix.gz
+            tabix -p vcf ${patient}.vcf.fix.gz
             """
 
 
@@ -59,10 +37,9 @@ process fixvcf{
         """
         zcat $vcf > tmp.vcf
         bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
-        awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${vcf.baseName}
-        # split_multiallelic.py -i "tmp.vcf" -o ${vcf.baseName}
-        bgzip -c ${vcf.baseName} > ${vcf.baseName}.fix.gz
-        tabix -p vcf ${vcf.baseName}.fix.gz
+        awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${patient}.vcf
+        bgzip -c ${patient}.vcf > ${patient}.vcf.fix.gz
+        tabix -p vcf ${patient}.vcf.fix.gz
         """
 }
 
@@ -73,9 +50,9 @@ process rename_somatic_vcf {
     tag "rename"
 
     input:
-        tuple val(tumor), file(vcf), file(index)
+        tuple val(patient), val(tumor), file(vcf), file(index)
     output:
-        tuple val(tumor), file("*.vcf.gz"), file("*.vcf.gz.tbi")
+        tuple val(patient), val(tumor), file("*.vcf.gz"), file("*.vcf.gz.tbi")
     script:
         """
         tumor="\$(zcat ${vcf} | grep 'tumor_sample'  | cut -d'=' -f2)"
@@ -90,23 +67,23 @@ process somatic_annotate_snp_indel{
     cpus 1
     maxRetries = 2
     memory { 8.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/annotation/somatic/${vcf.simpleName}", mode: "copy"
+    publishDir "${params.output}/${params.date}/annotation/somatic/${patient}", mode: "copy"
     // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/somatic/", mode: "copy"
     tag "vcf2maf"
 
     input:
-        tuple val(tumor_type), file(vcf), file(index)
+        tuple val(patient), val(tumor_type), file(vcf), file(index)
     output:
-        file("${vcf.simpleName}.small_mutations.cancervar.escat.maf")
-        file("filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv")
+        file("${patient}.small_mutations.cancervar.escat.maf")
+        file("filtered.${patient}.small_mutations.cancervar.escat.maf.tsv")
     script:
     """
     set -e
     normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
     tumor="\$(zcat ${vcf} | grep 'tumor_sample'  | cut -d'=' -f2)"
-    zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${vcf.baseName}
+    zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${patient}.vcf
 
-    zcat ${vcf} | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
+    awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}' ${patient}.vcf
     for file in `ls tmp_*vcf`; do
         cat header \$file > file.vcf
         bgzip -c file.vcf > file.vcf.gz
@@ -117,32 +94,32 @@ process somatic_annotate_snp_indel{
             -L ${params.target} \
             -R ${params.fasta} \
             -V file.vcf.gz \
-            -O ${vcf.simpleName}.maf \
+            -O ${patient}.maf \
             --annotation-default Matched_Norm_Sample_Barcode:\${normal} \
             --annotation-default Tumor_Sample_Barcode:\${tumor} \
             --annotation-default Tumor_type:${tumor_type} \
             --remove-filtered-variants true \
             --output-file-format MAF \
-            --data-sources-path ${params.somatic.funcotator_db}\
+            --data-sources-path ${params.funcotator_somatic_db}\
             --ref-version ${params.build}
 
 
         # cancervar call
         cp ${params.cancervar_init} config.init
-        sed -i "s,INPUTYPE,${params.cancervar.input_type},g" config.init
+        sed -i "s,INPUTYPE,${params.cancervar_input_type},g" config.init
         sed -i "s,BUILD,${params.build},g" config.init
         sed -i "s,INPUTFILE,file.vcf,g" config.init
         sed -i "s,OUTFILE,cancervar,g" config.init
-        sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
-        sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
+        sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
+        sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
         sed -i "s,CANCERVARDB,${params.cancervar_db},g" config.init
 
-        if ! [ ${params.cancervar.evidence_file} == "None" ]; then
-            if ! [ -f ${params.cancervar.evidence_file} ]; then
-                echo "${params.cancervar.evidence_file} cancervar evidence file does not exist!"
+        if ! [ ${params.cancervar_evidence_file} == "None" ]; then
+            if ! [ -f ${params.cancervar_evidence_file} ]; then
+                echo "${params.cancervar_evidence_file} cancervar evidence file does not exist!"
                 exit
             fi
-            sed -i "s,None,${params.cancervar.evidence_file},g" config.init
+            sed -i "s,None,${params.cancervar_evidence_file},g" config.init
         fi
 
         python ${params.cancervar_folder}/CancerVar.py -c config.init --cancer_type=${tumor_type}
@@ -153,7 +130,7 @@ process somatic_annotate_snp_indel{
         else
             cancervar_file="\$(ls cancervar.${vcf.simpleName}*.${params.build}_multianno.txt.cancervar)"
         fi
-        add_cancervar_escat_to_maf.py -m ${vcf.simpleName}.maf \
+        add_cancervar_escat_to_maf.py -m ${patient}.maf \
             -c \${cancervar_file} \
             -cc config.init \
             -o tmp \
@@ -161,26 +138,26 @@ process somatic_annotate_snp_indel{
             -p ${params.projectid} \
             -d ${params.date}
         
-        if ! [ -f ${vcf.simpleName}.small_mutations.cancervar.escat.maf ]; then
-            cp tmp ${vcf.simpleName}.small_mutations.cancervar.escat.maf
+        if ! [ -f ${patient}.small_mutations.cancervar.escat.maf ]; then
+            cp tmp ${patient}.small_mutations.cancervar.escat.maf
         else
-            awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${vcf.simpleName}.small_mutations.cancervar.escat.maf
+            awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${patient}.small_mutations.cancervar.escat.maf
         fi
 
-        if ! [ -f filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv ]; then
+        if ! [ -f filtered.${patient}.small_mutations.cancervar.escat.maf.tsv ]; then
             mytest=`awk 'BEGIN{getline; bool=-1; if(!(\$0 ~/EMPTY/)) bool=1; print bool}' filtered.tmp.tsv`
             if [ \$mytest -eq 1 ]; then
-                cp filtered.tmp.tsv filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv
+                cp filtered.tmp.tsv filtered.${patient}.small_mutations.cancervar.escat.maf.tsv
             fi
         else
-            awk '{if((!(\$0 ~/Hugo_Symbol/) && !(\$0 ~/EMPTY/))) print \$0}' >> filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv
+            awk '{if((!(\$0 ~/Hugo_Symbol/) && !(\$0 ~/EMPTY/))) print \$0}' >> filtered.${patient}.small_mutations.cancervar.escat.maf.tsv
         fi
 
 
     done
 
-    if ! [ -f filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv ]; then
-        echo "No variant passing filters!" > filtered.${vcf.simpleName}.small_mutations.cancervar.escat.maf.tsv
+    if ! [ -f filtered.${patient}.small_mutations.cancervar.escat.maf.tsv ]; then
+        echo "No variant passing filters!" > filtered.${patient}.small_mutations.cancervar.escat.maf.tsv
     fi
     """
 }
@@ -194,9 +171,9 @@ process filter_variants {
     tag "filter_variants"
 
     input:
-        file(vcf) 
+        tuple val(patient), path(vcf) 
     output:
-        file("*.vcf.gz") 
+        tuple val(patient), path("*.vcf.gz") 
     script:
         """
         tabix -p vcf ${vcf}
@@ -219,9 +196,9 @@ process normalise_rename_germline_vcf {
     tag "rename_and_index"
 
     input:
-        file(vcf)
+        tuple val(patient), path(vcf)
     output:
-        tuple file("*.vcf1.gz"), file("*.vcf1.gz.tbi")
+        tuple val(patient), file("*.vcf1.gz"), file("*.vcf1.gz.tbi")
     script:
         """
         name="\$(zcat $vcf | awk '{if(\$1 =="#CHROM"){print \$NF; exit} }')"
@@ -244,15 +221,15 @@ process germline_annotate_snp_indel{
     tag "vcf2maf"
 
     input:
-        tuple file(vcf), file(index) 
+        tuple val(patient), file(vcf), file(index) 
     output:
-        tuple file("${vcf.simpleName}.small_mutations.intervar.escat.maf"), file("filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv"), file("${vcf.simpleName}.vcf")
+        tuple file("${patient}.small_mutations.intervar.escat.maf"), file("filtered.${patient}.small_mutations.intervar.escat.maf.tsv"), file("${patient}.vcf")
     script:
     """
     set -e
-    zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${vcf.simpleName}.vcf
+    zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${patient}.vcf
 
-    cat ${vcf.simpleName}.vcf | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
+    cat ${patient}.vcf | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
     
     for file in `ls tmp_*vcf`; do
         cat header \$file > file.vcf
@@ -264,29 +241,29 @@ process germline_annotate_snp_indel{
             -L ${params.target} \
             -R ${params.fasta} \
             -V file.vcf.gz \
-            -O ${vcf.simpleName}.maf \
-            --annotation-default Matched_Norm_Sample_Barcode:${vcf.simpleName} \
+            -O ${patient}.maf \
+            --annotation-default Matched_Norm_Sample_Barcode:${patient} \
             --remove-filtered-variants true \
             --output-file-format MAF \
-            --data-sources-path ${params.germline.funcotator_db}\
+            --data-sources-path ${params.funcotator_germline_db}\
             --ref-version ${params.build}
 
 
         # intervar call
         cp ${params.intervar_init} config.init
-        sed -i "s,INPUTYPE,${params.intervar.input_type},g" config.init
+        sed -i "s,INPUTYPE,${params.intervar_input_type},g" config.init
         sed -i "s,BUILD,${params.build},g" config.init
         sed -i "s,INPUTFILE,file.vcf,g" config.init
         sed -i "s,OUTFILE,intervar,g" config.init
-        sed -i "s,ANNOVARDB,${params.cancervar.annovar_db_folder},g" config.init
-        sed -i "s,ANNOVAR,${params.cancervar.annovar_folder},g" config.init
+        sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
+        sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
         sed -i "s,INTERVARDB,${params.intervar_db},g" config.init
-        if ! [ ${params.intervar.evidence_file} == "None" ]; then
-            if ! [ -f ${params.intervar.evidence_file} ]; then
-                echo "${params.intervar.evidence_file} intervar evidence file does not exist!"
+        if ! [ ${params.intervar_evidence_file} == "None" ]; then
+            if ! [ -f ${params.intervar_evidence_file} ]; then
+                echo "${params.intervar_evidence_file} intervar evidence file does not exist!"
                 exit
             fi
-            sed -i "s,None,${params.intervar.evidence_file},g" config.init
+            sed -i "s,None,${params.intervar_evidence_file},g" config.init
         fi
 
 
@@ -295,7 +272,7 @@ process germline_annotate_snp_indel{
         # merge intervar and funcotator
         # intervarfile="\$(ls intervar.${vcf.simpleName}*.${params.build}_multianno.txt.intervar)"
         intervarfile="intervar.${params.build}_multianno.txt.intervar"
-        add_cancervar_escat_to_maf.py -m ${vcf.simpleName}.maf \
+        add_cancervar_escat_to_maf.py -m ${patient}.maf \
             -c \${intervarfile} \
             -cc config.init \
             -o tmp \
@@ -303,24 +280,24 @@ process germline_annotate_snp_indel{
             -p ${params.projectid} \
             -d ${params.date}
         
-        if ! [ -f ${vcf.simpleName}.small_mutations.intervar.escat.maf ]; then
-            cp tmp ${vcf.simpleName}.small_mutations.intervar.escat.maf
+        if ! [ -f ${patient}.small_mutations.intervar.escat.maf ]; then
+            cp tmp ${patient}.small_mutations.intervar.escat.maf
         else
-            awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${vcf.simpleName}.small_mutations.intervar.escat.maf
+            awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${patient}.small_mutations.intervar.escat.maf
         fi
 
-        if ! [ -f filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv ]; then
+        if ! [ -f filtered.${patient}.small_mutations.intervar.escat.maf.tsv ]; then
             mytest=`awk 'BEGIN{getline; bool=-1; if(!(\$0 ~/EMPTY/)) bool=1; print bool}' filtered.tmp.tsv`
             if [ \$mytest -eq 1 ]; then
-                cp filtered.tmp.tsv filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv
+                cp filtered.tmp.tsv filtered.${patient}.small_mutations.intervar.escat.maf.tsv
             fi
         else
-            awk '{if((!(\$0 ~/Hugo_Symbol/) && !(\$0 ~/EMPTY/))) print \$0}' >> filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv
+            awk '{if((!(\$0 ~/Hugo_Symbol/) && !(\$0 ~/EMPTY/))) print \$0}' >> filtered.${patient}.small_mutations.intervar.escat.maf.tsv
         fi
     done
 
-    if ! [ -f filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv ]; then
-        echo "No variant passing filters!" > filtered.${vcf.simpleName}.small_mutations.intervar.escat.maf.tsv
+    if ! [ -f filtered.${patient}.small_mutations.intervar.escat.maf.tsv ]; then
+        echo "No variant passing filters!" > filtered.${patient}.small_mutations.intervar.escat.maf.tsv
     fi
     """
 }
@@ -341,9 +318,9 @@ process germline_renovo_annotation{
         file("filtered.${maf.baseName}.renovo.maf.tsv")
     script:
     """
-        python ${params.renovo.path}/ReNOVo.py \
-        -p . -a ${params.cancervar.annovar_folder} \
-        -d ${params.cancervar.annovar_db_folder} \
+        python ${params.renovo_path}/ReNOVo.py \
+        -p . -a ${params.annovar_software_folder} \
+        -d ${params.annovar_db} \
         -b ${params.build} 
         
         add_renovo_to_maf.py -m ${maf} \
