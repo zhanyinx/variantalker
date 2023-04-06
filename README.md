@@ -35,7 +35,11 @@ variantalker relies on [Annovar](https://annovar.openbioinformatics.org/en/lates
 
 2- Update the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
 
-Work in progress: download updated databases from [missing link]()
+Work in progress: download the updated databases 
+
+```bash
+wget -r -N --no-parent -nH --cut-dirs=2 -P public_databases missing_link 
+```
 
 ## Documentation
 
@@ -46,15 +50,15 @@ The pipeline employs two tools to annotate and prioritize variants: [Funcotator]
 
 If you are using for the first time, update the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
 
-Update in the configuration file (nextflow.config) the path to the databases:
+Update in the configuration file (nextflow.config) by setting the path to the databases:
 
-- funcotator germline: e.g. path2/funcotator_dataSources.v1.7.20200521g
+- funcotator_germline_db: e.g. path2/public_databases/funcotator_dataSources.v1.7.20200521g
 
-- funcotator somatic: e.g. path2/funcotator_dataSources.v1.7.20200521s
+- funcotator_somatic_db: e.g. path2/public_databases/funcotator_dataSources.v1.7.20200521s
 
-- annovar databases: e.g. path2/humandb
+- annovar_db: e.g. path2/public_databases/humandb
 
-- annovar software folder: e.g. path2/annovar
+- annovar_software_folder: e.g. path2/annovar
 
 
 ```bash
