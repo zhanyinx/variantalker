@@ -63,16 +63,16 @@ nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesh
 
 ## Input
 
-variantalker takes as input a csv samplesheet with 3 columns
+variantalker takes as input a csv samplesheet with 4 columns
 
 
 
 __IMPORTANT: HEADER is required__ 
 
-| tumor_tissue   | sample_file       | sample_type  |
-| -------------- | ----------------- | -------------|
-| Lung           | path/tumor.vcf.gz | somatic      |
-| .....          | .....             | .....        |
+| patient        | tumor_tissue   | sample_file       | sample_type  |
+| -------------- | -------------- | ----------------- | -------------|
+| patient1       | Lung           | path/tumor.vcf.gz | somatic      |
+| .....          | .....          | .....             | .....        |
 
 Available sample_type are: somatic, germline, cnv. 
 
@@ -93,15 +93,15 @@ params.output
 |-- date
 |   `-- annotation
 |       |-- germline
-|       |   `-- sampleid
-|       |       |-- filtered.sampleid.small_mutations.intervar.escat.renovo.maf.tsv
-|       |       |-- sampleid.cnv.annotated.tsv
-|       |       `-- sampleid.small_mutations.intervar.escat.renovo.maf
+|       |   `-- patient
+|       |       |-- filtered.patient.small_mutations.intervar.escat.renovo.maf.tsv
+|       |       |-- patient.cnv.annotated.tsv
+|       |       `-- patient.small_mutations.intervar.escat.renovo.maf
 |       `-- somatic
-|           `-- sampleid
-|               |-- filtered.sampleid.small_mutations.cancervar.escat.maf.tsv
-|       |       |-- sampleid.cnv.annotated.tsv
-|               `-- sampleid.small_mutations.cancervar.escat.maf
+|           `-- patient
+|               |-- filtered.patient.small_mutations.cancervar.escat.maf.tsv
+|       |       |-- patient.cnv.annotated.tsv
+|               `-- patient.small_mutations.cancervar.escat.maf
 ```
 
 variantalker outputs for each sample two files
