@@ -39,7 +39,7 @@ def extract_csv(csv_file, sample_type) {
         while ((line = reader.readLine()) != null) {
             numberOfLinesInSampleSheet++
             if (numberOfLinesInSampleSheet == 1){
-                def requiredColumns = ['tumor_tissue', 'sample_file', 'sample_type']
+                def requiredColumns = ["patient", 'tumor_tissue', 'sample_file', 'sample_type']
                 def headerColumns = line
                 if (!requiredColumns.every { headerColumns.contains(it) }) {
                     log.error "Header missing or CSV file does not contain all of the required columns in the header: ${requiredColumns}"
@@ -66,9 +66,9 @@ def extract_csv(csv_file, sample_type) {
         .filter { row -> row != null }
         .map { row ->
             if(sample_type == "somatic"){
-                [row.tumor_tissue, row.sample_file]
+                [row.patient, row.tumor_tissue, row.sample_file]
             }else{
-                [row.sample_file]
+                [row.patient, row.sample_file]
             }
         }
 }

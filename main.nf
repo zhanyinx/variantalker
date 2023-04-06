@@ -39,7 +39,7 @@ process help {
     echo "This pipeline performs whole exome sequencing clinical annotation (snp, indel, cnv)."
     echo ""
     echo "Options:"
-    echo "  --input samplesheet.csv                      csv file with 3 columns: tumor_tissue, sample_file, sample_type." 
+    echo "  --input samplesheet.csv                      csv file with 4 columns: patient, tumor_tissue, sample_file, sample_type." 
     echo "  --analysis <analysis>                        Type of analysis: annotation (default), biomarkers, clonal_tmb." 
     echo "  --tumoronly                                  Flag to indicate that the input is tumor-only (default: false)."
     echo "  --pipeline <pipeline>                        The pipeline used to generate the input data (options: 'Sarek', 'DRAGEN' or 'Iontorrent' (only SNP/INDEL), default: 'Sarek')."
