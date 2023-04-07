@@ -9,18 +9,18 @@ process extract_tpm{
     cpus 1
     maxRetries = 2
     memory { 1.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/biomarkers/${counts.simpleName}", mode: "copy"
+    publishDir "${params.output}/${params.date}/biomarkers/${patient}", mode: "copy"
     // publishDir "${params.output}/${params.date}/${counts.simpleName}/biomarkers/", mode: "copy"
 
     tag "extract_signatures_tpm"
 
     input: 
-        file(counts)
+        tuple val(patient), path(counts)
     output:
-        file("${counts.simpleName}.rna.tpm.csv")
+        file("${patient}.rna.tpm.csv")
     script:
     """
-        gene_expression.py -i ${counts} -o ${counts.simpleName}.rna.tpm.csv
+        gene_expression.py -i ${counts} -o ${patient}.rna.tpm.csv
     """
 }
 
@@ -32,15 +32,15 @@ process calculate_tmb_signature{
     cpus 1
     maxRetries = 2
     memory { 1.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/biomarkers/${maf.simpleName}/", mode: "copy"
+    publishDir "${params.output}/${params.date}/biomarkers/${patient}/", mode: "copy"
     // publishDir "${params.output}/${params.date}/${maf.simpleName}/biomarkers/", mode: "copy"
     tag "tmb calculation"
 
     input:
-        file(maf)
+        tuple val(patient), path(maf)
     output:
         file(maf)
-        file("tmb_signatures.${maf.simpleName}.txt")
+        file("tmb_signatures.${patient}.txt")
     script:
 
     """
@@ -52,7 +52,7 @@ process calculate_tmb_signature{
         -t ${params.target} \
         -o tmb.txt
 
-    cat signatures.txt tmb.txt > tmb_signatures.${maf.simpleName}.txt
+    cat signatures.txt tmb.txt > tmb_signatures.${patient}.txt
     """
 }
 

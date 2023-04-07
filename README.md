@@ -78,6 +78,8 @@ __IMPORTANT: HEADER is required__
 | patient1       | Lung           | path/tumor.vcf.gz | somatic      |
 | .....          | .....          | .....             | .....        |
 
+Sample_file must be provided with full path, __not__ relative path
+
 Available sample_type are: somatic, germline, cnv. 
 
 - somatic sample type: it can be tumor_only (single sample) or tumor_normal (multi sample) vcf.gz file. Requires tumor_tissue to be specified
@@ -87,6 +89,12 @@ Available sample_type are: somatic, germline, cnv.
 - cnv: for nfcore/sarek, CNVKit output is supported (cnr file). For dragen, vcf.gz file required. It does not require tumor_tissue 
 
 Available tumor_tissue are: Adrenal_Gland Bile_Duct Bladder Blood Bone Bone_Marrow Brain Breast Cancer_all Cervix Colorectal Esophagus Eye Head_and_Neck Inflammatory Intrahepatic Kidney Liver Lung Lymph_Nodes Nervous_System Other Ovary Pancreas Pleura Prostate Skin Soft_Tissue Stomach Testis Thymus Thyroid Uterus
+
+__BETA version biomarkers__
+
+Available sample files are: maf format (output of annotation analysis) and .sf from Illumina Dragen RNA pipeline. 
+
+Available sample_type are: dna (maf files) and rna (.sf files)
 
 ## Output
 
