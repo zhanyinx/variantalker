@@ -53,11 +53,10 @@ def extract_csv(csv_file, sample_type) {
         }
 }
 
-ch_rna = extract_csv(file(params.input), "rna")
-ch_dna = extract_csv(file(params.input), "dna")
-
 workflow BIOMARKERS {
 
+    ch_rna = extract_csv(file(params.input), "rna")
+    ch_dna = extract_csv(file(params.input), "dna")
     // tmb and mutational signatures
     calculate_tmb_signature(ch_dna)
 

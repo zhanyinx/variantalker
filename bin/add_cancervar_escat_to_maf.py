@@ -305,18 +305,19 @@ def main():
         "protective",
         "protective|risk_factor",
     ]
+
     escat_exclude = [
         "IIIA",
         "IIIB",
         "IIIC",
         ".",
+        "V",
     ]
 
     if args.germline:
         out = out[
             (out["InterVar"].isin(intervar_keep))
             | (~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude))
-            | (~(out["ESCAT"].isin(escat_exclude)))
         ]
     else:
         out = out[

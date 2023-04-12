@@ -57,6 +57,7 @@ process calculate_tmb_signature{
 }
 
 process ascat_calling{
+    conda '/hpcnfs/data/PGP/zhan/miniconda3/envs/pyclone-vi'
     tag "ascat_calling"
     input:
         file(samp)
@@ -76,23 +77,23 @@ process ascat_calling{
             if [[ ${params.build} == "hg19" ]]; then
                 cp ${params.target} intervals.bed
                 sed -i 's/chr//g' intervals.bed
-                nextflow run nf-core/sarek -r 3.1.2 \
+                nextflow run nf-core/sarek -r 3.1.1 \
                 -profile singularity \
                 --input tmp.csv \
                 -resume \
                 -c ${conf} \
                 --genome "GATK.GRCh37" \
-                --step variant_calling \
-                --intervals intervals.bed
+                --step ${params.biomarkers_ascat_step} \
+                --intervals intervals.bed 
             else
-                nextflow run nf-core/sarek -r 3.1.2 \
+                nextflow run nf-core/sarek -r 3.1.1 \
                 -profile singularity \
                 --input tmp.csv \
                 -resume \
                 -c ${conf} \
                 --genome "GATK.GRCh38" \
-                --step variant_calling \
-                --intervals ${params.target}
+                --step ${params.biomarkers_ascat_step} \
+                --intervals ${params.target} 
             fi
 
             # extract cellularity, tumor/normal sample name and name from dragen

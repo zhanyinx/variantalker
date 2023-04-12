@@ -92,6 +92,8 @@ Available tumor_tissue are: Adrenal_Gland Bile_Duct Bladder Blood Bone Bone_Marr
 
 __BETA version biomarkers__
 
+For biomarkers extraction, the same type of input sheet can be provided. 
+
 Available sample files are: maf format (output of annotation analysis) and .sf from Illumina Dragen RNA pipeline. 
 
 Available sample_type are: dna (maf files) and rna (.sf files)
@@ -125,6 +127,6 @@ Filters applied:
 
 - "Silent", "Intron", "3'UTR", "5'UTR", "IGR", "5'Flank", "3'Flank", "RNA" variant types are filtered out
 
-- only variants ESCAT tier I and II or pathogenic, likely pathogenic, uncertain in any of InterVar, CancerVar or clinvar are kept
+-  pathogenic, likely pathogenic, uncertain in any of InterVar, CancerVar or clinvar are kept. For somatic samples also variants with ESCAT tier I and II are kept.
 
 - variants with variant allele frequency smaller than 0.05 (somatic) and 0.2 (germline) are filtered out
