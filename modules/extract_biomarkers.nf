@@ -57,7 +57,6 @@ process calculate_tmb_signature{
 }
 
 process ascat_calling{
-    conda '/hpcnfs/data/PGP/zhan/miniconda3/envs/pyclone-vi'
     tag "ascat_calling"
     input:
         file(samp)
@@ -66,13 +65,13 @@ process ascat_calling{
         path("*.clonalTMB.txt")
     script:
     """     
-        header="\$(awk -F ',' 'BEGIN{getline; printf "%s", \$1; for(i=2;i<=NF-1;i++) printf ",%s", \$i; print "";}' ${samp})" # get header for sarek input file
+        header="\$(awk -F ',' 'BEGIN{getline; printf "%s", \$1; for(i=2;i<=NF-2;i++) printf ",%s", \$i; print "";}' ${samp})" # get header for sarek input file
 
         # loop over patients
         for patient in `awk -F ',' 'BEGIN{getline}{print \$1}' ${samp} | sort | uniq`; do 
             # create patient specific input file and run nf sarek with ascat 
             echo \${header} > tmp.csv
-            awk -F ',' '{if(\$1 == "'"\$patient"'") {printf "%s", \$1; for(i=2;i<=NF-1;i++) printf ",%s", \$i; print "";}}' ${samp} >> tmp.csv 
+            awk -F ',' '{if(\$1 == "'"\$patient"'") {printf "%s", \$1; for(i=2;i<=NF-2;i++) printf ",%s", \$i; print "";}}' ${samp} >> tmp.csv 
 
             if [[ ${params.build} == "hg19" ]]; then
                 cp ${params.target} intervals.bed
@@ -97,11 +96,11 @@ process ascat_calling{
             fi
 
             # extract cellularity, tumor/normal sample name and name from dragen
-            cellularity="\$(awk 'BEGIN{getline; nrow=NF}{if(\$1 == "'"\$patient"'") cellularity = \$nrow}END{print cellularity}' ${samp})"
-            tumor="\$(awk '{if(\$1 == "'"\$patient"'" && \$3 == 1) out = \$4}END{print out}' ${samp})"
-            normal="\$(awk '{if(\$1 == "'"\$patient"'" && \$3 == 0) out = \$4}END{print out}' ${samp})"
+            cellularity="\$(awk 'BEGIN{getline; nrow=NF-1}{if(\$1 == "'"\$patient"'") cellularity = \$nrow}END{print cellularity}' ${samp})"
+            tumor="\$(awk -F ',' '{if(\$1 == "'"\$patient"'" && \$3 == 1) out = \$4}END{print out}' ${samp})"
+            normal="\$(awk -F ',' '{if(\$1 == "'"\$patient"'" && \$3 == 0) out = \$4}END{print out}' ${samp})"
             name=\$tumor
-            #name="\$(awk '{if(\$1 == "'"\$patient"'" && \$3 == 1) out = \$4}END{print out}' ${samp})"
+            #name="\$(awk -F ',' '{if(\$1 == "'"\$patient"'" && \$3 == 1) out = \$4}END{print out}' ${samp})"
             #name="\$(basename \$name | cut -d'.' -f-1)"
             
             # create pyclone input file
@@ -119,7 +118,7 @@ process ascat_calling{
                 continue
             fi
 
-            maf_file="\$(ls ${launchDir}/${params.output}/${params.date}/annotation/somatic/\$name/\$name*maf)"
+            maf_file="\$(awk -F ',' 'BEGIN{getline; nrow=NF}{if(\$1 == "'"\$patient"'" && \$3 == 1) cellularity = \$nrow}END{print cellularity}' ${samp})"
 
             if ! [ -z \$cellularity ]; then
                 create_input4pyclone.py -as \${ascat_file} -c \${cellularity} -m \${maf_file} -o \${patient}.pyclone.tsv
