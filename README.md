@@ -120,6 +120,10 @@ params.output
 |               |-- filtered.patient.small_mutations.cancervar.escat.maf.tsv
 |       |       |-- patient.cnv.annotated.tsv
 |               `-- patient.small_mutations.cancervar.escat.maf
+|   `-- biomarkers
+|       |-- patient
+|       |       |-- patient.rna.tpm.csv
+|       |       |-- tmb_signatures.patient.txt
 ```
 
 variantalker outputs for each sample two files
