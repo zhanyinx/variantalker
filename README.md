@@ -92,11 +92,15 @@ Available tumor_tissue are: Adrenal_Gland Bile_Duct Bladder Blood Bone Bone_Marr
 
 __BETA version biomarkers__
 
-For biomarkers extraction, the same type of input sheet can be provided. 
+To extract biomarkers, you can use the same type of input sheet. There are two types of sample files available: the maf format, which is the output of the annotation analysis, and the .sf file from the Illumina Dragen RNA pipeline. These sample files are categorized based on their sample type: dna for maf files and rna for .sf files.
 
-Available sample files are: maf format (output of annotation analysis) and .sf from Illumina Dragen RNA pipeline. 
+__BETA version clonal tmb__
 
-Available sample_type are: dna (maf files) and rna (.sf files)
+To extract clonal TMB, we utilize the [nfcore/sarek](https://nf-co.re/sarek)'s ascat tool  and [pyclone-vi](https://github.com/Roth-Lab/pyclone-vi). The input file format that is accepted is the same as in nfcore/sarek, but it includes twi additional columns: 
+
+1) cellularity  
+
+2) annotated maf file from the tumor sample for which you want to calculate the clonal tmb.
 
 ## Output
 
