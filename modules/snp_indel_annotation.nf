@@ -122,7 +122,7 @@ process somatic_annotate_snp_indel{
 
             check=\$?
             if [[ \$check -ne 0 ]]; then
-                grep -nr "ERROR GencodeFuncotationFactory" .command.log | awk '{split(\$14,res,"-"); print res[1]}'  | sort | uniq | awk '{split(\$0,res,":"); print res[1],res[2]}'  > remove
+                grep -nr "ERROR GencodeFuncotationFactory" .command.err | awk '{split(\$14,res,"-"); print res[1]}'  | sort | uniq | awk '{split(\$0,res,":"); print res[1],res[2]}'  > remove
                 awk 'BEGIN{fn=0; count=1; a=0}{
                     if(FNR==1) fn++;
 
@@ -310,7 +310,7 @@ process germline_annotate_snp_indel{
 
             check=\$?
             if [[ \$check -ne 0 ]]; then
-                grep -nr "ERROR GencodeFuncotationFactory" .command.log | awk '{split(\$14,res,"-"); print res[1]}'  | sort | uniq | awk '{split(\$0,res,":"); print res[1],res[2]}'  > remove
+                grep -nr "ERROR GencodeFuncotationFactory" .command.err | awk '{split(\$14,res,"-"); print res[1]}'  | sort | uniq | awk '{split(\$0,res,":"); print res[1],res[2]}'  > remove
                 awk 'BEGIN{fn=0; count=1; a=0}{
                     if(FNR==1) fn++;
 
