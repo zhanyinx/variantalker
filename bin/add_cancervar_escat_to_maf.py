@@ -79,6 +79,14 @@ def _parse_args():
         help="Tissues available: lung, breast, colorectal, prostate, stomach,pancreatic, liver, other",
     )
     parser.add_argument(
+        "-md",
+        "--min_depth",
+        type=str,
+        default=50,
+        required=False,
+        help="Minimum coverage to keep the variant. Default 50.",
+    )
+    parser.add_argument(
         "-vt",
         "--vaf_threshold",
         type=float,
@@ -260,7 +268,6 @@ def main():
     out.to_csv(args.output, sep="\t", index=False, mode="a")
 
     # filter variants
-    # filter_variant_classifications = ["Silent"]
     filter_variant_classifications = [
         "Silent",
         "Intron",
@@ -271,6 +278,9 @@ def main():
         "3'Flank",
     ]
     out = out[~out["Variant_Classification"].isin(filter_variant_classifications)]
+
+    # filter on coverage
+    out = out[(out["t_alt_count"] + out["t_ref_count"]) >= args.min_depth]
 
     # filter cancervar/intervar clinvar escat
     if args.germline:
@@ -305,18 +315,19 @@ def main():
         "protective",
         "protective|risk_factor",
     ]
+
     escat_exclude = [
         "IIIA",
         "IIIB",
         "IIIC",
         ".",
+        "V",
     ]
 
     if args.germline:
         out = out[
             (out["InterVar"].isin(intervar_keep))
             | (~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude))
-            | (~(out["ESCAT"].isin(escat_exclude)))
         ]
     else:
         out = out[

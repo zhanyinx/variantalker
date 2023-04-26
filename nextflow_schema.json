@@ -376,6 +376,17 @@
                     "format": "directory-path",
                     "description": "Path to the folder containing annovar software",
                     "fa_icon": "fas fa-folder-anno"
+                },
+                "biomarkers_ascat_step": {
+                    "type": "string",
+                    "description": "nfcore/sarek step at which you want to start to call CNV using ascat",
+                    "default": "markduplicates",
+                    "fa_icon": "fas fa-nfcore-ascat-step"
+                },
+                "biomarkers_ascat_config": {
+                    "type": "string",
+                    "description": "nfcore/sarek config file to be usedto call CNV using ascat",
+                    "fa_icon": "fas fa-nfcore-ascat-config"
                 }
             }
         }

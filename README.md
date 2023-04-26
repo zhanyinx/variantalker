@@ -31,14 +31,10 @@ git clone git@github.com:zhanyinx/variantalker.git
 
 variantalker relies on [Annovar](https://annovar.openbioinformatics.org/en/latest/) software and [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) databases.
 
-1- get the [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) databases and [Annovar](https://annovar.openbioinformatics.org/en/latest/)
-
-2- Update the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
-
-Work in progress: download the updated databases 
+Download the updated databases 
 
 ```bash
-wget -r -N --no-parent -nH --cut-dirs=2 -P public_databases missing_link 
+wget -r -N --no-parent -nH --cut-dirs=2 -P public_databases https://bioserver.ieo.it/repo/dima/ 
 ```
 
 ## Documentation
@@ -78,6 +74,8 @@ __IMPORTANT: HEADER is required__
 | patient1       | Lung           | path/tumor.vcf.gz | somatic      |
 | .....          | .....          | .....             | .....        |
 
+Sample_file must be provided with full path, __not__ relative path
+
 Available sample_type are: somatic, germline, cnv. 
 
 - somatic sample type: it can be tumor_only (single sample) or tumor_normal (multi sample) vcf.gz file. Requires tumor_tissue to be specified
@@ -87,6 +85,18 @@ Available sample_type are: somatic, germline, cnv.
 - cnv: for nfcore/sarek, CNVKit output is supported (cnr file). For dragen, vcf.gz file required. It does not require tumor_tissue 
 
 Available tumor_tissue are: Adrenal_Gland Bile_Duct Bladder Blood Bone Bone_Marrow Brain Breast Cancer_all Cervix Colorectal Esophagus Eye Head_and_Neck Inflammatory Intrahepatic Kidney Liver Lung Lymph_Nodes Nervous_System Other Ovary Pancreas Pleura Prostate Skin Soft_Tissue Stomach Testis Thymus Thyroid Uterus
+
+__BETA version biomarkers__
+
+To extract biomarkers, you can use the same type of input sheet. There are two types of sample files available: the maf format, which is the output of the annotation analysis, and the .sf file from the Illumina Dragen RNA pipeline. These sample files are categorized based on their sample type: dna for maf files and rna for .sf files.
+
+__BETA version clonal tmb__
+
+To extract clonal TMB, we utilize the [nfcore/sarek](https://nf-co.re/sarek)'s ascat tool  and [pyclone-vi](https://github.com/Roth-Lab/pyclone-vi). The input file format that is accepted is the same as in nfcore/sarek, but it includes twi additional columns: 
+
+1) cellularity  
+
+2) annotated maf file from the tumor sample for which you want to calculate the clonal tmb.
 
 ## Output
 
@@ -106,6 +116,10 @@ params.output
 |               |-- filtered.patient.small_mutations.cancervar.escat.maf.tsv
 |       |       |-- patient.cnv.annotated.tsv
 |               `-- patient.small_mutations.cancervar.escat.maf
+|   `-- biomarkers
+|       |-- patient
+|       |       |-- patient.rna.tpm.csv
+|       |       |-- tmb_signatures.patient.txt
 ```
 
 variantalker outputs for each sample two files
@@ -117,6 +131,6 @@ Filters applied:
 
 - "Silent", "Intron", "3'UTR", "5'UTR", "IGR", "5'Flank", "3'Flank", "RNA" variant types are filtered out
 
-- only variants ESCAT tier I and II or pathogenic, likely pathogenic, uncertain in any of InterVar, CancerVar or clinvar are kept
+-  pathogenic, likely pathogenic, uncertain in any of InterVar, CancerVar or clinvar are kept. For somatic samples also variants with ESCAT tier I and II are kept.
 
 - variants with variant allele frequency smaller than 0.05 (somatic) and 0.2 (germline) are filtered out

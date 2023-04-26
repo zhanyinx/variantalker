@@ -31,7 +31,7 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 include {fixvcf; rename_somatic_vcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation} from '../modules/snp_indel_annotation.nf'
 include {cnvkit_call; annotate_cnv} from '../modules/cnv_annotation.nf'
 
-// channel of vcf file 
+// extract channels from input annotation sample sheet 
 def extract_csv(csv_file, sample_type) {
     // check that the sample sheet is not 1 line or less, because it'll skip all subsequent checks if so.
     file(csv_file).withReader('UTF-8') { reader ->

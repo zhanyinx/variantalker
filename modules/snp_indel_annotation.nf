@@ -65,7 +65,7 @@ process rename_somatic_vcf {
 // annotate vcf with funcotator and cancervar and output to maf format
 process somatic_annotate_snp_indel{
     cpus 1
-    maxRetries = 2
+    maxRetries = 3
     memory { 8.GB * task.attempt }
     publishDir "${params.output}/${params.date}/annotation/somatic/${patient}", mode: "copy"
     // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/somatic/", mode: "copy"
@@ -78,7 +78,6 @@ process somatic_annotate_snp_indel{
         file("filtered.${patient}.small_mutations.cancervar.escat.maf.tsv")
     script:
     """
-    set -e
     normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
     tumor="\$(zcat ${vcf} | grep 'tumor_sample'  | cut -d'=' -f2)"
     zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${patient}.vcf
@@ -90,18 +89,65 @@ process somatic_annotate_snp_indel{
         tabix -p vcf file.vcf.gz
 
         # GATK funcotator
-        gatk Funcotator \
-            -L ${params.target} \
-            -R ${params.fasta} \
-            -V file.vcf.gz \
-            -O ${patient}.maf \
-            --annotation-default Matched_Norm_Sample_Barcode:\${normal} \
-            --annotation-default Tumor_Sample_Barcode:\${tumor} \
-            --annotation-default Tumor_type:${tumor_type} \
-            --remove-filtered-variants true \
-            --output-file-format MAF \
-            --data-sources-path ${params.funcotator_somatic_db}\
-            --ref-version ${params.build}
+        # gatk Funcotator \
+        #    -L ${params.target} \
+        #    -R ${params.fasta} \
+        #    -V file.vcf.gz \
+        #    -O ${patient}.maf \
+        #    --annotation-default Matched_Norm_Sample_Barcode:\${normal} \
+        #    --annotation-default Tumor_Sample_Barcode:\${tumor} \
+        #    --annotation-default Tumor_type:${tumor_type} \
+        #    --remove-filtered-variants true \
+        #    --output-file-format MAF \
+        #    --data-sources-path ${params.funcotator_somatic_db}\
+        #    --ref-version ${params.build}
+
+        
+        check=1
+        while [[ \$check -ne 0 ]]
+        do
+            # GATK funcotator
+            gatk Funcotator \
+                -L ${params.target} \
+                -R ${params.fasta} \
+                -V file.vcf.gz \
+                -O ${patient}.maf \
+                --annotation-default Matched_Norm_Sample_Barcode:\${normal} \
+                --annotation-default Tumor_Sample_Barcode:\${tumor} \
+                --annotation-default Tumor_type:${tumor_type} \
+                --remove-filtered-variants true \
+                --output-file-format MAF \
+                --data-sources-path ${params.funcotator_somatic_db}\
+                --ref-version ${params.build}
+
+            check=\$?
+            if [[ \$check -ne 0 ]]; then
+                grep -nr "ERROR GencodeFuncotationFactory" .command.err | awk '{split(\$14,res,"-"); print res[1]}'  | sort | uniq | awk '{split(\$0,res,":"); print res[1],res[2]}'  > remove
+                awk 'BEGIN{fn=0; count=1; a=0}{
+                    if(FNR==1) fn++;
+
+                    if(fn==1){
+                        chr[count] = \$1
+                        pos[count] = \$2
+                        count++
+                    }    
+
+                    if(fn==2){
+                        bool=1
+                        for(i=1;i<count;i++){
+                            if(\$1 == chr[i] && \$2 == pos[i]){
+                                bool=0
+                                break
+                            }
+                        }
+                        if(bool==1) print \$0
+                    }
+                }' remove file.vcf > appo
+                mv appo file.vcf
+                bgzip -c file.vcf > file.vcf.gz
+                tabix -p vcf file.vcf.gz
+            fi
+        done
 
 
         # cancervar call
@@ -214,7 +260,7 @@ process normalise_rename_germline_vcf {
 
 process germline_annotate_snp_indel{
     cpus 1
-    maxRetries = 2
+    maxRetries = 3
     memory { 8.GB * task.attempt }
     // publishDir "${params.output}/${params.date}/annotation/germline/${vcf.simpleName}", mode: "copy"
     // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/germline/", mode: "copy"
@@ -226,7 +272,6 @@ process germline_annotate_snp_indel{
         tuple file("${patient}.small_mutations.intervar.escat.maf"), file("filtered.${patient}.small_mutations.intervar.escat.maf.tsv"), file("${patient}.vcf")
     script:
     """
-    set -e
     zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${patient}.vcf
 
     cat ${patient}.vcf | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
@@ -236,18 +281,61 @@ process germline_annotate_snp_indel{
         bgzip -c file.vcf > file.vcf.gz
         tabix -p vcf file.vcf.gz
 
-        # GATK funcotator
-        gatk Funcotator \
-            -L ${params.target} \
-            -R ${params.fasta} \
-            -V file.vcf.gz \
-            -O ${patient}.maf \
-            --annotation-default Matched_Norm_Sample_Barcode:${patient} \
-            --remove-filtered-variants true \
-            --output-file-format MAF \
-            --data-sources-path ${params.funcotator_germline_db}\
-            --ref-version ${params.build}
+        # # GATK funcotator
+        # gatk Funcotator \
+        #     -L ${params.target} \
+        #     -R ${params.fasta} \
+        #     -V file.vcf.gz \
+        #     -O ${patient}.maf \
+        #     --annotation-default Matched_Norm_Sample_Barcode:${patient} \
+        #     --remove-filtered-variants true \
+        #     --output-file-format MAF \
+        #     --data-sources-path ${params.funcotator_germline_db} \
+        #     --ref-version ${params.build}
 
+        check=1
+        while [[ \$check -ne 0 ]]
+        do
+            # GATK funcotator
+            gatk Funcotator \
+                -L ${params.target} \
+                -R ${params.fasta} \
+                -V file.vcf.gz \
+                -O ${patient}.maf \
+                --annotation-default Matched_Norm_Sample_Barcode:${patient} \
+                --remove-filtered-variants true \
+                --output-file-format MAF \
+                --data-sources-path ${params.funcotator_germline_db}\
+                --ref-version ${params.build}
+
+            check=\$?
+            if [[ \$check -ne 0 ]]; then
+                grep -nr "ERROR GencodeFuncotationFactory" .command.err | awk '{split(\$14,res,"-"); print res[1]}'  | sort | uniq | awk '{split(\$0,res,":"); print res[1],res[2]}'  > remove
+                awk 'BEGIN{fn=0; count=1; a=0}{
+                    if(FNR==1) fn++;
+
+                    if(fn==1){
+                        chr[count] = \$1
+                        pos[count] = \$2
+                        count++
+                    }    
+
+                    if(fn==2){
+                        bool=1
+                        for(i=1;i<count;i++){
+                            if(\$1 == chr[i] && \$2 == pos[i]){
+                                bool=0
+                                break
+                            }
+                        }
+                        if(bool==1) print \$0
+                    }
+                }' remove file.vcf > appo
+                mv appo file.vcf
+                bgzip -c file.vcf > file.vcf.gz
+                tabix -p vcf file.vcf.gz
+            fi
+        done
 
         # intervar call
         cp ${params.intervar_init} config.init

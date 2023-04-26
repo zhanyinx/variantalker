@@ -9,18 +9,18 @@ process extract_tpm{
     cpus 1
     maxRetries = 2
     memory { 1.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/biomarkers/${counts.simpleName}", mode: "copy"
+    publishDir "${params.output}/${params.date}/biomarkers/${patient}", mode: "copy"
     // publishDir "${params.output}/${params.date}/${counts.simpleName}/biomarkers/", mode: "copy"
 
     tag "extract_signatures_tpm"
 
     input: 
-        file(counts)
+        tuple val(patient), path(counts)
     output:
-        file("${counts.simpleName}.rna.tpm.csv")
+        file("${patient}.rna.tpm.csv")
     script:
     """
-        gene_expression.py -i ${counts} -o ${counts.simpleName}.rna.tpm.csv
+        gene_expression.py -i ${counts} -o ${patient}.rna.tpm.csv
     """
 }
 
@@ -32,15 +32,15 @@ process calculate_tmb_signature{
     cpus 1
     maxRetries = 2
     memory { 1.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/biomarkers/${maf.simpleName}/", mode: "copy"
+    publishDir "${params.output}/${params.date}/biomarkers/${patient}/", mode: "copy"
     // publishDir "${params.output}/${params.date}/${maf.simpleName}/biomarkers/", mode: "copy"
     tag "tmb calculation"
 
     input:
-        file(maf)
+        tuple val(patient), path(maf)
     output:
         file(maf)
-        file("tmb_signatures.${maf.simpleName}.txt")
+        file("tmb_signatures.${patient}.txt")
     script:
 
     """
@@ -52,7 +52,7 @@ process calculate_tmb_signature{
         -t ${params.target} \
         -o tmb.txt
 
-    cat signatures.txt tmb.txt > tmb_signatures.${maf.simpleName}.txt
+    cat signatures.txt tmb.txt > tmb_signatures.${patient}.txt
     """
 }
 
@@ -65,42 +65,42 @@ process ascat_calling{
         path("*.clonalTMB.txt")
     script:
     """     
-        header="\$(awk -F ',' 'BEGIN{getline; printf "%s", \$1; for(i=2;i<=NF-1;i++) printf ",%s", \$i; print "";}' ${samp})" # get header for sarek input file
+        header="\$(awk -F ',' 'BEGIN{getline; printf "%s", \$1; for(i=2;i<=NF-2;i++) printf ",%s", \$i; print "";}' ${samp})" # get header for sarek input file
 
         # loop over patients
         for patient in `awk -F ',' 'BEGIN{getline}{print \$1}' ${samp} | sort | uniq`; do 
             # create patient specific input file and run nf sarek with ascat 
             echo \${header} > tmp.csv
-            awk -F ',' '{if(\$1 == "'"\$patient"'") {printf "%s", \$1; for(i=2;i<=NF-1;i++) printf ",%s", \$i; print "";}}' ${samp} >> tmp.csv 
+            awk -F ',' '{if(\$1 == "'"\$patient"'") {printf "%s", \$1; for(i=2;i<=NF-2;i++) printf ",%s", \$i; print "";}}' ${samp} >> tmp.csv 
 
             if [[ ${params.build} == "hg19" ]]; then
                 cp ${params.target} intervals.bed
                 sed -i 's/chr//g' intervals.bed
-                nextflow run nf-core/sarek -r 3.1.2 \
+                nextflow run nf-core/sarek -r 3.1.1 \
                 -profile singularity \
                 --input tmp.csv \
                 -resume \
                 -c ${conf} \
                 --genome "GATK.GRCh37" \
-                --step variant_calling \
-                --intervals intervals.bed
+                --step ${params.biomarkers_ascat_step} \
+                --intervals intervals.bed 
             else
-                nextflow run nf-core/sarek -r 3.1.2 \
+                nextflow run nf-core/sarek -r 3.1.1 \
                 -profile singularity \
                 --input tmp.csv \
                 -resume \
                 -c ${conf} \
                 --genome "GATK.GRCh38" \
-                --step variant_calling \
-                --intervals ${params.target}
+                --step ${params.biomarkers_ascat_step} \
+                --intervals ${params.target} 
             fi
 
             # extract cellularity, tumor/normal sample name and name from dragen
-            cellularity="\$(awk 'BEGIN{getline; nrow=NF}{if(\$1 == "'"\$patient"'") cellularity = \$nrow}END{print cellularity}' ${samp})"
-            tumor="\$(awk '{if(\$1 == "'"\$patient"'" && \$3 == 1) out = \$4}END{print out}' ${samp})"
-            normal="\$(awk '{if(\$1 == "'"\$patient"'" && \$3 == 0) out = \$4}END{print out}' ${samp})"
+            cellularity="\$(awk 'BEGIN{getline; nrow=NF-1}{if(\$1 == "'"\$patient"'") cellularity = \$nrow}END{print cellularity}' ${samp})"
+            tumor="\$(awk -F ',' '{if(\$1 == "'"\$patient"'" && \$3 == 1) out = \$4}END{print out}' ${samp})"
+            normal="\$(awk -F ',' '{if(\$1 == "'"\$patient"'" && \$3 == 0) out = \$4}END{print out}' ${samp})"
             name=\$tumor
-            #name="\$(awk '{if(\$1 == "'"\$patient"'" && \$3 == 1) out = \$4}END{print out}' ${samp})"
+            #name="\$(awk -F ',' '{if(\$1 == "'"\$patient"'" && \$3 == 1) out = \$4}END{print out}' ${samp})"
             #name="\$(basename \$name | cut -d'.' -f-1)"
             
             # create pyclone input file
@@ -118,7 +118,7 @@ process ascat_calling{
                 continue
             fi
 
-            maf_file="\$(ls ${launchDir}/${params.output}/${params.date}/annotation/somatic/\$name/\$name*maf)"
+            maf_file="\$(awk -F ',' 'BEGIN{getline; nrow=NF}{if(\$1 == "'"\$patient"'" && \$3 == 1) cellularity = \$nrow}END{print cellularity}' ${samp})"
 
             if ! [ -z \$cellularity ]; then
                 create_input4pyclone.py -as \${ascat_file} -c \${cellularity} -m \${maf_file} -o \${patient}.pyclone.tsv
