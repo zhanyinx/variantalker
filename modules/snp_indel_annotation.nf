@@ -65,7 +65,7 @@ process rename_somatic_vcf {
 // annotate vcf with funcotator and cancervar and output to maf format
 process somatic_annotate_snp_indel{
     cpus 1
-    maxRetries = 2
+    maxRetries = 3
     memory { 8.GB * task.attempt }
     publishDir "${params.output}/${params.date}/annotation/somatic/${patient}", mode: "copy"
     // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/somatic/", mode: "copy"
@@ -260,7 +260,7 @@ process normalise_rename_germline_vcf {
 
 process germline_annotate_snp_indel{
     cpus 1
-    maxRetries = 2
+    maxRetries = 3
     memory { 8.GB * task.attempt }
     // publishDir "${params.output}/${params.date}/annotation/germline/${vcf.simpleName}", mode: "copy"
     // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/germline/", mode: "copy"

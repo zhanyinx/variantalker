@@ -31,14 +31,10 @@ git clone git@github.com:zhanyinx/variantalker.git
 
 variantalker relies on [Annovar](https://annovar.openbioinformatics.org/en/latest/) software and [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) databases.
 
-1- get the [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) databases and [Annovar](https://annovar.openbioinformatics.org/en/latest/)
-
-2- Update the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
-
-Work in progress: download the updated databases 
+Download the updated databases 
 
 ```bash
-wget -r -N --no-parent -nH --cut-dirs=2 -P public_databases missing_link 
+wget -r -N --no-parent -nH --cut-dirs=2 -P public_databases https://bioserver.ieo.it/repo/dima/ 
 ```
 
 ## Documentation
