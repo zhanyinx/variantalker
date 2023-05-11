@@ -118,7 +118,8 @@ process somatic_annotate_snp_indel{
                 --remove-filtered-variants true \
                 --output-file-format MAF \
                 --data-sources-path ${params.funcotator_somatic_db}\
-                --ref-version ${params.build}
+                --ref-version ${params.build} \
+                --transcript-selection-mode BEST_EFFECT
 
             check=\$?
             if [[ \$check -ne 0 ]]; then
@@ -306,7 +307,8 @@ process germline_annotate_snp_indel{
                 --remove-filtered-variants true \
                 --output-file-format MAF \
                 --data-sources-path ${params.funcotator_germline_db}\
-                --ref-version ${params.build}
+                --ref-version ${params.build} \
+                --transcript-selection-mode BEST_EFFECT
 
             check=\$?
             if [[ \$check -ne 0 ]]; then
