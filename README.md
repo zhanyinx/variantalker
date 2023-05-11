@@ -133,4 +133,4 @@ Filters applied:
 
 -  pathogenic, likely pathogenic, uncertain in any of InterVar, CancerVar or clinvar are kept. For somatic samples also variants with ESCAT tier I and II are kept.
 
-- variants with variant allele frequency smaller than 0.05 (somatic) and 0.2 (germline) are filtered out
+- variants with variant allele frequency smaller than 0.01 (somatic) and 0.2 (germline) are filtered out
