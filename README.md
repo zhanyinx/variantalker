@@ -127,7 +127,7 @@ variantalker outputs for each sample two files
 1) *maf file with all the annotations
 2) filtered*tsv file with filtered variants.
 
-Filters applied:
+Default filters applied:
 
 - "Silent", "Intron", "3'UTR", "5'UTR", "IGR", "5'Flank", "3'Flank", "RNA" variant types are filtered out
 
