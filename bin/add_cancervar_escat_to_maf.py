@@ -265,6 +265,7 @@ def main():
             Warning("t_alt_count column is empty, probably malformatted VCF input file")
 
     # save output file
+    out = out.drop_duplicates()
     out.to_csv(args.output, sep="\t", index=False, mode="a")
 
     # filter variants
@@ -276,6 +277,7 @@ def main():
         "IGR",
         "5'Flank",
         "3'Flank",
+        "RNA",
     ]
     out = out[~out["Variant_Classification"].isin(filter_variant_classifications)]
 
@@ -283,39 +285,8 @@ def main():
     out = out[(out["t_alt_count"] + out["t_ref_count"]) >= args.min_depth]
 
     # filter cancervar/intervar clinvar escat
-    if args.germline:
-        intervar_keep = ["Pathogenic", "Likely pathogenic"]  #
-    else:
-        cancervar_keep = ["Tier_II_potential", "Tier_I_strong"]
-
-    clinvar_exclude = [
-        "Affects",
-        "Affects|association",
-        "Affects|risk_factor",
-        "Benign",
-        "Benign/Likely_benign",
-        "Benign/Likely_benign|association",
-        "Benign/Likely_benign|drug_response",
-        "Benign/Likely_benign|drug_response|other",
-        "Benign/Likely_benign|other",
-        "Benign/Likely_benign|other|risk_factor",
-        "Benign/Likely_benign|risk_factor",
-        "Benign|association",
-        "Benign|association|confers_sensitivity",
-        "Benign|confers_sensitivity",
-        "Benign|drug_response",
-        "Benign|other",
-        "Benign|protective",
-        "Benign|risk_factor",
-        "Likely_benign",
-        "Likely_benign|drug_response|other",
-        "Likely_benign|other",
-        "Likely_benign|risk_factor",
-        "association_not_found",
-        "protective",
-        "protective|risk_factor",
-    ]
-
+    cancervar_keep = ["Tier_II_potential", "Tier_I_strong"]
+    clinvar_exclude = CLINVAR_EXCLUDE
     escat_exclude = [
         "IIIA",
         "IIIB",
@@ -324,12 +295,7 @@ def main():
         "V",
     ]
 
-    if args.germline:
-        out = out[
-            (out["InterVar"].isin(intervar_keep))
-            | (~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude))
-        ]
-    else:
+    if not args.germline:
         out = out[
             (out["CancerVar"].isin(cancervar_keep))
             | (~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude))

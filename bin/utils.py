@@ -4,6 +4,35 @@ import numpy as np
 import pandas as pd
 import pyranges
 
+CLINVAR_EXCLUDE = [
+        "Affects",
+        "Affects|association",
+        "Affects|risk_factor",
+        "Benign",
+        "Benign/Likely_benign",
+        "Benign/Likely_benign|association",
+        "Benign/Likely_benign|drug_response",
+        "Benign/Likely_benign|drug_response|other",
+        "Benign/Likely_benign|other",
+        "Benign/Likely_benign|other|risk_factor",
+        "Benign/Likely_benign|risk_factor",
+        "Benign|association",
+        "Benign|association|confers_sensitivity",
+        "Benign|confers_sensitivity",
+        "Benign|drug_response",
+        "Benign|other",
+        "Benign|protective",
+        "Benign|risk_factor",
+        "Likely_benign",
+        "Likely_benign|drug_response|other",
+        "Likely_benign|other",
+        "Likely_benign|risk_factor",
+        "association_not_found",
+        "protective",
+        "protective|risk_factor",
+    ]
+
+
 
 def read_maf(file: str) -> pd.DataFrame:
     # count comment lines

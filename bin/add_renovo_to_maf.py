@@ -6,6 +6,33 @@ import os
 from numpy import append
 import pandas as pd
 
+CLINVAR_EXCLUDE = [
+        "Affects",
+        "Affects|association",
+        "Affects|risk_factor",
+        "Benign",
+        "Benign/Likely_benign",
+        "Benign/Likely_benign|association",
+        "Benign/Likely_benign|drug_response",
+        "Benign/Likely_benign|drug_response|other",
+        "Benign/Likely_benign|other",
+        "Benign/Likely_benign|other|risk_factor",
+        "Benign/Likely_benign|risk_factor",
+        "Benign|association",
+        "Benign|association|confers_sensitivity",
+        "Benign|confers_sensitivity",
+        "Benign|drug_response",
+        "Benign|other",
+        "Benign|protective",
+        "Benign|risk_factor",
+        "Likely_benign",
+        "Likely_benign|drug_response|other",
+        "Likely_benign|other",
+        "Likely_benign|risk_factor",
+        "association_not_found",
+        "protective",
+        "protective|risk_factor",
+    ]
 
 def _parse_args():
     """Parse command-line arguments."""
@@ -98,6 +125,7 @@ def main():
         ],
     )
     out = out.drop(["Chr", "Start", "Ref", "Alt"], axis=1)
+    out = out.drop_duplicates()
     out.to_csv(args.output, sep="\t", index=False, mode="a")
 
     filtered_maf = read_maf(args.filtered_maf)
@@ -116,6 +144,15 @@ def main():
             ],
         )
         out = out.drop(["Chr", "Start", "Ref", "Alt"], axis=1)
+        intervar_keep = ["Pathogenic", "Likely pathogenic"]
+        clinvar_exclude = CLINVAR_EXCLUDE
+        renovo_keep = ["LP Pathogenic", "IP Pathogenic", "HP Pathogenic"]
+        out = out[
+            (out["InterVar"].isin(intervar_keep))
+            | (~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude))
+            | (out["RENOVO_Class"].isin(renovo_keep))
+        ]
+
         out.to_csv(f"filtered.{args.output}.tsv", sep="\t", index=False)
     else:
         with open(f"filtered.{args.output}.tsv", "a") as f:
