@@ -127,10 +127,10 @@ variantalker outputs for each sample two files
 1) *maf file with all the annotations
 2) filtered*tsv file with filtered variants.
 
-Filters applied:
+Default filters applied:
 
 - "Silent", "Intron", "3'UTR", "5'UTR", "IGR", "5'Flank", "3'Flank", "RNA" variant types are filtered out
 
 -  pathogenic, likely pathogenic, uncertain in any of InterVar, CancerVar or clinvar are kept. For somatic samples also variants with ESCAT tier I and II are kept.
 
-- variants with variant allele frequency smaller than 0.05 (somatic) and 0.2 (germline) are filtered out
+- variants with variant allele frequency smaller than 0.01 (somatic) and 0.2 (germline) are filtered out
