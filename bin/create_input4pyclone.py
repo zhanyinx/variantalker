@@ -158,7 +158,7 @@ def main():
         sys.exit(0)
 
     if not any(["chr" in str(x) for x in cnv_data["chr"].values]):
-        cnv_data["chr"] = "chr" + cnv_data["chr"]
+        cnv_data["chr"] = "chr" + cnv_data["chr"].astype(str)
     cnv_data.columns = ["Chromosome", "Start", "End", "major_cn", "minor_cn"]
     cnv_data = pyranges.PyRanges(cnv_data)
 
