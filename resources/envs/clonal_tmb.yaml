@@ -100,7 +100,7 @@ dependencies:
     - numpy==1.23.5
     - pandas==1.5.3
     - git+https://github.com/Roth-Lab/pyclone-vi.git
-    - pyranges==0.0.120
+    - pyranges==0.0.127
     - pyrle==0.0.35
     - python-dateutil==2.8.2
     - pytz==2023.2
