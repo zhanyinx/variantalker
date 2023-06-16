@@ -78,7 +78,7 @@ Sample_file must be provided with full path, __not__ relative path
 
 Available sample_type are: somatic, germline, cnv. 
 
-- somatic sample type: it can be tumor_only (single sample) or tumor_normal (multi sample) vcf.gz file. Requires tumor_tissue to be specified
+- somatic sample type: it can be tumoronly (single sample) or tumor_normal (multi sample) vcf.gz file. Requires tumor_tissue to be specified
 
 - germline: single sample vcf.gz file. It does not require tumor_tissue
 

@@ -143,7 +143,7 @@ process clonal_tmb{
             }END{print "Clonal TMB: ", ncount}' \${patient}.pyclone.output.tsv > \${name}.clonalTMB.txt
 
             cp \${name}.clonalTMB.txt ${launchDir}/${params.output}/${params.date}/biomarkers/\${name}/
-            cp \${patient}.pyclone.output.tsv ${launchDir}/${params.output}/${params.date}/biomarkers/\${patient}/
+            cp \${patient}.pyclone.output.tsv ${launchDir}/${params.output}/${params.date}/biomarkers/\${name}/
 
         done
     """

@@ -65,6 +65,7 @@ process rename_somatic_vcf {
 // annotate vcf with funcotator and cancervar and output to maf format
 process somatic_annotate_snp_indel{
     cpus 1
+    errorStrategy 'retry'
     maxRetries = 3
     memory { 8.GB * task.attempt }
     publishDir "${params.output}/${params.date}/annotation/somatic/${patient}", mode: "copy"
@@ -101,6 +102,7 @@ process somatic_annotate_snp_indel{
         #    --output-file-format MAF \
         #    --data-sources-path ${params.funcotator_somatic_db}\
         #    --ref-version ${params.build}
+        #    --transcript-selection-mode BEST_EFFECT
 
         
         check=1
@@ -261,6 +263,7 @@ process normalise_rename_germline_vcf {
 
 process germline_annotate_snp_indel{
     cpus 1
+    errorStrategy 'retry'
     maxRetries = 3
     memory { 8.GB * task.attempt }
     // publishDir "${params.output}/${params.date}/annotation/germline/${vcf.simpleName}", mode: "copy"
@@ -293,6 +296,7 @@ process germline_annotate_snp_indel{
         #     --output-file-format MAF \
         #     --data-sources-path ${params.funcotator_germline_db} \
         #     --ref-version ${params.build}
+        #     --transcript-selection-mode BEST_EFFECT
 
         check=1
         while [[ \$check -ne 0 ]]
@@ -395,6 +399,7 @@ process germline_annotate_snp_indel{
 
 process germline_renovo_annotation{
     cpus 1
+    errorStrategy 'retry'
     maxRetries = 2
     memory { 1.GB * task.attempt }
     publishDir "${params.output}/${params.date}/annotation/germline/${maf.simpleName}", mode: "copy"
