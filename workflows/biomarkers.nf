@@ -8,7 +8,7 @@
 
 params.date = new java.util.Date().format('yyMMdd')
 
-include {extract_tpm; calculate_tmb_signature; ascat_calling} from '../modules/extract_biomarkers.nf'
+include {extract_tpm; calculate_tmb_signature; clonal_tmb} from '../modules/extract_biomarkers.nf'
 include {report_raw} from '../modules/report.nf'
 
 // extract channels from input biomarkers sample sheet 
@@ -75,6 +75,6 @@ workflow CLONAL_TMB{
         }else{
             config=Channel.from(file("$projectDir/resources/configs/ascat.sarek.config"))
         }
-        ascat_calling(sample, config)
+        clonal_tmb(sample, config)
     }   
 }

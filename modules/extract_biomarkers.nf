@@ -56,8 +56,8 @@ process calculate_tmb_signature{
     """
 }
 
-process ascat_calling{
-    tag "ascat_calling"
+process clonal_tmb{
+    tag "clonal_tmb"
     input:
         file(samp)
         file(conf)
@@ -143,6 +143,7 @@ process ascat_calling{
             }END{print "Clonal TMB: ", ncount}' \${patient}.pyclone.output.tsv > \${name}.clonalTMB.txt
 
             cp \${name}.clonalTMB.txt ${launchDir}/${params.output}/${params.date}/biomarkers/\${name}/
+            cp \${patient}.pyclone.output.tsv ${launchDir}/${params.output}/${params.date}/biomarkers/\${name}/
 
         done
     """
