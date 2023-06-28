@@ -1,6 +1,6 @@
 
 process ASCAT {
-    publishDir "${params.output}/${params.date}/biomarkers/${patient}/ASCAT", mode: "copy"
+    publishDir "${params.output}/${params.date}/biomarkers/${meta.patient}/ASCAT", mode: "copy"
     cpus '4'
     errorStrategy 'retry'
     maxRetries = 2
