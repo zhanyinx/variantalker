@@ -9,7 +9,7 @@
 params.date = new java.util.Date().format('yyMMdd')
 params.ascat_genome = params.build
 
-include {extract_tpm; calculate_tmb_signature; clonal_tmb} from '../modules/local/biomarkers/main.nf'
+include {extract_tpm; calculate_tmb_signature} from '../modules/local/biomarkers/main.nf'
 include {ASCAT; generate_ascat_loci; generate_ascat_alleles; generate_ascat_rt; generate_ascat_gc} from '../modules/local/ascat/main.nf'
 include {SAMTOOLS_CONVERT as BAM_TO_CRAM} from '../modules/nf-core/samtools/convert/main.nf'
 include {generate_pyclone; pyclone} from '../modules/local/pyclone/main.nf'
@@ -28,10 +28,9 @@ workflow BIOMARKERS {
     if (params.pipeline.toUpperCase() == "DRAGEN"){
         extract_tpm(ch_rna)
     }
-}
 
-workflow CLONAL_TMB{
-    if (params.pipeline.toUpperCase() == "DRAGEN"){
+    // clonal TMB
+    if (params.pipeline.toUpperCase() == "DRAGEN" && params.clonal_tmb_input){
 
         // create channel from input genome files
         ch_loci = Channel.from(file(params.genomes[params.build].ascat_loci))
@@ -40,7 +39,7 @@ workflow CLONAL_TMB{
         ch_gc = Channel.from(file(params.genomes[params.build].ascat_loci_gc))
 
         // extract channels from input file
-        input_sample = extract_csv_clonal_tmb(file(params.input))
+        input_sample = extract_csv_clonal_tmb(file(params.clonal_tmb_input))
         input_variant_calling_convert = input_sample.branch{
                 bam:  it[0].data_type == "bam"
                 cram: it[0].data_type == "cram"
