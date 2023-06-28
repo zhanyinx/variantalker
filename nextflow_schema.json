@@ -25,6 +25,17 @@
                     "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row. See [usage docs](https://nf-co.re/variantalker/usage#samplesheet-input).",
                     "fa_icon": "fas fa-file-csv"
                 },
+                "clonal_tmb_input": {
+                    "type": "string",
+                    "format": "file-path",
+                    "mimetype": "text/csv",
+                    "pattern": "^\\S+\\.csv$",
+                    "schema": "assets/schema_input.json",
+                    "default": null,
+                    "description": "Path to comma-separated file containing information about the samples in the experiment.",
+                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 8 columns, and a header row. See [usage docs](https://github.com/zhanyinx/clonal_evolution#input).",
+                    "fa_icon": "fas fa-file-csv1"
+                },
                 "output": {
                     "type": "string",
                     "format": "directory-path",
@@ -376,17 +387,87 @@
                     "format": "directory-path",
                     "description": "Path to the folder containing annovar software",
                     "fa_icon": "fas fa-folder-anno"
-                },
-                "biomarkers_ascat_step": {
+                }
+            }
+        },
+        "ascat": {
+            "title": "Ascat CNV Calling",
+            "type": "object",
+            "description": "Configure ascat calling tool",
+            "default": "",
+            "fa_icon": "fas fa-toolbox",
+            "required": [
+                "ascat_genome_basedir"
+            ],
+            "properties": {
+                "ascat_genome_basedir": {
                     "type": "string",
-                    "description": "nfcore/sarek step at which you want to start to call CNV using ascat",
-                    "default": "markduplicates",
-                    "fa_icon": "fas fa-nfcore-ascat-step"
+                    "fa_icon": "fas fa-greater-than",
+                    "description": "Base folder of ascat database files",
+                    "help_text": "For more details see [here](https://github.com/zhanyinx/clonal_evolution#readme)"
                 },
-                "biomarkers_ascat_config": {
-                    "type": "string",
-                    "description": "nfcore/sarek config file to be usedto call CNV using ascat",
-                    "fa_icon": "fas fa-nfcore-ascat-config"
+                "ascat_min_base_qual": {
+                    "type": "number",
+                    "default": 20,
+                    "fa_icon": "fas fa-greater-than",
+                    "description": "Overwrite Ascat min base quality required for a read to be counted.",
+                    "hidden": true,
+                    "help_text": "For more details see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf)"
+                },
+                "ascat_min_counts": {
+                    "type": "number",
+                    "default": 10,
+                    "fa_icon": "fas fa-align-center",
+                    "description": "Overwrite Ascat minimum depth required in the normal for a SNP to be considered.",
+                    "hidden": true,
+                    "help_text": "For more details, see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf)."
+                },
+                "ascat_min_map_qual": {
+                    "type": "number",
+                    "default": 35,
+                    "fa_icon": "fas fa-balance-scale-left",
+                    "description": "Overwrite Ascat min mapping quality required for a read to be counted.",
+                    "hidden": true,
+                    "help_text": "For more details, see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf)."
+                },
+                "ascat_ploidy": {
+                    "type": "number",
+                    "fa_icon": "fas fa-bacon",
+                    "help_text": "ASCAT: optional argument to override ASCAT optimization and supply psi parameter (expert parameter, don\u2019t adapt unless you know what you\u2019re doing). See [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf)",
+                    "hidden": true,
+                    "description": "Overwrite ASCAT ploidy."
+                },
+                "ascat_purity": {
+                    "type": "number",
+                    "fa_icon": "fas fa-broom",
+                    "description": "Overwrite ASCAT purity.",
+                    "help_text": "Overwrites ASCAT's `rho_manual` parameter. Expert use only, see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf) for details.\nRequires that `--ascat_ploidy` is set.",
+                    "hidden": true
+                }
+            }
+        },
+        "pyclone": {
+            "title": "pyclone ccf estimation",
+            "type": "object",
+            "description": "pyclone ccf estimation",
+            "default": "",
+            "fa_icon": "fas fa-toolbox",
+            "properties": {
+                "num_restarts": {
+                    "type": "number",
+                    "default": 20,
+                    "fa_icon": "fas fa-greater-than",
+                    "description": "Overwrite pyclone-vi number of restarts.",
+                    "hidden": true,
+                    "help_text": "For more details see [here](https://github.com/Roth-Lab/pyclone-vi)"
+                },
+                "num_clusters": {
+                    "type": "number",
+                    "default": 40,
+                    "fa_icon": "fas fa-align-center",
+                    "description": "Overwrite pyclone-vi number of clusters.",
+                    "hidden": true,
+                    "help_text": "For more details, see [here](https://github.com/Roth-Lab/pyclone-vi)."
                 }
             }
         }
@@ -406,6 +487,12 @@
         },
         {
             "$ref": "#/definitions/databases"
+        },
+        {
+            "$ref": "#/definitions/pyclone"
+        },
+        {
+            "$ref": "#/definitions/ascat"
         },
         {
             "$ref": "#/definitions/generic_options"
