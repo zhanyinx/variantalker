@@ -250,7 +250,7 @@ process normalise_rename_germline_vcf {
         tuple val(patient), file("*.vcf1.gz"), file("*.vcf1.gz.tbi")
     script:
         """
-        name="\$(zcat $vcf | awk '{if(\$1 =="#CHROM"){print \$NF; exit} }')"
+        name="\$(zcat $vcf | awk '{if(\$1 =="#CHROM"){print \$NF} }')"
         zcat $vcf > tmp.vcf
         rm $vcf
         bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf

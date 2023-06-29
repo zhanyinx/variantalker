@@ -9,19 +9,12 @@ import numpy as np
 import pandas as pd
 import pyranges
 
-from utils import read_maf, filter_maf4tmb
+from utils import read_maf
 
 
 def _parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-a",
-        "--alt_allele",
-        type=int,
-        default=3,
-        help="Minimum number of alt alleles to call a variant, default 3",
-    )
     parser.add_argument(
         "-as",
         "--ascat",
@@ -42,13 +35,6 @@ def _parse_args():
         type=float,
         default=-1,
         help="Cellularity of the sample, default 1",
-    )
-    parser.add_argument(
-        "-d",
-        "--depth",
-        type=int,
-        default=25,
-        help="Depth threshold for TMB calculation, default=25",
     )
     parser.add_argument(
         "-m",
@@ -72,13 +58,6 @@ def _parse_args():
         default="XX",
         help="XX or XY",
     )
-    parser.add_argument(
-        "-v",
-        "--vaf_threshold",
-        type=float,
-        default=0.05,
-        help="VAF threshold for tmb calculation, default 0.05",
-    )
 
     args = parser.parse_args()
     return args
@@ -97,14 +76,8 @@ def main():
 
     # read and process annotated maf file
     maf = read_maf(args.maf)
-    # filter maf
-    out = filter_maf4tmb(
-        maf,
-        depth=args.depth,
-        alt_allele=args.alt_allele,
-        vaf_threshold=args.vaf_threshold,
-    )
     sampleid = maf["Tumor_Sample_Barcode"].unique()[0]
+
     maf = maf[
         [
             "Chromosome",
@@ -154,7 +127,7 @@ def main():
                 "tumour_content",
             ]
         ]
-        maf.to_csv(args.output, index=False, sep="\t")
+        maf.to_csv(args.output, index=False, sep="\t", mode="a", header=None)
         sys.exit(0)
 
     if not any(["chr" in str(x) for x in cnv_data["chr"].values]):
@@ -165,7 +138,6 @@ def main():
     # joining
     joint = maf.join(cnv_data, suffix="_cnv", how="left").df
     joint = joint.drop([x for x in joint.columns if "_cnv" in x], axis=1)
-    joint = joint.drop(["Chromosome", "Start", "End"], axis=1)
     joint["sample_id"] = sampleid
 
     # add cellularity: if not provided, use that from ascat
@@ -182,9 +154,12 @@ def main():
         joint["normal_cn"] = 2
     elif args.sex == "XY":
         joint["normal_cn"] = 2
-        joint.loc[joint["Chromosome"].isin(["chrX", "chrY"]), "normal_cn"] = 1
+        if joint["Chromosome"].isin(["chrX", "chrY"]).any():
+            joint.loc[joint["Chromosome"].isin(["chrX", "chrY"]), "normal_cn"] = 1
     else:
         raise ValueError(f"sex must be XX or XY, provided {args.sex}.")
+
+    joint = joint.drop(["Chromosome", "Start", "End"], axis=1)
 
     joint = joint[
         [
@@ -202,7 +177,7 @@ def main():
     # no overlapping regions are set to -1, since we want major and minor = 1 when no cnv is present, we can just take the module
     joint["major_cn"] = np.abs(joint["major_cn"])
     joint["minor_cn"] = np.abs(joint["minor_cn"])
-    joint.to_csv(args.output, index=False, sep="\t")
+    joint.to_csv(args.output, index=False, sep="\t", mode="a", header=None)
 
 
 if __name__ == "__main__":

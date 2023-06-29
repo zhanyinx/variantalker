@@ -27,7 +27,7 @@ for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true
 */
 
 include { VARIANTALKER } from './workflows/variantalker'
-include { BIOMARKERS; CLONAL_TMB } from './workflows/biomarkers'
+include { BIOMARKERS} from './workflows/biomarkers'
 
 process help {
     label "help"
@@ -44,7 +44,7 @@ process help {
     echo "                                               vcf.gz file is accepted for sample_file. For CNV, either cnr from CNVkit or" 
     echo "                                               vcf.gz file from dragen is accepted." 
     echo "                                               For available tumor type, checkout https://github.com/zhanyinx/variantalker/blob/main/README.md" 
-    echo "  --analysis <analysis>                        Type of analysis: annotation (default), biomarkers, clonal_tmb." 
+    echo "  --analysis <analysis>                        Type of analysis: annotation (default), biomarkers" 
     echo "  --pipeline <pipeline>                        The pipeline used to generate the input data (options: 'Sarek', 'DRAGEN'"
     echo "                                               or 'Iontorrent' (only SNP/INDEL), default: 'Sarek')." 
     echo "  --tumoronly                                  Flag to indicate that the input is tumor-only (default: false)."
@@ -58,11 +58,8 @@ workflow {
     }else if(params.analysis == "biomarkers"){
         println("Biomarkers BETA version!")
         BIOMARKERS()
-    }else if(params.analysis == "clonal_tmb"){
-        println("clonal tmb BETA version, works only with conda env for now")
-        CLONAL_TMB()
     }else{
-        println("Provide one of the following analysis: annotation, biomarkers, clonal_tmb")
+        println("Provide one of the following analysis: annotation, biomarkers")
         println("e.g. nextflow run main.nf --analysis annotation")
     }
     

@@ -20,7 +20,7 @@ Variant annotation in cancer genomics involves identifying and characterizing th
 
 We have developed a Nextflow pipeline called variantalker that enables users to annotate variants from VCF files. Our pipeline supports VCF files generated from dragen, nf-sarek, and ION-torrent platforms.
 
-BETA version: we have implemented the possibility to extract biomarkers such as TMB, mutational signatures (apobec, uv and tabacco), clonal TMB and expression of specific genes if RNA-seq is given
+BETA version: we have implemented the possibility to extract biomarkers such as TMB, mutational signatures (apobec, uv and tabacco), clonal TMB (if bam/cram files and sex are provided) and expression of specific genes (if RNA-seq data are provided)
 
 ## Installation
 Clone the repo
@@ -61,6 +61,13 @@ Update in the configuration file (nextflow.config) by setting the path to the da
 nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --output outdir
 ```
 
+To perform biomarker analysis:
+
+```bash
+nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --output outdir --analysis biomarkers
+```
+
+
 ## Input
 
 variantalker takes as input a csv samplesheet with 4 columns
@@ -90,30 +97,11 @@ __BETA version biomarkers__
 
 To extract biomarkers, you can use the same type of input sheet. There are two types of sample files available: the maf format, which is the output of the annotation analysis, and the .sf file from the Illumina Dragen RNA pipeline. These sample files are categorized based on their sample type: dna for maf files and rna for .sf files.
 
-__BETA version clonal analysis__
-
-Clonal analysis works only with conda enviroment for now. To extract clonal TMB, we utilize the [nfcore/sarek](https://nf-co.re/sarek)'s ascat tool  and [pyclone-vi](https://github.com/Roth-Lab/pyclone-vi). The input file format that is accepted is the same as in nfcore/sarek, but it includes twi additional columns: 
-
-1) cellularity  
-
-2) annotated maf file from the tumor sample for which you want to calculate the clonal tmb.
-
-To run clonal tmb, add 
-
-```
-process {
-   withName: 'clonal_tmb' {
-      conda = 'PATH2/variantalker/resources/envs/clonal_tmb.yaml'
-   }
-}
-```
-
-to the configuration file
-
-Example code run:
+If clonal tmb biomarker calculation is also required, the --clonal_tmb_input parameter must be also specified.
+The format of the clonal_tmb_input file can be found [here](https://github.com/zhanyinx/clonal_evolution#input)
 
 ```bash
-nextflow run path_to/main.nf run -with-tower -c nextflow.config  -profile conda --input sample.csv --output variantalker_output/ --analysis clonal_tmb
+nextflow run path_to/main.nf run -with-tower -c nextflow.config  -profile conda --input sample.csv --output variantalker_output/ --analysis biomarkers --clonal_tmb_input sample_clonal_tmb.csv
 ```
 
 
@@ -139,6 +127,7 @@ params.output
 |       |-- patient
 |       |       |-- patient.rna.tpm.csv
 |       |       |-- tmb_signatures.patient.txt
+|       |       |-- patient.clonalTMB.txt
 ```
 
 variantalker outputs for each sample two files
