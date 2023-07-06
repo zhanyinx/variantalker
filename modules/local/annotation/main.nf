@@ -13,6 +13,11 @@ process fixvcf{
     if (params.pipeline.toUpperCase() != "SAREK")
         if (params.tumoronly)
             """
+            if [[ $vcf != *.gz ]]; then 
+                bgzip $vcf 
+                mv ${vcf}.gz $vcf
+            fi
+            
             fix_vcf_header4funcotator.sh -i $vcf -o "tmp.vcf" -t
             
             # normalise and split multiallelic
@@ -25,6 +30,10 @@ process fixvcf{
             """
         else
             """
+            if [[ $vcf != *.gz ]]; then 
+                bgzip $vcf 
+                mv ${vcf}.gz $vcf
+            fi
             fix_vcf_header4funcotator.sh -i $vcf -o "tmp.vcf" 
             bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
             awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${patient}.vcf
@@ -35,6 +44,10 @@ process fixvcf{
 
     else
         """
+        if [[ $vcf != *.gz ]]; then 
+            bgzip $vcf 
+            mv ${vcf}.gz $vcf
+        fi
         zcat $vcf > tmp.vcf
         bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
         awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${patient}.vcf
@@ -250,13 +263,17 @@ process normalise_rename_germline_vcf {
         tuple val(patient), file("*.vcf1.gz"), file("*.vcf1.gz.tbi")
     script:
         """
-        name="\$(zcat $vcf | awk '{if(\$1 =="#CHROM"){print \$NF} }')"
+        if [[ $vcf != *.gz ]]; then 
+            bgzip $vcf 
+            mv ${vcf}.gz $vcf
+        fi
+        # name="\$(zcat $vcf | awk '{if(\$1 =="#CHROM"){print \$NF} }')"
         zcat $vcf > tmp.vcf
         rm $vcf
         bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
         awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > tmp2.vcf
-        bgzip -c tmp2.vcf > \${name}.vcf1.gz
-        tabix -p vcf \${name}.vcf1.gz
+        bgzip -c tmp2.vcf > ${patient}.vcf1.gz
+        tabix -p vcf ${patient}.vcf1.gz
         """
 }
 
