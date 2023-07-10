@@ -211,6 +211,33 @@
                 }
             }
         },
+        "filtering": {
+            "title": "Filters applied to variant",
+            "type": "object",
+            "fa_icon": "fab fa-filters-tracker",
+            "description": "Filters applied to variant to be kept in the filtered file",
+            "help_text": "Filters applied to variant to be kept in the filtered file",
+            "properties": {
+                "filter_min_depth": {
+                    "type": "number",
+                    "description": "min depth to keep variant in the filtered output file",
+                    "default": 50,
+                    "fa_icon": "fas fa-number-mindepth-db"
+                },
+                "filter_vaf_threshold": {
+                    "type": "number",
+                    "description": "min somatic variant allele frequency to keep the variant in the filtered variant output file",
+                    "default": 0.01,
+                    "fa_icon": "fas fa-number-minvaf-db"
+                },
+                "filter_vaf_threshold_germline": {
+                    "type": "number",
+                    "description": "min germline variant allele frequency to keep the variant in the filtered variant output file",
+                    "default": 0.2,
+                    "fa_icon": "fas fa-number-minvafg-db"
+                }
+            }
+        },
         "generic_options": {
             "title": "Generic options",
             "type": "object",

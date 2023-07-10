@@ -27,6 +27,13 @@ def _parse_args():
         help="Cancervar file",
     )
     parser.add_argument(
+        "-cf",
+        "--cancervar_filter",
+        type=str,
+        default="Tier_II_potential,Tier_I_strong",
+        help="Cancervar filters, available: Tier_II_potential,Tier_I_strong,Tier_III_Uncertain,Tier_IV_benign",
+    )
+    parser.add_argument(
         "-cc",
         "--config",
         type=str,
@@ -81,7 +88,7 @@ def _parse_args():
     parser.add_argument(
         "-md",
         "--min_depth",
-        type=str,
+        type=int,
         default=50,
         required=False,
         help="Minimum coverage to keep the variant. Default 50.",

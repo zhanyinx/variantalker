@@ -7,32 +7,34 @@ from numpy import append
 import pandas as pd
 
 CLINVAR_EXCLUDE = [
-        "Affects",
-        "Affects|association",
-        "Affects|risk_factor",
-        "Benign",
-        "Benign/Likely_benign",
-        "Benign/Likely_benign|association",
-        "Benign/Likely_benign|drug_response",
-        "Benign/Likely_benign|drug_response|other",
-        "Benign/Likely_benign|other",
-        "Benign/Likely_benign|other|risk_factor",
-        "Benign/Likely_benign|risk_factor",
-        "Benign|association",
-        "Benign|association|confers_sensitivity",
-        "Benign|confers_sensitivity",
-        "Benign|drug_response",
-        "Benign|other",
-        "Benign|protective",
-        "Benign|risk_factor",
-        "Likely_benign",
-        "Likely_benign|drug_response|other",
-        "Likely_benign|other",
-        "Likely_benign|risk_factor",
-        "association_not_found",
-        "protective",
-        "protective|risk_factor",
-    ]
+    "Affects",
+    "Affects|association",
+    "Affects|risk_factor",
+    "Benign",
+    "Benign/Likely_benign",
+    "Benign/Likely_benign|association",
+    "Benign/Likely_benign|drug_response",
+    "Benign/Likely_benign|drug_response|other",
+    "Benign/Likely_benign|other",
+    "Benign/Likely_benign|other|risk_factor",
+    "Benign/Likely_benign|risk_factor",
+    "Benign|association",
+    "Benign|association|confers_sensitivity",
+    "Benign|confers_sensitivity",
+    "Benign|drug_response",
+    "Benign|other",
+    "Benign|protective",
+    "Benign|risk_factor",
+    "Likely_benign",
+    "Likely_benign|drug_response|other",
+    "Likely_benign|other",
+    "Likely_benign|risk_factor",
+    "association_not_found",
+    "protective",
+    "protective|risk_factor",
+    "",
+]
+
 
 def _parse_args():
     """Parse command-line arguments."""
@@ -59,6 +61,13 @@ def _parse_args():
         default=None,
         required=True,
         help="Renovo output file",
+    )
+    parser.add_argument(
+        "-if",
+        "--intervar_filter",
+        type=str,
+        default="Pathogenic,Likely pathogenic",
+        help="Intervar filters, available: Pathogenic,Likely pathogenic,Uncertain significance,Likely benign,Benign",
     )
     parser.add_argument(
         "-o",

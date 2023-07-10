@@ -5,33 +5,33 @@ import pandas as pd
 import pyranges
 
 CLINVAR_EXCLUDE = [
-        "Affects",
-        "Affects|association",
-        "Affects|risk_factor",
-        "Benign",
-        "Benign/Likely_benign",
-        "Benign/Likely_benign|association",
-        "Benign/Likely_benign|drug_response",
-        "Benign/Likely_benign|drug_response|other",
-        "Benign/Likely_benign|other",
-        "Benign/Likely_benign|other|risk_factor",
-        "Benign/Likely_benign|risk_factor",
-        "Benign|association",
-        "Benign|association|confers_sensitivity",
-        "Benign|confers_sensitivity",
-        "Benign|drug_response",
-        "Benign|other",
-        "Benign|protective",
-        "Benign|risk_factor",
-        "Likely_benign",
-        "Likely_benign|drug_response|other",
-        "Likely_benign|other",
-        "Likely_benign|risk_factor",
-        "association_not_found",
-        "protective",
-        "protective|risk_factor",
-    ]
-
+    "Affects",
+    "Affects|association",
+    "Affects|risk_factor",
+    "Benign",
+    "Benign/Likely_benign",
+    "Benign/Likely_benign|association",
+    "Benign/Likely_benign|drug_response",
+    "Benign/Likely_benign|drug_response|other",
+    "Benign/Likely_benign|other",
+    "Benign/Likely_benign|other|risk_factor",
+    "Benign/Likely_benign|risk_factor",
+    "Benign|association",
+    "Benign|association|confers_sensitivity",
+    "Benign|confers_sensitivity",
+    "Benign|drug_response",
+    "Benign|other",
+    "Benign|protective",
+    "Benign|risk_factor",
+    "Likely_benign",
+    "Likely_benign|drug_response|other",
+    "Likely_benign|other",
+    "Likely_benign|risk_factor",
+    "association_not_found",
+    "protective",
+    "protective|risk_factor",
+    "",
+]
 
 
 def read_maf(file: str) -> pd.DataFrame:
@@ -93,8 +93,6 @@ def write_annovar_db_from_cancervar(file: str, outfile: str):
 #         assert len(left.index) == len(right.index)
 #         result = pd.concat([left.reset_index(drop=True), right.reset_index(drop=True)], axis=1)
 
-
-    
 
 def assign_escat(
     maf: pd.DataFrame, escat: pd.DataFrame, tissue: str = None

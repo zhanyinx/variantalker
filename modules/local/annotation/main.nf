@@ -198,7 +198,9 @@ process somatic_annotate_snp_indel{
             -o tmp \
             -t ${tumor_type} \
             -p ${params.projectid} \
-            -d ${params.date}
+            -d ${params.date} \
+            -md ${params.filter_min_depth} \
+            -vt ${params.filter_vaf_threshold}
         
         if ! [ -f ${patient}.small_mutations.cancervar.escat.maf ]; then
             cp tmp ${patient}.small_mutations.cancervar.escat.maf
@@ -389,7 +391,9 @@ process germline_annotate_snp_indel{
             -o tmp \
             --germline \
             -p ${params.projectid} \
-            -d ${params.date}
+            -d ${params.date} \
+            -md ${params.filter_min_depth} \
+            -vtg ${params.filter_vaf_threshold_germline}
         
         if ! [ -f ${patient}.small_mutations.intervar.escat.maf ]; then
             cp tmp ${patient}.small_mutations.intervar.escat.maf
