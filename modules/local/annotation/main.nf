@@ -200,7 +200,9 @@ process somatic_annotate_snp_indel{
             -p ${params.projectid} \
             -d ${params.date} \
             -md ${params.filter_min_depth} \
-            -vt ${params.filter_vaf_threshold}
+            -vt ${params.filter_vaf_threshold} \
+            --filter_cancervar "${params.filter_cancervar}" \
+            --filter_genes_somatic ${params.filter_genes_somatic}
         
         if ! [ -f ${patient}.small_mutations.cancervar.escat.maf ]; then
             cp tmp ${patient}.small_mutations.cancervar.escat.maf
@@ -393,7 +395,8 @@ process germline_annotate_snp_indel{
             -p ${params.projectid} \
             -d ${params.date} \
             -md ${params.filter_min_depth} \
-            -vtg ${params.filter_vaf_threshold_germline}
+            -vtg ${params.filter_vaf_threshold_germline} \
+            --filter_genes_germline ${params.filter_genes_germline}
         
         if ! [ -f ${patient}.small_mutations.intervar.escat.maf ]; then
             cp tmp ${patient}.small_mutations.intervar.escat.maf
@@ -442,6 +445,8 @@ process germline_renovo_annotation{
         add_renovo_to_maf.py -m ${maf} \
          -r ReNOVo_output/${vcf.baseName}_ReNOVo_and_ANNOVAR_implemented.txt \
          --filtered_maf ${filtered_maf} \
-         -o ${maf.baseName}.renovo.maf 
+         -o ${maf.baseName}.renovo.maf \
+         --filter_intervar "${params.filter_intervar}" \
+         --filter_renovo "${params.filter_renovo}"
     """
 }

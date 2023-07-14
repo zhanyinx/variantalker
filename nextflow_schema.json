@@ -222,19 +222,51 @@
                     "type": "number",
                     "description": "min depth to keep variant in the filtered output file",
                     "default": 50,
-                    "fa_icon": "fas fa-number-mindepth-db"
+                    "fa_icon": "fas fa-number-mindepth-filter"
                 },
                 "filter_vaf_threshold": {
                     "type": "number",
                     "description": "min somatic variant allele frequency to keep the variant in the filtered variant output file",
                     "default": 0.01,
-                    "fa_icon": "fas fa-number-minvaf-db"
+                    "fa_icon": "fas fa-number-minvaf-filter"
                 },
                 "filter_vaf_threshold_germline": {
                     "type": "number",
                     "description": "min germline variant allele frequency to keep the variant in the filtered variant output file",
                     "default": 0.2,
-                    "fa_icon": "fas fa-number-minvafg-db"
+                    "fa_icon": "fas fa-number-minvafg-db-filter"
+                },
+                "filter_intervar": {
+                    "type": "string",
+                    "description": "comma separated list of intervar classes to keep",
+                    "default": "Pathogenic,Likely pathogenic",
+                    "fa_icon": "fas fa-string-intervar-filter"
+                },
+                "filter_cancervar": {
+                    "type": "string",
+                    "description": "comma separated list of cancervar classes to keep",
+                    "default": "Tier_II_potential,Tier_I_strong",
+                    "fa_icon": "fas fa-string-cancervar-filter"
+                },
+                "filter_renovo": {
+                    "type": "string",
+                    "description": "comma separated list of renovo classes to keep",
+                    "default": "LP Pathogenic,IP Pathogenic,HP Pathogenic",
+                    "fa_icon": "fas fa-string-renovo-filter"
+                },
+                "filter_genes_somatic": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "file with list of Hugo_Symbol genes to be kept",
+                    "default": null,
+                    "fa_icon": "fas fa-string-filegenesomatic-filter"
+                },
+                "filter_genes_germline": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "file with list of Hugo_Symbol genes to be kept",
+                    "default": null,
+                    "fa_icon": "fas fa-string-filegenegermline-filter"
                 }
             }
         },
@@ -523,6 +555,9 @@
         },
         {
             "$ref": "#/definitions/generic_options"
+        },
+        {
+            "$ref": "#/definitions/filtering"
         }
     ]
 }

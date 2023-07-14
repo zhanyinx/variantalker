@@ -27,8 +27,8 @@ def _parse_args():
         help="Cancervar file",
     )
     parser.add_argument(
-        "-cf",
-        "--cancervar_filter",
+        "-fc",
+        "--filter_cancervar",
         type=str,
         default="Tier_II_potential,Tier_I_strong",
         help="Cancervar filters, available: Tier_II_potential,Tier_I_strong,Tier_III_Uncertain,Tier_IV_benign",
@@ -107,6 +107,20 @@ def _parse_args():
         default=0.2,
         help="VAF threshold for normal, default 0.2",
     )
+    parser.add_argument(
+        "-fgs",
+        "--filter_genes_somatic",
+        type=str,
+        default="null",
+        help="file with list of Hugo_Symbol genes to be kept.",
+    )
+    parser.add_argument(
+        "-fgg",
+        "--filter_genes_germline",
+        type=str,
+        default="null",
+        help="file with list of Hugo_Symbol genes to be kept.",
+    )
     args = parser.parse_args()
     return args
 
@@ -147,6 +161,7 @@ def main():
 
     writeheader(args.maf, args.output)
     write_annovar_db_from_cancervar(args.config, args.output)
+    write_metadata2file(f"Somatic and germline filters arguments: {args}", args.output)
 
     # merge table based on mutation position, reference and alternative
 
@@ -292,7 +307,7 @@ def main():
     out = out[(out["t_alt_count"] + out["t_ref_count"]) >= args.min_depth]
 
     # filter cancervar/intervar clinvar escat
-    cancervar_keep = ["Tier_II_potential", "Tier_I_strong"]
+    cancervar_keep = args.filter_cancervar.split(",")
     clinvar_exclude = CLINVAR_EXCLUDE
     escat_exclude = [
         "IIIA",
@@ -305,7 +320,10 @@ def main():
     if not args.germline:
         out = out[
             (out["CancerVar"].isin(cancervar_keep))
-            | (~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude))
+            | (
+                ~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude)
+                & (~out["ClinVar_VCF_CLNSIG"].isna())
+            )
             | (~(out["ESCAT"].isin(escat_exclude)))
         ]
 
@@ -313,6 +331,18 @@ def main():
         out = out[(out["tumor_f"] > args.vaf_threshold_germline)]
     else:
         out = out[(out["tumor_f"] > args.vaf_threshold)]
+
+    # filter list if defined
+    if args.filter_genes_somatic != "null" or args.filter_genes_germline != "null":
+        filter_genes_file = args.filter_genes_somatic
+        if args.germline:
+            filter_genes_file = args.filter_genes_germline
+
+        if os.path.exists(filter_genes_file):
+            genes = pd.read_csv(filter_genes_file, header=None)
+            out = out[out["Hugo_Symbol"].str.upper().isin(genes[0].str.upper().values)]
+        else:
+            Warning(f"{filter_genes_file} file does not exist.")
 
     if len(out):
         # filtering columns
