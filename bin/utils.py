@@ -5,33 +5,33 @@ import pandas as pd
 import pyranges
 
 CLINVAR_EXCLUDE = [
-        "Affects",
-        "Affects|association",
-        "Affects|risk_factor",
-        "Benign",
-        "Benign/Likely_benign",
-        "Benign/Likely_benign|association",
-        "Benign/Likely_benign|drug_response",
-        "Benign/Likely_benign|drug_response|other",
-        "Benign/Likely_benign|other",
-        "Benign/Likely_benign|other|risk_factor",
-        "Benign/Likely_benign|risk_factor",
-        "Benign|association",
-        "Benign|association|confers_sensitivity",
-        "Benign|confers_sensitivity",
-        "Benign|drug_response",
-        "Benign|other",
-        "Benign|protective",
-        "Benign|risk_factor",
-        "Likely_benign",
-        "Likely_benign|drug_response|other",
-        "Likely_benign|other",
-        "Likely_benign|risk_factor",
-        "association_not_found",
-        "protective",
-        "protective|risk_factor",
-    ]
-
+    "Affects",
+    "Affects|association",
+    "Affects|risk_factor",
+    "Benign",
+    "Benign/Likely_benign",
+    "Benign/Likely_benign|association",
+    "Benign/Likely_benign|drug_response",
+    "Benign/Likely_benign|drug_response|other",
+    "Benign/Likely_benign|other",
+    "Benign/Likely_benign|other|risk_factor",
+    "Benign/Likely_benign|risk_factor",
+    "Benign|association",
+    "Benign|association|confers_sensitivity",
+    "Benign|confers_sensitivity",
+    "Benign|drug_response",
+    "Benign|other",
+    "Benign|protective",
+    "Benign|risk_factor",
+    "Likely_benign",
+    "Likely_benign|drug_response|other",
+    "Likely_benign|other",
+    "Likely_benign|risk_factor",
+    "association_not_found",
+    "protective",
+    "protective|risk_factor",
+    "not_provided",
+]
 
 
 def read_maf(file: str) -> pd.DataFrame:
@@ -86,15 +86,12 @@ def write_annovar_db_from_cancervar(file: str, outfile: str):
     out.close()
 
 
-# def cbind_or_merge(left: pd.DataFrame, right: pd.DataFrame, left_on: list, right_on: list, bind: bool=False) -> pd.DataFrame:
-#     """Merge or bind columns between data frames if bind is true and number of rows is the same."""
+def write_metadata2file(text: str, outfile: str):
+    """Append text to file."""
+    out = open(outfile, "a")
+    out.write(f"## Extra metadata: {text} \n")
+    out.close()
 
-#     if bind:
-#         assert len(left.index) == len(right.index)
-#         result = pd.concat([left.reset_index(drop=True), right.reset_index(drop=True)], axis=1)
-
-
-    
 
 def assign_escat(
     maf: pd.DataFrame, escat: pd.DataFrame, tissue: str = None

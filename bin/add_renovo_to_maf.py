@@ -7,32 +7,34 @@ from numpy import append
 import pandas as pd
 
 CLINVAR_EXCLUDE = [
-        "Affects",
-        "Affects|association",
-        "Affects|risk_factor",
-        "Benign",
-        "Benign/Likely_benign",
-        "Benign/Likely_benign|association",
-        "Benign/Likely_benign|drug_response",
-        "Benign/Likely_benign|drug_response|other",
-        "Benign/Likely_benign|other",
-        "Benign/Likely_benign|other|risk_factor",
-        "Benign/Likely_benign|risk_factor",
-        "Benign|association",
-        "Benign|association|confers_sensitivity",
-        "Benign|confers_sensitivity",
-        "Benign|drug_response",
-        "Benign|other",
-        "Benign|protective",
-        "Benign|risk_factor",
-        "Likely_benign",
-        "Likely_benign|drug_response|other",
-        "Likely_benign|other",
-        "Likely_benign|risk_factor",
-        "association_not_found",
-        "protective",
-        "protective|risk_factor",
-    ]
+    "Affects",
+    "Affects|association",
+    "Affects|risk_factor",
+    "Benign",
+    "Benign/Likely_benign",
+    "Benign/Likely_benign|association",
+    "Benign/Likely_benign|drug_response",
+    "Benign/Likely_benign|drug_response|other",
+    "Benign/Likely_benign|other",
+    "Benign/Likely_benign|other|risk_factor",
+    "Benign/Likely_benign|risk_factor",
+    "Benign|association",
+    "Benign|association|confers_sensitivity",
+    "Benign|confers_sensitivity",
+    "Benign|drug_response",
+    "Benign|other",
+    "Benign|protective",
+    "Benign|risk_factor",
+    "Likely_benign",
+    "Likely_benign|drug_response|other",
+    "Likely_benign|other",
+    "Likely_benign|risk_factor",
+    "association_not_found",
+    "protective",
+    "protective|risk_factor",
+    "not_provided"
+]
+
 
 def _parse_args():
     """Parse command-line arguments."""
@@ -59,6 +61,20 @@ def _parse_args():
         default=None,
         required=True,
         help="Renovo output file",
+    )
+    parser.add_argument(
+        "-fi",
+        "--filter_intervar",
+        type=str,
+        default="Pathogenic,Likely pathogenic",
+        help="Intervar filters, available: Pathogenic,Likely pathogenic,Uncertain significance,Likely benign,Benign",
+    )
+    parser.add_argument(
+        "-fr",
+        "--filter_renovo",
+        type=str,
+        default="LP Pathogenic,IP Pathogenic,HP Pathogenic",
+        help="Intervar filters, available: LP Pathogenic,IP Pathogenic,HP Pathogenic,LP Benign,IP Benign,HP Benign",
     )
     parser.add_argument(
         "-o",
@@ -94,6 +110,13 @@ def writeheader(file: str, outfile: str):
     out.close()
 
 
+def write_metadata2file(text: str, outfile: str):
+    """Append text to file."""
+    out = open(outfile, "a")
+    out.write(f"## Extra metadata: {text} \n")
+    out.close()
+
+
 def main():
     """Merge cancervar and with the corresponding maf file."""
     # Parse input
@@ -111,6 +134,7 @@ def main():
     renovo.columns = ["Chr", "Start", "Ref", "Alt", "RENOVO_Class", "RENOVO_pls"]
 
     writeheader(args.maf, args.output)
+    write_metadata2file(f"Germline filters arguments: {args}", args.output)
 
     # merge table based on mutation position, reference and alternative
     out = pd.merge(
@@ -144,12 +168,15 @@ def main():
             ],
         )
         out = out.drop(["Chr", "Start", "Ref", "Alt"], axis=1)
-        intervar_keep = ["Pathogenic", "Likely pathogenic"]
+        intervar_keep = args.filter_intervar.split(",")
         clinvar_exclude = CLINVAR_EXCLUDE
-        renovo_keep = ["LP Pathogenic", "IP Pathogenic", "HP Pathogenic"]
+        renovo_keep = args.filter_renovo.split(",")
         out = out[
             (out["InterVar"].isin(intervar_keep))
-            | (~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude))
+            | (
+                ~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude)
+                & (~out["ClinVar_VCF_CLNSIG"].isna())
+            )
             | (out["RENOVO_Class"].isin(renovo_keep))
         ]
 

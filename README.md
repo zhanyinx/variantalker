@@ -139,6 +139,16 @@ Default filters applied:
 
 - "Silent", "Intron", "3'UTR", "5'UTR", "IGR", "5'Flank", "3'Flank", "RNA" variant types are filtered out
 
--  pathogenic, likely pathogenic, uncertain in any of InterVar, CancerVar or clinvar are kept. For somatic samples also variants with ESCAT tier I and II are kept.
+- minimum coverage 50
 
-- variants with variant allele frequency smaller than 0.01 (somatic) and 0.2 (germline) are filtered out
+- minimum somatic VAF: 0.01
+
+- minimum germline VAF: 0.2
+
+- InterVar classes to be kept: Pathogenic,Likely pathogenic
+
+- CancerVar classes to be kept: Tier_II_potential,Tier_I_strong
+
+- ReNOVo class to be kept: LP Pathogenic,IP Pathogenic,HP Pathogenic
+
+- no filters on genes (somatic or germline)
