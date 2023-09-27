@@ -97,6 +97,11 @@ process somatic_annotate_snp_indel{
     zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${patient}.vcf
 
     awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}' ${patient}.vcf
+
+    # funcotator reads without start coordinate: format (start,end]
+    awk -F'\\t' '{print \$1,\$2-1,\$3+1}' ${params.target} > tmp.target.funcotator.bed
+    
+
     for file in `ls tmp_*vcf`; do
         cat header \$file > file.vcf
         bgzip -c file.vcf > file.vcf.gz
@@ -104,7 +109,7 @@ process somatic_annotate_snp_indel{
 
         # GATK funcotator
         # gatk Funcotator \
-        #    -L ${params.target} \
+        #    -L tmp.target.funcotator.bed \
         #    -R ${params.fasta} \
         #    -V file.vcf.gz \
         #    -O ${patient}.maf \
@@ -123,7 +128,7 @@ process somatic_annotate_snp_indel{
         do
             # GATK funcotator
             gatk Funcotator \
-                -L ${params.target} \
+                -L tmp.target.funcotator.bed \
                 -R ${params.fasta} \
                 -V file.vcf.gz \
                 -O ${patient}.maf \
@@ -300,6 +305,7 @@ process germline_annotate_snp_indel{
     zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${patient}.vcf
 
     cat ${patient}.vcf | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
+    awk -F'\\t' '{print \$1,\$2-1,\$3+1}' ${params.target} > tmp.target.funcotator.bed
     
     for file in `ls tmp_*vcf`; do
         cat header \$file > file.vcf
@@ -308,7 +314,7 @@ process germline_annotate_snp_indel{
 
         # # GATK funcotator
         # gatk Funcotator \
-        #     -L ${params.target} \
+        #     -L tmp.target.funcotator.bed \
         #     -R ${params.fasta} \
         #     -V file.vcf.gz \
         #     -O ${patient}.maf \
@@ -324,7 +330,7 @@ process germline_annotate_snp_indel{
         do
             # GATK funcotator
             gatk Funcotator \
-                -L ${params.target} \
+                -L tmp.target.funcotator.bed \
                 -R ${params.fasta} \
                 -V file.vcf.gz \
                 -O ${patient}.maf \

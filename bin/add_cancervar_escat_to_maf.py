@@ -203,6 +203,7 @@ def main():
     ).drop(["Chr", "Start", "Ref", "Alt"], axis=1)
 
     # recalculate tumor frequency when not present
+    out = out[(out["t_alt_count"] + out["t_ref_count"]) > 0]
     out["tumor_f"] = out["t_alt_count"] / (out["t_alt_count"] + out["t_ref_count"])
 
     # add project id and tumor tissue
