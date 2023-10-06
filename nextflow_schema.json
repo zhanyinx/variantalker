@@ -208,6 +208,24 @@
                     "format": "directory-path",
                     "description": "Path to the folder containing funcotator germline databases",
                     "fa_icon": "fas fa-folder-anno-db"
+                },
+                "transcript_selection": {
+                    "type": "string",
+                    "description": "Transcript selection mode.",
+                    "default": "BEST_EFFECT",
+                    "fa_icon": "fas fa-folder-transcript-sel"
+                },
+                "funcotator_target": {
+                    "type": "string",
+                    "description": "target file for funcotator. Keep it null if variant calling has been done with target file.",
+                    "default": null,
+                    "fa_icon": "fas fa-folder-funcotator-target"
+                },
+                "target_padding": {
+                    "type": "number",
+                    "description": "Padding of the target region to avoid problems with 0 or 1 starting bins",
+                    "default": 2,
+                    "fa_icon": "fas fa-folder-target-padding"
                 }
             }
         },
