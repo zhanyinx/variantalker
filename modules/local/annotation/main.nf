@@ -98,10 +98,6 @@ process somatic_annotate_snp_indel{
 
     awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}' ${patient}.vcf
 
-    # funcotator reads without start coordinate: format (start,end]
-    awk -F'\\t' '{print \$1,\$2-1,\$3+1}' ${params.target} > tmp.target.funcotator.bed
-    
-
     for file in `ls tmp_*vcf`; do
         cat header \$file > file.vcf
         bgzip -c file.vcf > file.vcf.gz
@@ -109,7 +105,7 @@ process somatic_annotate_snp_indel{
 
         # GATK funcotator
         # gatk Funcotator \
-        #    -L tmp.target.funcotator.bed \
+        #    -L ${params.funcotator_target} \
         #    -R ${params.fasta} \
         #    -V file.vcf.gz \
         #    -O ${patient}.maf \
@@ -119,8 +115,9 @@ process somatic_annotate_snp_indel{
         #    --remove-filtered-variants true \
         #    --output-file-format MAF \
         #    --data-sources-path ${params.funcotator_somatic_db}\
-        #    --ref-version ${params.build}
-        #    --transcript-selection-mode BEST_EFFECT
+        #    --ref-version ${params.build} \
+        #    --transcript-selection-mode ${params.transcript_selection} \
+        #    --interval-padding ${params.target_padding}
 
         
         check=1
@@ -128,7 +125,7 @@ process somatic_annotate_snp_indel{
         do
             # GATK funcotator
             gatk Funcotator \
-                -L tmp.target.funcotator.bed \
+                -L ${params.funcotator_target} \
                 -R ${params.fasta} \
                 -V file.vcf.gz \
                 -O ${patient}.maf \
@@ -139,7 +136,8 @@ process somatic_annotate_snp_indel{
                 --output-file-format MAF \
                 --data-sources-path ${params.funcotator_somatic_db}\
                 --ref-version ${params.build} \
-                --transcript-selection-mode BEST_EFFECT
+                --transcript-selection-mode ${params.transcript_selection} \
+                --interval-padding ${params.target_padding}
 
             check=\$?
             if [[ \$check -ne 0 ]]; then
@@ -305,7 +303,6 @@ process germline_annotate_snp_indel{
     zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${patient}.vcf
 
     cat ${patient}.vcf | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
-    awk -F'\\t' '{print \$1,\$2-1,\$3+1}' ${params.target} > tmp.target.funcotator.bed
     
     for file in `ls tmp_*vcf`; do
         cat header \$file > file.vcf
@@ -314,7 +311,7 @@ process germline_annotate_snp_indel{
 
         # # GATK funcotator
         # gatk Funcotator \
-        #     -L tmp.target.funcotator.bed \
+        #     -L ${params.funcotator_target} \
         #     -R ${params.fasta} \
         #     -V file.vcf.gz \
         #     -O ${patient}.maf \
@@ -322,15 +319,16 @@ process germline_annotate_snp_indel{
         #     --remove-filtered-variants true \
         #     --output-file-format MAF \
         #     --data-sources-path ${params.funcotator_germline_db} \
-        #     --ref-version ${params.build}
-        #     --transcript-selection-mode BEST_EFFECT
+        #     --ref-version ${params.build} \
+        #     --transcript-selection-mode ${params.transcript_selection} \
+        #     --interval-padding ${params.target_padding}
 
         check=1
         while [[ \$check -ne 0 ]]
         do
             # GATK funcotator
             gatk Funcotator \
-                -L tmp.target.funcotator.bed \
+                -L ${params.funcotator_target} \
                 -R ${params.fasta} \
                 -V file.vcf.gz \
                 -O ${patient}.maf \
@@ -339,7 +337,8 @@ process germline_annotate_snp_indel{
                 --output-file-format MAF \
                 --data-sources-path ${params.funcotator_germline_db}\
                 --ref-version ${params.build} \
-                --transcript-selection-mode BEST_EFFECT
+                --transcript-selection-mode ${params.transcript_selection} \
+                --interval-padding ${params.target_padding}
 
             check=\$?
             if [[ \$check -ne 0 ]]; then
