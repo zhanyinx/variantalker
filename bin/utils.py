@@ -2,7 +2,6 @@
 
 import numpy as np
 import pandas as pd
-import pyranges
 
 CLINVAR_EXCLUDE = [
     "Affects",
@@ -180,27 +179,3 @@ def assign_escat(
 
                 continue
     return maf
-
-
-def calculate_nmd(out, gr_nmd, filter_variant_type, filter_variant_classification):
-    if filter_variant_classification:
-        maf_gr = out[
-            (out["Variant_Type"].isin(filter_variant_type))
-            & (out["Variant_Classification"].isin(filter_variant_classification))
-        ][["Chromosome", "Start_Position", "End_Position"]]
-    else:
-        maf_gr = out[(out["Variant_Type"].isin(filter_variant_type))][
-            ["Chromosome", "Start_Position", "End_Position"]
-        ]
-    if len(maf_gr):
-        maf_gr.columns = ["Chromosome", "Start", "End"]
-        maf_gr = pyranges.PyRanges(df=maf_gr)
-        tmb_nmd_escapees = np.sum(
-            pyranges.count_overlaps(
-                grs={"nmd": gr_nmd}, how="containment", features=maf_gr
-            ).nmd
-            != 0
-        )
-        return tmb_nmd_escapees
-
-    return 0.0
