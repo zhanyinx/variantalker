@@ -89,7 +89,8 @@ process somatic_annotate_snp_indel{
         tuple val(patient), val(tumor_type), file(vcf), file(index)
     output:
         file("${patient}.small_mutations.cancervar.escat.maf")
-        file("filtered.${patient}.small_mutations.cancervar.escat.maf.tsv")
+        file("filtered.${patient}.small_mutations.cancervar.escat.maf.nopass.tsv")
+        file("filtered.${patient}.small_mutations.cancervar.escat.maf.pass.tsv")
     script:
     """
     normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
@@ -195,17 +196,13 @@ process somatic_annotate_snp_indel{
         else
             cancervar_file="\$(ls cancervar.${vcf.simpleName}*.${params.build}_multianno.txt.cancervar)"
         fi
-        add_cancervar_escat_to_maf.py -m ${patient}.maf \
+        add_guidelines_and_escat_to_maf.py -m ${patient}.maf \
             -c \${cancervar_file} \
             -cc config.init \
             -o tmp \
             -t ${tumor_type} \
             -p ${params.projectid} \
-            -d ${params.date} \
-            -md ${params.filter_min_depth} \
-            -vt ${params.filter_vaf_threshold} \
-            --filter_cancervar "${params.filter_cancervar}" \
-            --filter_genes_somatic ${params.filter_genes_somatic}
+            -d ${params.date} 
         
         if ! [ -f ${patient}.small_mutations.cancervar.escat.maf ]; then
             cp tmp ${patient}.small_mutations.cancervar.escat.maf
@@ -213,21 +210,15 @@ process somatic_annotate_snp_indel{
             awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${patient}.small_mutations.cancervar.escat.maf
         fi
 
-        if ! [ -f filtered.${patient}.small_mutations.cancervar.escat.maf.tsv ]; then
-            mytest=`awk 'BEGIN{getline; bool=-1; if(!(\$0 ~/EMPTY/)) bool=1; print bool}' filtered.tmp.tsv`
-            if [ \$mytest -eq 1 ]; then
-                cp filtered.tmp.tsv filtered.${patient}.small_mutations.cancervar.escat.maf.tsv
-            fi
-        else
-            awk '{if((!(\$0 ~/Hugo_Symbol/) && !(\$0 ~/EMPTY/))) print \$0}' >> filtered.${patient}.small_mutations.cancervar.escat.maf.tsv
-        fi
-
-
     done
-
-    if ! [ -f filtered.${patient}.small_mutations.cancervar.escat.maf.tsv ]; then
-        echo "No variant passing filters!" > filtered.${patient}.small_mutations.cancervar.escat.maf.tsv
-    fi
+    mv ${patient}.small_mutations.cancervar.escat.maf tmp.maf 
+    filter_variants.py -m tmp.maf \
+         -o ${patient}.small_mutations.cancervar.escat.maf \
+         --somatic \
+         -md ${params.filter_min_depth} \
+         -vt ${params.filter_vaf_threshold} \
+         --filter_cancervar "${params.filter_cancervar}" \
+         --filter_genes_somatic ${params.filter_genes_somatic}
     """
 }
 
@@ -297,7 +288,7 @@ process germline_annotate_snp_indel{
     input:
         tuple val(patient), file(vcf), file(index) 
     output:
-        tuple file("${patient}.small_mutations.intervar.escat.maf"), file("filtered.${patient}.small_mutations.intervar.escat.maf.tsv"), file("${patient}.vcf")
+        tuple file("${patient}.small_mutations.intervar.escat.maf"), file("${patient}.vcf")
     script:
     """
     zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${patient}.vcf
@@ -392,16 +383,13 @@ process germline_annotate_snp_indel{
         # merge intervar and funcotator
         # intervarfile="\$(ls intervar.${vcf.simpleName}*.${params.build}_multianno.txt.intervar)"
         intervarfile="intervar.${params.build}_multianno.txt.intervar"
-        add_cancervar_escat_to_maf.py -m ${patient}.maf \
+        add_guidelines_and_escat_to_maf.py -m ${patient}.maf \
             -c \${intervarfile} \
             -cc config.init \
             -o tmp \
-            --germline \
             -p ${params.projectid} \
             -d ${params.date} \
-            -md ${params.filter_min_depth} \
-            -vtg ${params.filter_vaf_threshold_germline} \
-            --filter_genes_germline ${params.filter_genes_germline}
+            --germline
         
         if ! [ -f ${patient}.small_mutations.intervar.escat.maf ]; then
             cp tmp ${patient}.small_mutations.intervar.escat.maf
@@ -409,19 +397,7 @@ process germline_annotate_snp_indel{
             awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${patient}.small_mutations.intervar.escat.maf
         fi
 
-        if ! [ -f filtered.${patient}.small_mutations.intervar.escat.maf.tsv ]; then
-            mytest=`awk 'BEGIN{getline; bool=-1; if(!(\$0 ~/EMPTY/)) bool=1; print bool}' filtered.tmp.tsv`
-            if [ \$mytest -eq 1 ]; then
-                cp filtered.tmp.tsv filtered.${patient}.small_mutations.intervar.escat.maf.tsv
-            fi
-        else
-            awk '{if((!(\$0 ~/Hugo_Symbol/) && !(\$0 ~/EMPTY/))) print \$0}' >> filtered.${patient}.small_mutations.intervar.escat.maf.tsv
-        fi
     done
-
-    if ! [ -f filtered.${patient}.small_mutations.intervar.escat.maf.tsv ]; then
-        echo "No variant passing filters!" > filtered.${patient}.small_mutations.intervar.escat.maf.tsv
-    fi
     """
 }
 
@@ -436,10 +412,11 @@ process germline_renovo_annotation{
     tag "vcf2maf"
 
     input:
-        tuple file(maf), file(filtered_maf), file(vcf) 
+        tuple file(maf), file(vcf) 
     output:
         file("${maf.baseName}.renovo.maf")
-        file("filtered.${maf.baseName}.renovo.maf.tsv")
+        file("filtered.${maf.baseName}.renovo.maf.pass.tsv")
+        file("filtered.${maf.baseName}.renovo.maf.nopass.tsv")
     script:
     """
         python ${params.renovo_path}/ReNOVo.py \
@@ -449,9 +426,16 @@ process germline_renovo_annotation{
         
         add_renovo_to_maf.py -m ${maf} \
          -r ReNOVo_output/${vcf.baseName}_ReNOVo_and_ANNOVAR_implemented.txt \
-         --filtered_maf ${filtered_maf} \
+         -o ${maf.baseName}
+
+        filter_variants.py -m ${maf.baseName} \
          -o ${maf.baseName}.renovo.maf \
          --filter_intervar "${params.filter_intervar}" \
-         --filter_renovo "${params.filter_renovo}"
+         --filter_renovo "${params.filter_renovo}" \
+         --germline \
+         -md ${params.filter_min_depth} \
+         -vtg ${params.filter_vaf_threshold_germline} \
+         --filter_genes_germline ${params.filter_genes_germline}
+
     """
 }
