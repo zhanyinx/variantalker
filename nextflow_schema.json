@@ -285,6 +285,13 @@
                     "description": "file with list of Hugo_Symbol genes to be kept",
                     "default": null,
                     "fa_icon": "fas fa-string-filegenegermline-filter"
+                },
+                "filter_var_classification": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Filter on variant classification. Available options can be found in Variant Classification here: https://gatk.broadinstitute.org/hc/en-us/articles/360035531732-Funcotator-Annotation-Specifications",
+                    "default": "Silent,Intron,3'UTR,5'UTR,IGR,5'Flank,3'Flank,RNA",
+                    "fa_icon": "fas fa-string-vclass-filter"
                 }
             }
         },

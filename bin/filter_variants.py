@@ -69,6 +69,13 @@ def _parse_args():
         help="Minimum coverage to keep the variant. Default 50.",
     )
     parser.add_argument(
+        "-fvc",
+        "--filter_variant_classification",
+        type=str,
+        default="Silent,Intron,3'UTR,5'UTR,IGR,5'Flank,3'Flank,RNA",
+        help="Available options can be found in Variant Classification here: https://gatk.broadinstitute.org/hc/en-us/articles/360035531732-Funcotator-Annotation-Specifications",
+    )
+    parser.add_argument(
         "-vt",
         "--vaf_threshold",
         type=float,
@@ -100,19 +107,12 @@ def _parse_args():
     return args
 
 
-def common_filters(maf: pd.DataFrame, coverage: float) -> pd.DataFrame:
+def common_filters(
+    maf: pd.DataFrame, coverage: float, variant_classification_filter: list
+) -> pd.DataFrame:
     """Set of common filters."""
     # filter variants
-    filter_variant_classifications = [
-        "Silent",
-        "Intron",
-        "3'UTR",
-        "5'UTR",
-        "IGR",
-        "5'Flank",
-        "3'Flank",
-        "RNA",
-    ]
+    filter_variant_classifications = variant_classification_filter
     return (~maf["Variant_Classification"].isin(filter_variant_classifications)) & (
         (maf["t_alt_count"] + maf["t_ref_count"]) >= coverage
     )
@@ -207,7 +207,12 @@ def main():
         raise ValueError(f"Maf file {args.maf} does not exist!")
 
     out = read_maf(args.maf)
-    out["filter_common"] = common_filters(out, coverage=args.min_depth)
+    variant_classification_filter = args.filter_variant_classification.split(",")
+    out["filter_common"] = common_filters(
+        out,
+        coverage=args.min_depth,
+        variant_classification_filter=variant_classification_filter,
+    )
 
     if args.somatic:
         cancervar_keep = args.filter_cancervar.split(",")
@@ -250,6 +255,7 @@ def main():
         "Reference_Allele",
         "Tumor_Seq_Allele1",
         "Tumor_Seq_Allele2",
+        "AAChange.refGene",
         "cDNA_Change",
         "Codon_Change",
         "Protein_Change",

@@ -218,7 +218,8 @@ process somatic_annotate_snp_indel{
          -md ${params.filter_min_depth} \
          -vt ${params.filter_vaf_threshold} \
          --filter_cancervar "${params.filter_cancervar}" \
-         --filter_genes_somatic ${params.filter_genes_somatic}
+         --filter_genes_somatic ${params.filter_genes_somatic} \
+         --filter_variant_classification "${params.filter_var_classification}"
     """
 }
 
@@ -435,7 +436,8 @@ process germline_renovo_annotation{
          --germline \
          -md ${params.filter_min_depth} \
          -vtg ${params.filter_vaf_threshold_germline} \
-         --filter_genes_germline ${params.filter_genes_germline}
+         --filter_genes_germline ${params.filter_genes_germline} \
+         --filter_variant_classification "${params.filter_var_classification}"
 
     """
 }
