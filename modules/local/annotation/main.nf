@@ -289,7 +289,7 @@ process germline_annotate_snp_indel{
     input:
         tuple val(patient), file(vcf), file(index) 
     output:
-        tuple file("${patient}.small_mutations.intervar.escat.maf"), file("${patient}.vcf")
+        tuple val(patient), file("${patient}.small_mutations.intervar.escat.maf"), file("${patient}.vcf")
     script:
     """
     zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${patient}.vcf
@@ -413,7 +413,7 @@ process germline_renovo_annotation{
     tag "vcf2maf"
 
     input:
-        tuple file(maf), file(vcf) 
+        tuple val(patient), file(maf), file(vcf) 
     output:
         file("${maf.baseName}.renovo.maf")
         file("filtered.${maf.baseName}.renovo.maf.pass.tsv")
@@ -441,3 +441,4 @@ process germline_renovo_annotation{
 
     """
 }
+
