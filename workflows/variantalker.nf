@@ -28,7 +28,7 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include {fixvcf; rename_somatic_vcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation} from '../modules/local/annotation/main.nf'
+include {fixvcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation} from '../modules/local/annotation/main.nf'
 include {cnvkit_call; annotate_cnv} from '../modules/local/cnv/main.nf'
 
 // extract channels from input annotation sample sheet 
@@ -65,10 +65,16 @@ def extract_csv(csv_file, sample_type) {
         }
         .filter { row -> row != null }
         .map { row ->
+            def meta = [:]
+
+            meta.tumor_tissue = row.tumor_tissue
+            meta.patient = row.patient
+            meta.sample_type = row.sample_type
+
             if(sample_type == "somatic"){
-                [row.patient, row.tumor_tissue, row.sample_file]
+                return [ meta, row.sample_file ]
             }else{
-                [row.patient, row.sample_file]
+                return [ meta, row.sample_file ]
             }
         }
 }
@@ -81,8 +87,7 @@ workflow VARIANTALKER{
 
     // Workflow for snp and indel variant annotation
     fixvcf(ch_somatic)
-    rename_somatic_vcf(fixvcf.out)
-    somatic_annotate_snp_indel(rename_somatic_vcf.out)
+    somatic_annotate_snp_indel(fixvcf.out)
 
     if (params.pipeline.toUpperCase() == "SAREK") {
         filter_variants(ch_germline)

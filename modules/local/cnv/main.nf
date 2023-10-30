@@ -4,31 +4,31 @@ process cnvkit_call{
     memory "5 G"
 
     input:
-        tuple val(patient), path(cnr)
+        tuple val(meta), path(cnr)
 
     output:
-        tuple val(patient), path("${patient}.call.cnv")
+        tuple val(meta), path("${meta.patient}.call.cnv")
     script:
         if(!params.cnvkit_cellularity || params.cnvkit_cellularity.isEmpty())
         """
-        cnvkit.py call ${cnr} --drop-low-coverage -m threshold --t=${params.cnvkit_threshold} -o ${patient}.call.cnv
+        cnvkit.py call ${cnr} --drop-low-coverage -m threshold --t=${params.cnvkit_threshold} -o ${meta.patient}.call.cnv
         """
         else
         """
-        cnvkit.py call ${cnr} -y -m clonal --purity ${params.cnvkit_cellularity} -o ${patient}.call.cnv
+        cnvkit.py call ${cnr} -y -m clonal --purity ${params.cnvkit_cellularity} -o ${meta.patient}.call.cnv
         """
 }
 
 process annotate_cnv {
     cpus 5
     memory "5 G"
-    publishDir "${params.output}/${params.date}/annotation/somatic/${patient}", mode: "copy"
+    publishDir "${params.output}/${params.date}/annotation/somatic/${meta.patient}", mode: "copy"
     // publishDir "${params.output}/${params.date}/${input.simpleName}/annotation/somatic/", mode: "copy"
 
     input:
-        tuple val(patient), path(input)
+        tuple val(meta), path(input)
     output:
-        file("${patient}.cnv.annotated.tsv")
+        file("${meta.patient}.cnv.annotated.tsv")
     script:
     if (params.pipeline.toUpperCase() == "DRAGEN")
         """
@@ -45,7 +45,7 @@ process annotate_cnv {
         mv appo \$name
         sed -i 's/ /\\t/g' \$name
         python ${params.classifyCNV_folder}/ClassifyCNV.py --infile \$name --GenomeBuild ${params.build} --cores 5 --outdir tmp
-        mv tmp/Scoresheet.txt ${patient}.cnv.annotated.tsv
+        mv tmp/Scoresheet.txt ${meta.patient}.cnv.annotated.tsv
 
         """
     else if (params.pipeline.toUpperCase() == "SAREK")
@@ -53,6 +53,6 @@ process annotate_cnv {
         awk 'BEGIN{getline;}{if(\$4!="Antitarget"){if(\$6>3) print  \$1, \$2,\$3, "DUP"; if(\$6<1) print \$1, \$2,\$3, "DEL"}}' ${input} > appo
         sed -i 's/ /\\t/g' appo
         python ${params.classifyCNV_folder}/ClassifyCNV.py --infile appo --GenomeBuild ${params.build} --cores 5 --outdir tmp
-        mv tmp/Scoresheet.txt ${patient}.cnv.annotated.tsv
+        mv tmp/Scoresheet.txt ${meta.patient}.cnv.annotated.tsv
         """
 }
