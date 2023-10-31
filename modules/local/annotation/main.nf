@@ -1,5 +1,37 @@
 // List of functions and processes used to annotate snp and indel from whole exome sequences
 
+
+// filter maf file
+process filter_maf{
+    cpus 1
+    errorStrategy 'retry'
+    maxRetries = 2
+    memory { 1.GB * task.attempt }
+    publishDir "${params.output}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
+    tag "filtermaf"
+
+    input:
+        tuple val(meta), file(maf), file(vcf)
+    output:
+        tuple val(meta), file("${meta.patient}.maf"), file("${meta.patient}.vcf")
+        tuple file("filtered*.pass.tsv"), file("filtered*.nopass.tsv")
+    script:
+    """
+        filter_variants.py -m ${maf} \
+         -o ${meta.patient}.maf \
+         --filter_intervar "${params.filter_intervar}" \
+         --filter_renovo "${params.filter_renovo}" \
+         --sample_type ${meta.sample_type} \
+         -md ${params.filter_min_depth} \
+         -vtg ${params.filter_vaf_threshold_germline} \
+         --filter_genes_germline ${params.filter_genes_germline} \
+         --filter_variant_classification "${params.filter_var_classification}"
+
+    """
+    
+}
+
+// *************************************************************** For germline mutation annotation ***************************************************************
 // fix vcf header in case of dragen vcf, remove split multi allelic and remove 0 af multi allelic from ION 
 process fixvcf{
     cpus 1
@@ -63,15 +95,15 @@ process somatic_annotate_snp_indel{
     errorStrategy 'retry'
     maxRetries = 3
     memory { 8.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/annotation/somatic/${meta.patient}", mode: "copy"
+    //publishDir "${params.output}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy", pattern: "*.vcf"
     // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/somatic/", mode: "copy"
     tag "vcf2maf"
 
     input:
         tuple val(meta), file(vcf), file(index)
     output:
-        tuple val(meta), file("${meta.patient}.small_mutations.cancervar.escat.maf")
-        tuple val(meta), file("filtered.${meta.patient}.small_mutations.cancervar.escat.maf.nopass.tsv"), file("filtered.${meta.patient}.small_mutations.cancervar.escat.maf.pass.tsv")
+        tuple val(meta), file("${meta.patient}.small_mutations.cancervar.escat.maf"), file("${meta.patient}.vcf")
+        //tuple val(meta), file("filtered.${meta.patient}.small_mutations.cancervar.escat.maf.nopass.tsv"), file("filtered.${meta.patient}.small_mutations.cancervar.escat.maf.pass.tsv")
     script:
     """
     normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
@@ -192,20 +224,11 @@ process somatic_annotate_snp_indel{
         fi
 
     done
-    mv ${meta.patient}.small_mutations.cancervar.escat.maf tmp.maf 
-    filter_variants.py -m tmp.maf \
-         -o ${meta.patient}.small_mutations.cancervar.escat.maf \
-         --somatic \
-         -md ${params.filter_min_depth} \
-         -vt ${params.filter_vaf_threshold} \
-         --filter_cancervar "${params.filter_cancervar}" \
-         --filter_genes_somatic ${params.filter_genes_somatic} \
-         --filter_variant_classification "${params.filter_var_classification}"
     """
 }
 
 
-// For germline mutation annotation 
+// *************************************************************** For germline mutation annotation ***************************************************************
 
 process filter_variants {
     cpus 1
@@ -263,8 +286,7 @@ process germline_annotate_snp_indel{
     errorStrategy 'retry'
     maxRetries = 3
     memory { 8.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/annotation/germline/${meta.patient}", mode: "copy", pattern: "*vcf"
-    // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/germline/", mode: "copy"
+    //publishDir "${params.output}/${params.date}/annotation/germline/${meta.patient}", mode: "copy", pattern: "*vcf"
     tag "vcf2maf"
 
     input:
@@ -391,13 +413,10 @@ process germline_renovo_annotation{
     memory { 1.GB * task.attempt }
     tag "vcf2maf"
 
-    publishDir "${params.output}/${params.date}/annotation/germline/${meta.patient}", mode: "copy"
-
     input:
         tuple val(meta), file(maf), file(vcf)
     output:
-        tuple val(meta), file("${maf.baseName}.renovo.maf")
-        tuple val(meta), file("filtered*.pass.tsv"), file("filtered*.nopass.tsv")
+        tuple val(meta), file("${maf.baseName}.renovo.maf"), file("${meta.patient}.vcf")
     script:
     """
         python ${params.renovo_path}/ReNOVo.py \
@@ -408,47 +427,6 @@ process germline_renovo_annotation{
         add_renovo_to_maf.py -m ${maf} \
          -r ReNOVo_output/${vcf.baseName}_ReNOVo_and_ANNOVAR_implemented.txt \
          -o ${maf.baseName}
-
-        filter_variants.py -m ${maf.baseName} \
-         -o ${maf.baseName}.renovo.maf \
-         --filter_intervar "${params.filter_intervar}" \
-         --filter_renovo "${params.filter_renovo}" \
-         --germline \
-         -md ${params.filter_min_depth} \
-         -vtg ${params.filter_vaf_threshold_germline} \
-         --filter_genes_germline ${params.filter_genes_germline} \
-         --filter_variant_classification "${params.filter_var_classification}"
-
     """
 }
 
-/*
-process filter_maf{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 2
-    memory { 1.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/annotation/germline/${meta.patient}", mode: "copy"
-    tag "filtermaf"
-
-    input:
-        tuple val(patient), file(maf)
-    output:
-        tuple val(patient), file("${meta.patient}.maf")
-        tuple file("filtered*tsv")
-    script:
-    """
-        filter_variants.py -m ${maf} \
-         -o ${meta.patient}.maf \
-         --filter_intervar "${params.filter_intervar}" \
-         --filter_renovo "${params.filter_renovo}" \
-         --germline \
-         -md ${params.filter_min_depth} \
-         -vtg ${params.filter_vaf_threshold_germline} \
-         --filter_genes_germline ${params.filter_genes_germline} \
-         --filter_variant_classification "${params.filter_var_classification}"
-
-    """
-    
-}
-*/

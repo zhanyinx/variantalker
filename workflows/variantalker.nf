@@ -14,6 +14,12 @@ params.intervar_init = "$projectDir/resources/configs/config.init.intervar"
 params.cancervar_db = "$projectDir/resources/CancerVar/cancervardb"
 params.intervar_db = "$projectDir/resources/InterVar/intervardb"
 
+if(params.build == "hg38"){
+    params.build_alt_name = "GRCh38"
+}else if(params.build == "hg19"){
+    params.build_alt_name = "GRCh37"
+}
+
 if (!params.cancervar_evidence_file || params.cancervar_evidence_file.isEmpty()) {
     params.cancervar_evidence_file = "None"
 }
@@ -28,7 +34,8 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include {fixvcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation} from '../modules/local/annotation/main.nf'
+include {filter_maf; fixvcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/main.nf'
+include {filter_maf as filter_maf_germline} from '../modules/local/annotation/main.nf'
 include {cnvkit_call; annotate_cnv} from '../modules/local/cnv/main.nf'
 
 // extract channels from input annotation sample sheet 
@@ -88,17 +95,20 @@ workflow VARIANTALKER{
     // Workflow for snp and indel variant annotation
     fixvcf(ch_somatic)
     somatic_annotate_snp_indel(fixvcf.out)
+    filter_maf(somatic_annotate_snp_indel.out)
 
     if (params.pipeline.toUpperCase() == "SAREK") {
         filter_variants(ch_germline)
         normalise_rename_germline_vcf(filter_variants.out)
         germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
         germline_renovo_annotation(germline_annotate_snp_indel.out)
+        filter_maf_germline(germline_renovo_annotation.out)
     }
     else{
         normalise_rename_germline_vcf(ch_germline)
         germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
         germline_renovo_annotation(germline_annotate_snp_indel.out)
+        filter_maf_germline(germline_renovo_annotation.out)
     }
 
     // workflow for somatic cnv annotation

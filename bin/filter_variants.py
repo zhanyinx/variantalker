@@ -42,16 +42,11 @@ def _parse_args():
         help="Intervar filters, available: LP Pathogenic,IP Pathogenic,HP Pathogenic,LP Benign,IP Benign,HP Benign",
     )
     parser.add_argument(
-        "-g",
-        "--germline",
-        action="store_true",
-        help="If set, germline mode.",
-    )
-    parser.add_argument(
-        "-s",
-        "--somatic",
-        action="store_true",
-        help="If set, somatic mode.",
+        "-st",
+        "--sample_type",
+        type=str,
+        default="somatic",
+        help="set to germline if sample is germline",
     )
     parser.add_argument(
         "-o",
@@ -214,7 +209,12 @@ def main():
         variant_classification_filter=variant_classification_filter,
     )
 
-    if args.somatic:
+    if args.sample_type not in ["somatic", "germline"]:
+        raise ValueError(
+            f"sample_type must be somatic or germline; Provided {args.sample_type}"
+        )
+
+    if args.sample_type == "somatic":
         cancervar_keep = args.filter_cancervar.split(",")
         out["filter_specific"] = somatic_filters(
             out,
@@ -223,7 +223,7 @@ def main():
             vaf=args.vaf_threshold,
         )
 
-    if args.germline:
+    if args.sample_type == "germline":
         intervar_keep = args.filter_intervar.split(",")
         renovo_keep = args.filter_renovo.split(",")
         out["filter_specific"] = germline_filters(
@@ -279,7 +279,7 @@ def main():
         "gnomAD_exome_AF",
     ]
 
-    if args.germline:
+    if args.sample_type == "germline":
         keep.remove("Tumor_Sample_Barcode")
         keep.remove("HGNC_RefSeq_IDs")
         keep.remove("cosmic95")
