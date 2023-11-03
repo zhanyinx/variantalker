@@ -78,7 +78,8 @@ process filter_maf{
          -md ${params.filter_min_depth} \
          -vtg ${params.filter_vaf_threshold_germline} \
          --filter_genes_germline ${params.filter_genes_germline} \
-         --filter_variant_classification "${params.filter_var_classification}"
+         --filter_variant_classification "${params.filter_var_classification}" \
+         --filter_civic "${params.filter_civic_evidence_level}"
 
     """
     

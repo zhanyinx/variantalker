@@ -28,6 +28,13 @@ def _parse_args():
         help="Cancervar filters, available: Tier_II_potential,Tier_I_strong,Tier_III_Uncertain,Tier_IV_benign",
     )
     parser.add_argument(
+        "-fci",
+        "--filter_civic",
+        type=str,
+        default="A,B,C",
+        help="Cancervar filters, available: A,B,C,D,E",
+    )
+    parser.add_argument(
         "-fi",
         "--filter_intervar",
         type=str,
@@ -113,8 +120,16 @@ def common_filters(
     )
 
 
+def has_element_from_list(s: str, my_list: list):
+    """Check if any of the element in my_list is in the string s."""
+    if pd.notna(s):
+        for element in my_list:
+            if element in s:
+                return True
+    return False
+
 def somatic_filters(
-    maf: pd.DataFrame, vaf: float, somatic_genes: str, cancervar_keep: list
+    maf: pd.DataFrame, vaf: float, somatic_genes: str, cancervar_keep: list, civic_keep: list
 ):
     """Set of somatic specific filters."""
     clinvar_exclude = CLINVAR_EXCLUDE
@@ -132,7 +147,8 @@ def somatic_filters(
             ~maf["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude)
             & (~maf["ClinVar_VCF_CLNSIG"].isna())
         )
-        | (~(maf["ESCAT"].isin(escat_exclude)))
+        | (~(maf["ESCAT"].isin(escat_exclude))) 
+        | maf["CIViC_Evidence_Level"].apply(lambda x: has_element_from_list(x, civic_keep))
     )
 
     # filter on variant allele frequency
@@ -219,10 +235,12 @@ def main():
 
     if args.sample_type == "somatic":
         cancervar_keep = args.filter_cancervar.split(",")
+        civic_keep = args.filter_civic.upper().split(",")
         out["filter_specific"] = somatic_filters(
             out,
             somatic_genes=args.filter_genes_somatic,
             cancervar_keep=cancervar_keep,
+            civic_keep=civic_keep,
             vaf=args.vaf_threshold,
         )
 
