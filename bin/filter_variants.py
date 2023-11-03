@@ -193,6 +193,9 @@ def germline_filters(
     return filter_guidelines & filter_vaf & filter_genes
 
 
+
+
+
 def main():
     """Merge cancervar and with the corresponding maf file."""
     # Parse input
@@ -270,6 +273,12 @@ def main():
         "ESCAT",
         "ESCAT_TISSUE",
         "ESCAT_CANCER",
+        "CIViC_Evidence_Level",
+        "CIViC_Evidence_Rating",
+        "CIViC_Entity_Disease",
+        "CIViC_Variant_URL",
+        "CIViC_Entity_URL",
+        "CIViC_Entity_Status",
         "Otherinfo",
         "tumor_tissue",
         "cosmic95",  # TODO cosmic update when change version cosmic
@@ -289,6 +298,7 @@ def main():
         keep.insert(idx, "InterVar")
         keep.append("RENOVO_Class")
         keep.append("RENOVO_pls")
+        keep = [item for item in keep if not item.startswith("CIViC")]
 
     if len(out[out["filter"] == "NOPASS"]):
         out_nopass = out.loc[

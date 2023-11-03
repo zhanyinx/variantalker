@@ -34,7 +34,7 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include {filter_maf; fixvcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/main.nf'
+include {filter_maf; add_civic; fixvcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/main.nf'
 include {filter_maf as filter_maf_germline} from '../modules/local/annotation/main.nf'
 include {cnvkit_call; annotate_cnv} from '../modules/local/cnv/main.nf'
 
@@ -94,7 +94,8 @@ workflow VARIANTALKER{
 
     // Workflow for snp and indel variant annotation
     fixvcf(ch_somatic)
-    somatic_annotate_snp_indel(fixvcf.out)
+    add_civic(fixvcf.out)
+    somatic_annotate_snp_indel(add_civic.out)
     filter_maf(somatic_annotate_snp_indel.out)
 
     if (params.pipeline.toUpperCase() == "SAREK") {

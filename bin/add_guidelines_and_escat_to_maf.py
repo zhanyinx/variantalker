@@ -248,6 +248,14 @@ def main():
     # drop duplicates
     out = out.drop_duplicates()
 
+    if not args.germline:
+        # split civic into multiple lines
+        civic_splitted = out["CIVIC"].apply(split_civic).apply(pd.Series)
+        if len(civic_splitted.columns) > 1:
+            out[CIVIC_COLUMNS] = civic_splitted
+        else:
+            out[CIVIC_COLUMNS] = None
+
     # write to file
     out.to_csv(args.output, sep="\t", index=False, mode="a")
 

@@ -1,5 +1,58 @@
 // List of functions and processes used to annotate snp and indel from whole exome sequences
 
+// add civic data to vcf
+process add_civic{
+    cpus 10
+    errorStrategy 'retry'
+    maxRetries = 3
+    memory { 4.GB * task.attempt }
+
+    tag "civic2vcf"
+
+    input:
+        tuple val(meta), file(vcf), file(index)
+    output:
+        tuple val(meta), file("${meta.patient}.vcf.gz"), file("${meta.patient}.vcf.gz.tbi")
+    script:
+    """
+    zcat ${vcf} > appo.vcf
+
+    # split on chromosomes
+    awk '{if(\$1~/^#/) print \$0}' appo.vcf > header
+    for chr in `awk '{if(!(\$1~/^#/)) print \$1}' appo.vcf | sort | uniq`; do
+        cp header tmp_\$chr
+    done
+    awk '{if(!(\$1~/^#/)) print \$0 >> "tmp_"\$1 }'  appo.vcf
+
+    cpu=0
+    for file in `ls tmp_*`; do
+        civicpy annotate-vcf --input-vcf  \$file --output-vcf out.\$file --reference ${params.build_alt_name}  --include-status accepted --include-status submitted > log.\$file 2>&1 &
+        let cpu=cpu+1
+
+        if [ \$cpu -eq $task.cpus ]; then
+            cpu=0
+            wait
+        fi
+    done
+    wait
+
+    if [ -f final.vcf ]; then
+        rm final.vcf
+    fi
+
+    for file in `ls out*`; do
+        awk '{if(!(\$1~/^#/)) print \$0; else print \$0 > "header"}' \$file >> final.vcf
+    done
+
+    sort -k1,1V -k2,2n final.vcf > final.sorted.vcf
+    sed -i 's/ /_/g' final.sorted.vcf
+    cat header final.sorted.vcf > ${meta.patient}.vcf
+    rm ${vcf} ${index}
+    bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
+    tabix -p vcf ${meta.patient}.vcf.gz
+    """
+
+}
 
 // filter maf file
 process filter_maf{
@@ -426,7 +479,7 @@ process germline_renovo_annotation{
         
         add_renovo_to_maf.py -m ${maf} \
          -r ReNOVo_output/${vcf.baseName}_ReNOVo_and_ANNOVAR_implemented.txt \
-         -o ${maf.baseName}
+         -o ${maf.baseName}.renovo.maf
     """
 }
 
