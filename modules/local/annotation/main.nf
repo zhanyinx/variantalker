@@ -55,6 +55,55 @@ process add_civic{
 }
 
 
+// alpha_missense
+process add_alpha_missense{
+    cpus 1
+    errorStrategy 'retry'
+    maxRetries = 2
+    memory { 3.GB * task.attempt }
+    tag "alphamissense"
+
+    input:
+        tuple val(meta), file(maf), file(vcf)
+    output:
+        tuple val(meta), file("${maf.baseName}.missense.maf"), file("${meta.patient}.vcf")
+    script:
+    """
+        if ! [ -f ${params.genomes[params.build].alpha_missense} ]; then
+            echo "${params.genomes[params.build].alpha_missense} alpha Missense file does not exist." > .command.err
+            exit 125
+        fi
+
+        zcat ${params.genomes[params.build].alpha_missense} > tmp
+        awk -F'\\t' 'BEGIN{fn=0; count=0}{
+            if(FNR==1) fn++
+            if(fn==1){
+                if(\$1~/^#/){
+                    print \$0
+                }else if(\$1=="Hugo_Symbol"){
+                    print "# Alpha Missense file ""'"${params.genomes[params.build].alpha_missense}"'"
+                    printf "%s\\t%s\\t%s\\n", \$0, "am_pathogenicity", "am_class"
+                }else{
+                    converter[\$5,\$6] = count
+                    string[\$5,\$6]=\$5\$6\$12\$13
+                    line[count]=\$0
+                    bool[\$5,\$6]++
+                    count++
+                }
+            }
+
+            if(fn==2){
+                if(bool[\$1,\$2] > 0){
+                    if(string[\$1,\$2] == \$1\$2\$3\$4){
+                        am_pathogenicity[converter[\$1,\$2]] = \$9
+                        am_class[converter[\$1,\$2]] = \$10
+                    }
+                }
+            }
+        }END{for(i=0;i<count;i++) printf "%s\\t%s\\t%s\\n", line[i], am_pathogenicity[i], am_class[i]}' ${maf} tmp > ${maf.baseName}.missense.maf
+        rm tmp
+    """
+}
 
 // filter maf file
 process filter_maf{
@@ -78,9 +127,11 @@ process filter_maf{
          --filter_cancervar "${params.filter_cancervar}" \
          --filter_renovo "${params.filter_renovo}" \
          --sample_type ${meta.sample_type} \
-         -md ${params.filter_min_depth} \
-         -vtg ${params.filter_vaf_threshold_germline} \
+         --min_depth ${params.filter_min_depth} \
+         --vaf_threshold_germline ${params.filter_vaf_threshold_germline} \
+         --vaf_threshold ${params.filter_vaf_threshold} \
          --filter_genes_germline ${params.filter_genes_germline} \
+         --filter_genes_somatic ${params.filter_genes_somatic} \
          --filter_variant_classification "${params.filter_var_classification}" \
          --filter_civic "${params.filter_civic_evidence_level}"
 
