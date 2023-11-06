@@ -54,6 +54,8 @@ process add_civic{
 
 }
 
+
+
 // filter maf file
 process filter_maf{
     cpus 1
@@ -73,6 +75,7 @@ process filter_maf{
         filter_variants.py -m ${maf} \
          -o ${meta.patient}.maf \
          --filter_intervar "${params.filter_intervar}" \
+         --filter_cancervar "${params.filter_cancervar}" \
          --filter_renovo "${params.filter_renovo}" \
          --sample_type ${meta.sample_type} \
          -md ${params.filter_min_depth} \
