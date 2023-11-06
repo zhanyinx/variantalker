@@ -221,15 +221,9 @@ def main():
         if cosmic[0] != "cosmic95":
             out.drop(cosmic[0], inplace=True, axis=1)
 
-    # recalculate tumor frequency when not present
-    out["tumor_f"] = out["t_alt_count"] / (out["t_alt_count"] + out["t_ref_count"])
-    # fill in vaf values for iontorrent
-    if out["tumor_f"].isnull().values.any():
-        if "AF" in out.columns:
-            out["tumor_f"] = out["AF"]
-        else:
-            Warning("tumor_f column is empty, probably malformatted VCF input file")
 
+
+    # fill in vaf values for iontorrent
     if out["t_ref_count"].isnull().values.any():
         if "RO" in out.columns:
             out["t_ref_count"] = out["FRO"]
@@ -241,6 +235,15 @@ def main():
             out["t_alt_count"] = out["FAO"]
         else:
             Warning("t_alt_count column is empty, probably malformatted VCF input file")
+    
+    if out["tumor_f"].isnull().values.any():
+        if "AF" in out.columns:
+            out["tumor_f"] = out["AF"]
+        else:
+            Warning("tumor_f column is empty, probably malformatted VCF input file")
+    else:
+        # recalculate tumor frequency in case of dragen
+        out["tumor_f"] = out["t_alt_count"] / (out["t_alt_count"] + out["t_ref_count"])
 
     # remove variants without support
     out = out[(out["t_alt_count"] + out["t_ref_count"]) > 0]
