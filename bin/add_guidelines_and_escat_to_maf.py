@@ -248,7 +248,7 @@ def main():
     # drop duplicates
     out = out.drop_duplicates()
 
-    if not args.germline:
+    if not args.germline and len(out):
         # split civic into multiple lines
         civic_splitted = out["CIVIC"].apply(split_civic).apply(pd.Series)
         if len(civic_splitted.columns) > 1:
