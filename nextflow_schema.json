@@ -266,6 +266,12 @@
                     "default": "Tier_II_potential,Tier_I_strong",
                     "fa_icon": "fas fa-string-cancervar-filter"
                 },
+                "filter_civic_evidence_level": {
+                    "type": "string",
+                    "description": "comma separated list of civic evidence level to keep to keep",
+                    "default": "A,B,C",
+                    "fa_icon": "fas fa-string-civic-filter"
+                },
                 "filter_renovo": {
                     "type": "string",
                     "description": "comma separated list of renovo classes to keep",
