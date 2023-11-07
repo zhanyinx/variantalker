@@ -34,8 +34,9 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include {filter_maf; add_civic; fixvcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/main.nf'
+include {filter_maf; add_civic; add_alpha_missense; fixvcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/main.nf'
 include {filter_maf as filter_maf_germline} from '../modules/local/annotation/main.nf'
+include {add_alpha_missense as add_alpha_missense_germline} from '../modules/local/annotation/main.nf'
 include {cnvkit_call; annotate_cnv} from '../modules/local/cnv/main.nf'
 
 // extract channels from input annotation sample sheet 
@@ -96,20 +97,23 @@ workflow VARIANTALKER{
     fixvcf(ch_somatic)
     add_civic(fixvcf.out)
     somatic_annotate_snp_indel(add_civic.out)
-    filter_maf(somatic_annotate_snp_indel.out)
+    add_alpha_missense(somatic_annotate_snp_indel.out)
+    filter_maf(add_alpha_missense.out)
 
     if (params.pipeline.toUpperCase() == "SAREK") {
         filter_variants(ch_germline)
         normalise_rename_germline_vcf(filter_variants.out)
         germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
         germline_renovo_annotation(germline_annotate_snp_indel.out)
-        filter_maf_germline(germline_renovo_annotation.out)
+        add_alpha_missense_germline(germline_renovo_annotation.out)
+        filter_maf_germline(add_alpha_missense_germline.out)
     }
     else{
         normalise_rename_germline_vcf(ch_germline)
         germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
         germline_renovo_annotation(germline_annotate_snp_indel.out)
-        filter_maf_germline(germline_renovo_annotation.out)
+        add_alpha_missense_germline(germline_renovo_annotation.out)
+        filter_maf_germline(add_alpha_missense_germline.out)
     }
 
     // workflow for somatic cnv annotation
