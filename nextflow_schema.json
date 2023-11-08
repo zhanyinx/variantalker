@@ -93,6 +93,13 @@
                     "description": "Path to exome capture bed file.",
                     "help_text": "Provide the bed file with region covered by WES. If WGS, put full chromosome size file with chr, start end",
                     "fa_icon": "far fa-file-target"
+                },
+                "alpha_mis_genome_basedir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-string-alphamissense-fa",
+                    "description": "Base folder of alpha missense database files",
+                    "help_text": "Path to the folder with alpha missense database files"
                 }
             }
         },
@@ -236,6 +243,12 @@
             "description": "Filters applied to variant to be kept in the filtered file",
             "help_text": "Filters applied to variant to be kept in the filtered file",
             "properties": {
+                "filter_alpha_missense": {
+                    "type": "string",
+                    "description": "comma separated list of alpha missense classes to keep",
+                    "default": "likely_pathogenic,ambiguous",
+                    "fa_icon": "fas fa-string-alphamissense-filter"
+                },
                 "filter_min_depth": {
                     "type": "number",
                     "description": "min depth to keep variant in the filtered output file",
