@@ -156,7 +156,7 @@ def somatic_filters(
         )
         | (~(maf["ESCAT"].isin(escat_exclude))) 
         | maf["CIViC_Evidence_Level"].apply(lambda x: has_element_from_list(x, civic_keep))
-        | (maf("am_class").isin(alpha_missense_keep))
+        | (maf["am_class"].isin(alpha_missense_keep))
     )
 
     # filter on variant allele frequency
@@ -196,7 +196,7 @@ def germline_filters(
             & (~maf["ClinVar_VCF_CLNSIG"].isna())
         )
         | (maf["RENOVO_Class"].isin(renovo_keep))
-        | (maf("am_class").isin(alpha_missense_keep))
+        | (maf["am_class"].isin(alpha_missense_keep))
     )
 
     # filter on variant allele frequency
