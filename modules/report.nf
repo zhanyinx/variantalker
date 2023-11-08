@@ -5,8 +5,7 @@ List of functions and processes used to generate the report
 process report_raw{
     cpus 2
     memory "5 G"
-    publishDir "${params.output}/${params.date}/reports/${maf.simpleName}", mode: "copy"
-    // publishDir "${params.output}/${params.date}/${maf.simpleName}/reports/", mode: "copy"
+    publishDir "${params.outdir}/${params.date}/reports/${maf.simpleName}", mode: "copy"
     tag "report raw"
 
     input:

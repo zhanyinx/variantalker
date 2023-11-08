@@ -74,15 +74,20 @@ For biomarkers:
 
 
 ```bash
-nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --output outdir
+nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --outdir outdir
 ```
 
 To perform biomarker analysis:
 
 ```bash
-nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --output outdir --analysis biomarkers
+nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --outdir outdir --analysis biomarkers
 ```
 
+To show the whole list of parameters:
+
+```bash
+nextflow run path_to/main.nf --help --show_hidden_params
+```
 
 ## Input
 
@@ -117,7 +122,7 @@ If clonal tmb biomarker calculation is also required, the --clonal_tmb_input par
 The format of the clonal_tmb_input file can be found [here](https://github.com/zhanyinx/clonal_evolution#input)
 
 ```bash
-nextflow run path_to/main.nf run -with-tower -c nextflow.config  -profile conda --input sample.csv --output variantalker_output/ --analysis biomarkers --clonal_tmb_input sample_clonal_tmb.csv
+nextflow run path_to/main.nf run -with-tower -c nextflow.config  -profile conda --input sample.csv --outdir variantalker_output/ --analysis biomarkers --clonal_tmb_input sample_clonal_tmb.csv
 ```
 
 
@@ -126,7 +131,7 @@ nextflow run path_to/main.nf run -with-tower -c nextflow.config  -profile conda 
 Output structure:
 
 ```
-params.output
+params.outdir
 |-- date
 |   `-- annotation
 |       |-- germline

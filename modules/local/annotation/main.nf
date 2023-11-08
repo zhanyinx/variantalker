@@ -111,7 +111,7 @@ process filter_maf{
     errorStrategy 'retry'
     maxRetries = 2
     memory { 1.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
+    publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
     tag "filtermaf"
 
     input:
@@ -203,15 +203,12 @@ process somatic_annotate_snp_indel{
     errorStrategy 'retry'
     maxRetries = 3
     memory { 8.GB * task.attempt }
-    //publishDir "${params.output}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy", pattern: "*.vcf"
-    // publishDir "${params.output}/${params.date}/${vcf.simpleName}/annotation/somatic/", mode: "copy"
     tag "vcf2maf"
 
     input:
         tuple val(meta), file(vcf), file(index)
     output:
         tuple val(meta), file("${meta.patient}.small_mutations.cancervar.escat.maf"), file("${meta.patient}.vcf")
-        //tuple val(meta), file("filtered.${meta.patient}.small_mutations.cancervar.escat.maf.nopass.tsv"), file("filtered.${meta.patient}.small_mutations.cancervar.escat.maf.pass.tsv")
     script:
     """
     normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
@@ -394,7 +391,6 @@ process germline_annotate_snp_indel{
     errorStrategy 'retry'
     maxRetries = 3
     memory { 8.GB * task.attempt }
-    //publishDir "${params.output}/${params.date}/annotation/germline/${meta.patient}", mode: "copy", pattern: "*vcf"
     tag "vcf2maf"
 
     input:

@@ -1,5 +1,5 @@
 process cnvkit_call{
-    publishDir "${params.output}/${params.date}/intermediate_files/cnvkit/cnv", mode: "copy"
+    publishDir "${params.outdir}/${params.date}/intermediate_files/cnvkit/cnv", mode: "copy"
     cpus 5
     memory "5 G"
 
@@ -22,8 +22,7 @@ process cnvkit_call{
 process annotate_cnv {
     cpus 5
     memory "5 G"
-    publishDir "${params.output}/${params.date}/annotation/somatic/${meta.patient}", mode: "copy"
-    // publishDir "${params.output}/${params.date}/${input.simpleName}/annotation/somatic/", mode: "copy"
+    publishDir "${params.outdir}/${params.date}/annotation/somatic/${meta.patient}", mode: "copy"
 
     input:
         tuple val(meta), path(input)
