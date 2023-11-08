@@ -172,14 +172,16 @@ Default filters applied:
 
 - minimum germline VAF: 0.2
 
-- InterVar classes to be kept: Pathogenic,Likely pathogenic
+- InterVar classes to be kept: Pathogenic,Likely pathogenic (logic OR)
 
-- CancerVar classes to be kept: Tier_II_potential,Tier_I_strong
+- CancerVar classes to be kept: Tier_II_potential,Tier_I_strong (logic OR)
 
-- ReNOVo class to be kept: LP Pathogenic,IP Pathogenic,HP Pathogenic
+- ReNOVo class to be kept: LP Pathogenic,IP Pathogenic,HP Pathogenic (logic OR)
 
-- CIViC evidence levels to be kept: A,B,C
+- CIViC evidence levels to be kept: A,B,C (logic OR)
 
-- Alpha missense class to be kept: ambigous,likely_pathogenic
+- Alpha missense class to be kept: ambigous,likely_pathogenic (logic OR)
 
 - no filters on genes (somatic or germline)
+
+Logic OR filters: a variant is kept if at least one of the OR filters is true
