@@ -39,7 +39,16 @@ wget -r -N --no-parent -nH --cut-dirs=2 -P public_databases https://bioserver.ie
 
 ## Documentation
 
-The pipeline employs two tools to annotate and prioritize variants: [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) and [CancerVar](https://github.com/WGLab/CancerVar) for somatic variants and InterVar for germline variants, both of which rely on [Annovar](https://annovar.openbioinformatics.org/en/latest/). To ensure the accuracy of the pipeline, the databases for Funcotator and Annovar must be regularly updated using the provided tools found here: [update utilities](https://github.com/zhanyinx/variantalker/tree/main/update_db).
+The pipeline employs several tools to annotate and prioritize variants: 
+
+- [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) for variant annotation
+- [CancerVar](https://github.com/WGLab/CancerVar) for somatic variants prioritization
+- [InterVar](https://github.com/WGLab/InterVar) for germline variants annotation
+- [Annovar](https://annovar.openbioinformatics.org/en/latest/): cancervar and intervar reply on Annovar. 
+- [CIViC](https://civicdb.org/): somatic variant classification using CIViC evidence level.
+- [AlphaMissense](https://www.science.org/doi/10.1126/science.adg7492): somatic and germline variant prioritization.
+
+To ensure the accuracy of the pipeline, the databases for Funcotator and Annovar must be regularly updated using the provided tools found here: [update utilities](https://github.com/zhanyinx/variantalker/tree/main/update_db).
 
 
 ## Usage
@@ -55,6 +64,13 @@ Update in the configuration file (nextflow.config) by setting the path to the da
 - annovar_db: e.g. path2/public_databases/humandb
 
 - annovar_software_folder: e.g. path2/annovar
+
+- alpha_mis_genome_basedir: e.g. path2/public_databases
+
+For biomarkers:
+
+- ascat_genome_basedir: e.g. path2/public_databases
+
 
 
 ```bash
@@ -115,14 +131,18 @@ params.output
 |   `-- annotation
 |       |-- germline
 |       |   `-- patient
-|       |       |-- filtered.patient.small_mutations.intervar.escat.renovo.maf.tsv
+|       |       |-- filtered.patient.maf.pass.tsv
+|       |       |-- filtered.patient.maf.nopass.tsv
 |       |       |-- patient.cnv.annotated.tsv
-|       |       `-- patient.small_mutations.intervar.escat.renovo.maf
+|       |       |-- patient.vcf
+|       |       `-- patient.maf
 |       `-- somatic
 |           `-- patient
-|               |-- filtered.patient.small_mutations.cancervar.escat.maf.tsv
+|       |       |-- filtered.patient.maf.pass.tsv
+|       |       |-- filtered.patient.maf.nopass.tsv
 |       |       |-- patient.cnv.annotated.tsv
-|               `-- patient.small_mutations.cancervar.escat.maf
+|       |       |-- patient.vcf
+|               `-- patient.maf
 |   `-- biomarkers
 |       |-- patient
 |       |       |-- patient.rna.tpm.csv
@@ -130,10 +150,12 @@ params.output
 |       |       |-- patient.clonalTMB.txt
 ```
 
-variantalker outputs for each sample two files
+variantalker outputs for each sample multiple files
 
-1) *maf file with all the annotations
-2) filtered*tsv file with filtered variants.
+1) maf file with all the annotations
+2) vcf file with the PASS variants 
+3) filtered pass file with variants passing the filters (see below).
+4) filtered nopass file with variants not passing the filters (see below).
 
 Default filters applied:
 
@@ -150,5 +172,9 @@ Default filters applied:
 - CancerVar classes to be kept: Tier_II_potential,Tier_I_strong
 
 - ReNOVo class to be kept: LP Pathogenic,IP Pathogenic,HP Pathogenic
+
+- CIViC evidence levels to be kept: A,B,C
+
+- Alpha missense class to be kept: ambigous,likely_pathogenic
 
 - no filters on genes (somatic or germline)
