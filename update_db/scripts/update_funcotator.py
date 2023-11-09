@@ -92,7 +92,7 @@ def main():
     # Achilles, cancer-gene-census, familial & simple-uniprot (same source dataset, check only)
     # check_oncotator(outfile)
     check_dna_repair_genes(outfile)
-    check_oreganno(outfile)
+    #check_oreganno(outfile)
 
     # Update cosmic
     curr_version = get_version(f"{args.somatic_database}/cosmic/hg38/cosmic.config")

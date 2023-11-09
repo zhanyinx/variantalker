@@ -32,7 +32,7 @@ List of Funcotator databases:
 
 - Achilles, cancer-gene-census, familial & simple-uniprot (from Oncotator; check only)
 - dna_repair_genes (check only)
-- oreganno (check only)
+- oreganno (check only, UPDATE November 2023, oreganno.org is still down, skipped)
 - cosmic (update if a newer version is available)
 - gencode (update if a newer version is available, currently not functioning correctly)
 - clinvar (update if a newer version is available)
