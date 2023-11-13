@@ -670,7 +670,7 @@ def check_annovar_result():
             + paras["buildver"]
             + " -remove -out "
             + paras["outfile"]
-            + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,dbnsfp42c,clinvar_20230222,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene  -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
+            + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,dbnsfp42c,clinvar_20231109,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene  -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
             + annovar_options
         )
         print("%s" % cmd)
@@ -687,7 +687,7 @@ def check_annovar_result():
             + paras["buildver"]
             + " -remove -out "
             + paras["outfile"]
-            + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,dbnsfp42c,clinvar_20230222,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene   -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
+            + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,dbnsfp42c,clinvar_20231109,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene   -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
             + annovar_options
         )
         print("%s" % cmd)
@@ -707,7 +707,7 @@ def check_annovar_result():
                 + paras["buildver"]
                 + " -remove -out "
                 + new_outfile
-                + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,dbnsfp42c,clinvar_20230222,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene   -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
+                + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,dbnsfp42c,clinvar_20231109,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene   -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
                 + annovar_options
             )
             print("%s" % cmd)

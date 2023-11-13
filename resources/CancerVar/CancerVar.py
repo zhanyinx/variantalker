@@ -783,7 +783,7 @@ def check_annovar_result():
             + paras["buildver"]
             + " -remove -out "
             + paras["outfile"]
-            + " -protocol refGene,ensGene,knownGene,esp6500siv2_all,1000g2015aug_all,exac03,avsnp150,dbnsfp42c,dbscsnv11,dbnsfp31a_interpro,clinvar_20230222,cosmic97,icgc28,gnomad_genome  -operation  g,g,g,f,f,f,f,f,f,f,f,f,f,f  -nastring ."
+            + " -protocol refGene,ensGene,knownGene,esp6500siv2_all,1000g2015aug_all,exac03,avsnp150,dbnsfp42c,dbscsnv11,dbnsfp31a_interpro,clinvar_20231109,cosmic98,icgc28,gnomad_genome  -operation  g,g,g,f,f,f,f,f,f,f,f,f,f,f  -nastring ."
             + annovar_options
         )
         print("%s" % cmd)
@@ -800,7 +800,7 @@ def check_annovar_result():
             + paras["buildver"]
             + " -remove -out "
             + paras["outfile"]
-            + " -protocol  refGene,ensGene,knownGene,esp6500siv2_all,1000g2015aug_all,exac03,avsnp150,dbnsfp42c,dbscsnv11,dbnsfp31a_interpro,clinvar_20230222,cosmic97,icgc28,gnomad_genome  -operation  g,g,g,f,f,f,f,f,f,f,f,f,f,f   -nastring ."
+            + " -protocol  refGene,ensGene,knownGene,esp6500siv2_all,1000g2015aug_all,exac03,avsnp150,dbnsfp42c,dbscsnv11,dbnsfp31a_interpro,clinvar_20231109,cosmic98,icgc28,gnomad_genome  -operation  g,g,g,f,f,f,f,f,f,f,f,f,f,f   -nastring ."
             + annovar_options
         )
         print("%s" % cmd)
@@ -820,7 +820,7 @@ def check_annovar_result():
                 + paras["buildver"]
                 + " -remove -out "
                 + new_outfile
-                + " -protocol  refGene,ensGene,knownGene,esp6500siv2_all,1000g2015aug_all,exac03,avsnp150,dbnsfp42c,dbscsnv11,dbnsfp31a_interpro,clinvar_20230222,cosmic97,icgc28  -operation  g,g,g,f,f,f,f,f,f,f,f,f,f    -nastring ."
+                + " -protocol  refGene,ensGene,knownGene,esp6500siv2_all,1000g2015aug_all,exac03,avsnp150,dbnsfp42c,dbscsnv11,dbnsfp31a_interpro,clinvar_20231109,cosmic98,icgc28  -operation  g,g,g,f,f,f,f,f,f,f,f,f,f    -nastring ."
                 + annovar_options
             )
             print("%s" % cmd)
@@ -1569,16 +1569,16 @@ def check_SomD(line, Funcanno_flgs, Allels_flgs, lof_genes_dict):
     1 Likely present
     0 Absent or present without association to specific tumors (potential germline VUS); present but in very few cases
     0 Absent or present without association to specific tumors (potential rare germline polymorphism)
-    """  # cosmic97    ID=COSM12560;OCCURENCE=60(haematopoietic_and_lymphoid_tissue)
+    """  # cosmic98    ID=COSM12560;OCCURENCE=60(haematopoietic_and_lymphoid_tissue)
     # ICGC_Id ICGC_Occurrence MU31370893  COCA-CN|1|187|0.00535,PRAD-CA|1|124|0.00806,SKCA-BR|1|66|0.01515,MELA-AU|2|183|0.01093
     SomD = 0
     cls = line.split("\t")
 
-    if cls[Funcanno_flgs["cosmic97"]] != "." or cls[Funcanno_flgs["ICGC_Id"]] != ".":
+    if cls[Funcanno_flgs["cosmic98"]] != "." or cls[Funcanno_flgs["ICGC_Id"]] != ".":
         SomD = 1
-    if cls[Funcanno_flgs["cosmic97"]] == "." and cls[Funcanno_flgs["ICGC_Id"]] == ".":
+    if cls[Funcanno_flgs["cosmic98"]] == "." and cls[Funcanno_flgs["ICGC_Id"]] == ".":
         SomD = 0
-    if cls[Funcanno_flgs["cosmic97"]] != "." and cls[Funcanno_flgs["ICGC_Id"]] != ".":
+    if cls[Funcanno_flgs["cosmic98"]] != "." and cls[Funcanno_flgs["ICGC_Id"]] != ".":
         SomD = 2
     return SomD
 
@@ -1989,7 +1989,7 @@ def my_inter_var_can(annovar_outfile):
         "AAChange.ensGene": 0,
         "AAChange.knownGene": 0,
         "MetaSVM_score": 0,
-        "cosmic97": 0,
+        "cosmic98": 0,
         "ICGC_Id": 0,
         "ICGC_Occurrence": 0,
         "Otherinfo": 0,
@@ -2061,7 +2061,7 @@ def my_inter_var_can(annovar_outfile):
                     "FATHMM_score",
                     "MetaLR_score",
                     "MutationAssessor_score",
-                    "cosmic97",
+                    "cosmic98",
                     "icgc28",
                     "Otherinfo",
                 )
@@ -2111,7 +2111,7 @@ def my_inter_var_can(annovar_outfile):
                     "FATHMM_score",
                     "MetaLR_score",
                     "MutationAssessor_score",
-                    "cosmic97",
+                    "cosmic98",
                     "icgc28",
                 )
             )
@@ -2241,7 +2241,7 @@ def my_inter_var_can(annovar_outfile):
                             cls[Funcanno_flgs["FATHMM_score"]],
                             cls[Funcanno_flgs["MetaLR_score"]],
                             cls[Funcanno_flgs["MutationAssessor_score"]],
-                            cls[Funcanno_flgs["cosmic97"]],
+                            cls[Funcanno_flgs["cosmic98"]],
                             cls[Funcanno_flgs["ICGC_Id"]],
                             cls[Funcanno_flgs["Otherinfo"]],
                         )
@@ -2291,7 +2291,7 @@ def my_inter_var_can(annovar_outfile):
                             cls[Funcanno_flgs["FATHMM_score"]],
                             cls[Funcanno_flgs["MetaLR_score"]],
                             cls[Funcanno_flgs["MutationAssessor_score"]],
-                            cls[Funcanno_flgs["cosmic97"]],
+                            cls[Funcanno_flgs["cosmic98"]],
                             cls[Funcanno_flgs["ICGC_Id"]],
                         )
                     )
