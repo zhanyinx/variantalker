@@ -83,6 +83,8 @@ To perform biomarker analysis:
 nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --outdir outdir --analysis biomarkers
 ```
 
+Add --clonal_tmb_input samplesheet.clonaltmb.csv (see [format](https://github.com/zhanyinx/clonal_evolution#input)) to perform clonal tmb analysis
+
 To show the whole list of parameters:
 
 ```bash

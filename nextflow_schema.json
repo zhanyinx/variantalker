@@ -490,7 +490,7 @@
                     "type": "string",
                     "fa_icon": "fas fa-greater-than",
                     "description": "Base folder of ascat database files",
-                    "help_text": "For more details see [here](https://github.com/zhanyinx/clonal_evolution#readme)",
+                    "help_text": "Path to the folder with ascat zip files (). e.g. path to the downloaded public_databases.",
                     "hidden": true
                 },
                 "ascat_min_base_qual": {
