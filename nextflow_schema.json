@@ -1,8 +1,8 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://raw.githubusercontent.com/nf-core/variantalker/master/nextflow_schema.json",
-    "title": "nf-core/variantalker pipeline parameters",
-    "description": "variantalker enables users to annotate variants in VCF files",
+    "title": "variantalker pipeline parameters",
+    "description": "variantalker enables users to annotate variants starting from VCF files",
     "type": "object",
     "definitions": {
         "input_output_options": {
@@ -12,7 +12,7 @@
             "description": "Define where the pipeline should find input data and save output data.",
             "required": [
                 "input",
-                "output"
+                "outdir"
             ],
             "properties": {
                 "input": {
@@ -22,7 +22,7 @@
                     "pattern": "^\\S+\\.csv$",
                     "schema": "assets/schema_input.json",
                     "description": "Path to comma-separated file containing information about the samples in the experiment.",
-                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row. See [usage docs](https://nf-co.re/variantalker/usage#samplesheet-input).",
+                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 4 columns, and a header row. See [usage docs](https://github.com/zhanyinx/variantalker#input).",
                     "fa_icon": "fas fa-file-csv"
                 },
                 "clonal_tmb_input": {
@@ -32,11 +32,12 @@
                     "pattern": "^\\S+\\.csv$",
                     "schema": "assets/schema_input.json",
                     "default": null,
-                    "description": "Path to comma-separated file containing information about the samples in the experiment.",
+                    "description": "Path to comma-separated input file for biomarkers containing information about the samples in the experiment.",
                     "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 8 columns, and a header row. See [usage docs](https://github.com/zhanyinx/clonal_evolution#input).",
-                    "fa_icon": "fas fa-file-csv1"
+                    "fa_icon": "fas fa-file-csv1",
+                    "hidden": true
                 },
-                "output": {
+                "outdir": {
                     "type": "string",
                     "format": "directory-path",
                     "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
@@ -50,12 +51,6 @@
             "fa_icon": "fas fa-dna",
             "description": "Reference genome related files and options required for the workflow.",
             "properties": {
-                "genome": {
-                    "type": "string",
-                    "description": "Name of iGenomes reference.",
-                    "fa_icon": "fas fa-book",
-                    "help_text": "If using a reference genome configured in the pipeline using iGenomes, use this parameter to give the ID for the reference. This is then used to build the full paths for all required reference genome files e.g. `--genome GRCh38`. \n\nSee the [nf-core website docs](https://nf-co.re/usage/reference_genomes) for more details."
-                },
                 "fasta": {
                     "type": "string",
                     "format": "file-path",
@@ -64,21 +59,6 @@
                     "description": "Path to FASTA genome file.",
                     "help_text": "This parameter is *mandatory* if `--genome` is not specified.",
                     "fa_icon": "far fa-file-code"
-                },
-                "igenomes_base": {
-                    "type": "string",
-                    "format": "directory-path",
-                    "description": "Directory / URL base for iGenomes references.",
-                    "default": "s3://ngi-igenomes/igenomes",
-                    "fa_icon": "fas fa-cloud-download-alt",
-                    "hidden": true
-                },
-                "igenomes_ignore": {
-                    "type": "boolean",
-                    "description": "Do not load the iGenomes reference config.",
-                    "fa_icon": "fas fa-ban",
-                    "hidden": true,
-                    "help_text": "Do not load `igenomes.config` when running the pipeline. You may choose this option if you observe clashes between custom parameters and those supplied in `igenomes.config`."
                 },
                 "build": {
                     "type": "string",
@@ -200,13 +180,13 @@
                 "funcotator_germline_db": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Path to the folder containing funcotator germline databases",
+                    "description": "Path to the folder containing funcotator germline databases. e.g. funcotator_dataSources.v1.7.20200521g",
                     "fa_icon": "fas fa-folder-anno-db"
                 },
                 "funcotator_somatic_db": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Path to the folder containing funcotator germline databases",
+                    "description": "Path to the folder containing funcotator somatic databases. e.g. funcotator_dataSources.v1.7.20200521s",
                     "fa_icon": "fas fa-folder-anno-db"
                 },
                 "transcript_selection": {
@@ -226,6 +206,13 @@
                     "description": "Padding of the target region to avoid problems with 0 or 1 starting bins",
                     "default": 2,
                     "fa_icon": "fas fa-folder-target-padding"
+                },
+                "alpha_mis_genome_basedir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-string-alphamissense-fa",
+                    "description": "Base folder of alpha missense database files",
+                    "help_text": "Path to the folder with alpha missense database files. e.g. path to the downloaded public_databases."
                 }
             }
         },
@@ -236,6 +223,12 @@
             "description": "Filters applied to variant to be kept in the filtered file",
             "help_text": "Filters applied to variant to be kept in the filtered file",
             "properties": {
+                "filter_alpha_missense": {
+                    "type": "string",
+                    "description": "comma separated list of alpha missense classes to keep",
+                    "default": "likely_pathogenic,ambiguous",
+                    "fa_icon": "fas fa-string-alphamissense-filter"
+                },
                 "filter_min_depth": {
                     "type": "number",
                     "description": "min depth to keep variant in the filtered output file",
@@ -266,6 +259,12 @@
                     "default": "Tier_II_potential,Tier_I_strong",
                     "fa_icon": "fas fa-string-cancervar-filter"
                 },
+                "filter_civic_evidence_level": {
+                    "type": "string",
+                    "description": "comma separated list of civic evidence level to keep to keep",
+                    "default": "A,B,C",
+                    "fa_icon": "fas fa-string-civic-filter"
+                },
                 "filter_renovo": {
                     "type": "string",
                     "description": "comma separated list of renovo classes to keep",
@@ -285,6 +284,13 @@
                     "description": "file with list of Hugo_Symbol genes to be kept",
                     "default": null,
                     "fa_icon": "fas fa-string-filegenegermline-filter"
+                },
+                "filter_var_classification": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Filter on variant classification. Available options can be found in Variant Classification here: https://gatk.broadinstitute.org/hc/en-us/articles/360035531732-Funcotator-Annotation-Specifications",
+                    "default": "Silent,Intron,3'UTR,5'UTR,IGR,5'Flank,3'Flank,RNA",
+                    "fa_icon": "fas fa-string-vclass-filter"
                 }
             }
         },
@@ -324,6 +330,14 @@
                         "copyNoFollow",
                         "move"
                     ],
+                    "hidden": true
+                },
+                "email": {
+                    "type": "string",
+                    "description": "Email address for completion summary.",
+                    "fa_icon": "fas fa-exclamation-triangle",
+                    "pattern": "^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$",
+                    "help_text": "An email address to send a summary email to when the pipeline is completed.",
                     "hidden": true
                 },
                 "email_on_fail": {
@@ -373,15 +387,10 @@
                     "fa_icon": "fas fa-image",
                     "hidden": true
                 },
-                "multiqc_methods_description": {
-                    "type": "string",
-                    "description": "Custom MultiQC yaml file containing HTML including a methods description.",
-                    "fa_icon": "fas fa-cog"
-                },
                 "tracedir": {
                     "type": "string",
                     "description": "Directory to keep pipeline Nextflow logs and reports.",
-                    "default": "${params.output}/pipeline_info",
+                    "default": "${params.outdir}/pipeline_info",
                     "fa_icon": "fas fa-cogs",
                     "hidden": true
                 },
@@ -412,7 +421,7 @@
                 },
                 "analysis": {
                     "type": "string",
-                    "description": "Type of analysis to do: annotation (default), biomarkers (beta version) or clonal_tmb (beta version)",
+                    "description": "Type of analysis to do: annotation (default), biomarkers (beta version)",
                     "default": "annotation",
                     "fa_icon": "fas fa-analysis"
                 },
@@ -481,38 +490,39 @@
                     "type": "string",
                     "fa_icon": "fas fa-greater-than",
                     "description": "Base folder of ascat database files",
-                    "help_text": "For more details see [here](https://github.com/zhanyinx/clonal_evolution#readme)"
+                    "help_text": "Path to the folder with ascat zip files (). e.g. path to the downloaded public_databases.",
+                    "hidden": true
                 },
                 "ascat_min_base_qual": {
                     "type": "number",
                     "default": 20,
                     "fa_icon": "fas fa-greater-than",
                     "description": "Overwrite Ascat min base quality required for a read to be counted.",
-                    "hidden": true,
-                    "help_text": "For more details see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf)"
+                    "help_text": "For more details see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf)",
+                    "hidden": true
                 },
                 "ascat_min_counts": {
                     "type": "number",
                     "default": 10,
                     "fa_icon": "fas fa-align-center",
                     "description": "Overwrite Ascat minimum depth required in the normal for a SNP to be considered.",
-                    "hidden": true,
-                    "help_text": "For more details, see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf)."
+                    "help_text": "For more details, see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf).",
+                    "hidden": true
                 },
                 "ascat_min_map_qual": {
                     "type": "number",
                     "default": 35,
                     "fa_icon": "fas fa-balance-scale-left",
                     "description": "Overwrite Ascat min mapping quality required for a read to be counted.",
-                    "hidden": true,
-                    "help_text": "For more details, see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf)."
+                    "help_text": "For more details, see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf).",
+                    "hidden": true
                 },
                 "ascat_ploidy": {
                     "type": "number",
                     "fa_icon": "fas fa-bacon",
                     "help_text": "ASCAT: optional argument to override ASCAT optimization and supply psi parameter (expert parameter, don\u2019t adapt unless you know what you\u2019re doing). See [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf)",
-                    "hidden": true,
-                    "description": "Overwrite ASCAT ploidy."
+                    "description": "Overwrite ASCAT ploidy.",
+                    "hidden": true
                 },
                 "ascat_purity": {
                     "type": "number",
@@ -535,16 +545,16 @@
                     "default": 20,
                     "fa_icon": "fas fa-greater-than",
                     "description": "Overwrite pyclone-vi number of restarts.",
-                    "hidden": true,
-                    "help_text": "For more details see [here](https://github.com/Roth-Lab/pyclone-vi)"
+                    "help_text": "For more details see [here](https://github.com/Roth-Lab/pyclone-vi)",
+                    "hidden": true
                 },
                 "num_clusters": {
                     "type": "number",
                     "default": 40,
                     "fa_icon": "fas fa-align-center",
                     "description": "Overwrite pyclone-vi number of clusters.",
-                    "hidden": true,
-                    "help_text": "For more details, see [here](https://github.com/Roth-Lab/pyclone-vi)."
+                    "help_text": "For more details, see [here](https://github.com/Roth-Lab/pyclone-vi).",
+                    "hidden": true
                 }
             }
         }

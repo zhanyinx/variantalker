@@ -9,8 +9,7 @@ process extract_tpm{
     cpus 1
     maxRetries = 2
     memory { 1.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/biomarkers/${patient}", mode: "copy"
-    // publishDir "${params.output}/${params.date}/${counts.simpleName}/biomarkers/", mode: "copy"
+    publishDir "${params.outdir}/${params.date}/biomarkers/${patient}", mode: "copy"
 
     tag "extract_signatures_tpm"
 
@@ -32,8 +31,7 @@ process calculate_tmb_signature{
     cpus 1
     maxRetries = 2
     memory { 1.GB * task.attempt }
-    publishDir "${params.output}/${params.date}/biomarkers/${patient}/", mode: "copy"
-    // publishDir "${params.output}/${params.date}/${maf.simpleName}/biomarkers/", mode: "copy"
+    publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/", mode: "copy"
     tag "tmb calculation"
 
     input:

@@ -27,13 +27,6 @@ def _parse_args():
         help="Cancervar file",
     )
     parser.add_argument(
-        "-fc",
-        "--filter_cancervar",
-        type=str,
-        default="Tier_II_potential,Tier_I_strong",
-        help="Cancervar filters, available: Tier_II_potential,Tier_I_strong,Tier_III_Uncertain,Tier_IV_benign",
-    )
-    parser.add_argument(
         "-cc",
         "--config",
         type=str,
@@ -61,7 +54,7 @@ def _parse_args():
         "-g",
         "--germline",
         action="store_true",
-        help="If set, germline mode: InterVar instead of CancerVar.",
+        help="If set, germline mode.",
     )
     parser.add_argument(
         "-o",
@@ -84,42 +77,6 @@ def _parse_args():
         default=None,
         required=False,
         help="Tissues available: lung, breast, colorectal, prostate, stomach,pancreatic, liver, other",
-    )
-    parser.add_argument(
-        "-md",
-        "--min_depth",
-        type=int,
-        default=50,
-        required=False,
-        help="Minimum coverage to keep the variant. Default 50.",
-    )
-    parser.add_argument(
-        "-vt",
-        "--vaf_threshold",
-        type=float,
-        default=0.01,
-        help="VAF threshold for tumor, default 0.01",
-    )
-    parser.add_argument(
-        "-vtg",
-        "--vaf_threshold_germline",
-        type=float,
-        default=0.2,
-        help="VAF threshold for normal, default 0.2",
-    )
-    parser.add_argument(
-        "-fgs",
-        "--filter_genes_somatic",
-        type=str,
-        default="null",
-        help="file with list of Hugo_Symbol genes to be kept.",
-    )
-    parser.add_argument(
-        "-fgg",
-        "--filter_genes_germline",
-        type=str,
-        default="null",
-        help="file with list of Hugo_Symbol genes to be kept.",
     )
     args = parser.parse_args()
     return args
@@ -202,10 +159,6 @@ def main():
         right_on=["Chr", "Start", "Ref", "Alt", "Gene"],
     ).drop(["Chr", "Start", "Ref", "Alt"], axis=1)
 
-    # recalculate tumor frequency when not present
-    out = out[(out["t_alt_count"] + out["t_ref_count"]) > 0]
-    out["tumor_f"] = out["t_alt_count"] / (out["t_alt_count"] + out["t_ref_count"])
-
     # add project id and tumor tissue
     out["project_id"] = args.projectid
     out["tumor_tissue"] = args.tissue
@@ -268,13 +221,9 @@ def main():
         if cosmic[0] != "cosmic95":
             out.drop(cosmic[0], inplace=True, axis=1)
 
-    # fill in vaf values for iontorrent
-    if out["tumor_f"].isnull().values.any():
-        if "AF" in out.columns:
-            out["tumor_f"] = out["AF"]
-        else:
-            Warning("tumor_f column is empty, probably malformatted VCF input file")
 
+
+    # fill in vaf values for iontorrent
     if out["t_ref_count"].isnull().values.any():
         if "RO" in out.columns:
             out["t_ref_count"] = out["FRO"]
@@ -286,121 +235,32 @@ def main():
             out["t_alt_count"] = out["FAO"]
         else:
             Warning("t_alt_count column is empty, probably malformatted VCF input file")
-
-    # save output file
-    out = out.drop_duplicates()
-    out.to_csv(args.output, sep="\t", index=False, mode="a")
-
-    # filter variants
-    filter_variant_classifications = [
-        "Silent",
-        "Intron",
-        "3'UTR",
-        "5'UTR",
-        "IGR",
-        "5'Flank",
-        "3'Flank",
-        "RNA",
-    ]
-    out = out[~out["Variant_Classification"].isin(filter_variant_classifications)]
-
-    # filter on coverage
-    out = out[(out["t_alt_count"] + out["t_ref_count"]) >= args.min_depth]
-
-    # filter cancervar/intervar clinvar escat
-    cancervar_keep = args.filter_cancervar.split(",")
-    clinvar_exclude = CLINVAR_EXCLUDE
-    escat_exclude = [
-        "IIIA",
-        "IIIB",
-        "IIIC",
-        ".",
-        "V",
-    ]
-
-    if not args.germline:
-        out = out[
-            (out["CancerVar"].isin(cancervar_keep))
-            | (
-                ~out["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude)
-                & (~out["ClinVar_VCF_CLNSIG"].isna())
-            )
-            | (~(out["ESCAT"].isin(escat_exclude)))
-        ]
-
-    if args.germline:
-        out = out[(out["tumor_f"] > args.vaf_threshold_germline)]
-    else:
-        out = out[(out["tumor_f"] > args.vaf_threshold)]
-
-    # filter list if defined
-    if args.filter_genes_somatic != "null" or args.filter_genes_germline != "null":
-        filter_genes_file = args.filter_genes_somatic
-        if args.germline:
-            filter_genes_file = args.filter_genes_germline
-
-        if os.path.exists(filter_genes_file):
-            genes = pd.read_csv(filter_genes_file, header=None)
-            out = out[out["Hugo_Symbol"].str.upper().isin(genes[0].str.upper().values)]
+    
+    if out["tumor_f"].isnull().values.any():
+        if "AF" in out.columns:
+            out["tumor_f"] = out["AF"]
         else:
-            Warning(f"{filter_genes_file} file does not exist.")
-
-    if len(out):
-        # filtering columns
-        keep = [
-            "Tumor_Sample_Barcode",
-            "Matched_Norm_Sample_Barcode",
-            "project_id",
-            "Hugo_Symbol",
-            "HGNC_RefSeq_IDs",
-            "Chromosome",
-            "Start_Position",
-            "End_Position",
-            "Variant_Classification",
-            "Variant_Type",
-            "Reference_Allele",
-            "Tumor_Seq_Allele1",
-            "Tumor_Seq_Allele2",
-            "cDNA_Change",
-            "Codon_Change",
-            "Protein_Change",
-            "Transcript_Exon",
-            "tumor_f",
-            "t_alt_count",
-            "t_ref_count",
-            "n_alt_count",
-            "n_ref_count",
-            "ClinVar_VCF_CLNSIG",
-            "CancerVar",
-            "ESCAT",
-            "ESCAT_TISSUE",
-            "ESCAT_CANCER",
-            "Otherinfo",
-            "tumor_tissue",
-            "cosmic95",  # TODO cosmic update when change version cosmic
-            "Freq_ExAC_ALL",
-            "Freq_esp6500siv2_all",
-            "Freq_1000g2015aug_all",
-            "gnomAD_exome_AF",
-        ]
-
-        if args.germline:
-            keep.remove("Tumor_Sample_Barcode")
-            keep.remove("HGNC_RefSeq_IDs")
-            keep.remove("cosmic95")
-            keep.remove("Freq_ExAC_ALL")
-            idx = keep.index("CancerVar")
-            keep.remove("CancerVar")
-            keep.insert(idx, "InterVar")
-
-        out = out.loc[:, ~(out == "__UNKNOWN__").all()]  # remove unknown columns
-        out = out[keep]
-        out.to_csv(f"filtered.{args.output}.tsv", sep="\t", index=False)
+            Warning("tumor_f column is empty, probably malformatted VCF input file")
     else:
-        with open(f"filtered.{args.output}.tsv", "a") as f:
-            f.write(
-                f"EMPTY! No mutations passing filters! Double check VAF to make sure!"
-            )
+        # recalculate tumor frequency in case of dragen
+        out["tumor_f"] = out["t_alt_count"] / (out["t_alt_count"] + out["t_ref_count"])
+
+    # remove variants without support
+    out = out[(out["t_alt_count"] + out["t_ref_count"]) > 0]
+
+    # drop duplicates
+    out = out.drop_duplicates()
+
+    if not args.germline and len(out):
+        # split civic into multiple lines
+        civic_splitted = out["CIVIC"].apply(split_civic).apply(pd.Series)
+        if len(civic_splitted.columns) > 1:
+            out[CIVIC_COLUMNS] = civic_splitted
+        else:
+            out[CIVIC_COLUMNS] = None
+
+    # write to file
+    out.to_csv(args.output, sep="\t", index=False, mode="a")
 
 
 if __name__ == "__main__":

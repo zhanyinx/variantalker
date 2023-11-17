@@ -504,22 +504,23 @@ def update_acmg_rec(
 
         for row in table_rows:
             columns = row.findChildren("td")
-            if (
-                columns[0].text.strip() != "MedGen"
-                and columns[1].find("a").text != "ClinVar"
-            ):
-                disease_name = columns[0].text.strip()
+            if len(columns):
+                if (
+                    columns[0].text.strip() != "MedGen"
+                    and columns[1].find("a").text != "ClinVar"
+                ):
+                    disease_name = columns[0].text.strip()
 
-            try:
-                gene = columns[2].find("a").text
-            except IndexError:
-                gene = columns[0].find("a").text
+                try:
+                    gene = columns[2].find("a").text
+                except IndexError:
+                    gene = columns[0].find("a").text
 
-            if gene == "ClinVar":
-                gene = columns[1].find("a").text
+                if gene == "ClinVar":
+                    gene = columns[1].find("a").text
 
-            disease_names.append(disease_name)
-            genes.append(gene)
+                disease_names.append(disease_name)
+                genes.append(gene)
 
         # write to file
         with open(f"acmg_{version}_{today}_test_cleaned.txt", "w") as f:
@@ -733,7 +734,7 @@ def update_cosmic_annovar(
     ):
         logging.info("Updating cosmic to {version}")
         # TODO change path
-        update_script = f"{scriptdir}/update_cosmic_annovar.sh"
+        update_script = f"{scriptdir}/update_cosmic.sh"
 
         # Run update script
         subprocess.run(

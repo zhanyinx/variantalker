@@ -2,7 +2,6 @@
 
 import numpy as np
 import pandas as pd
-import pyranges
 
 CLINVAR_EXCLUDE = [
     "Affects",
@@ -32,6 +31,61 @@ CLINVAR_EXCLUDE = [
     "protective|risk_factor",
     "not_provided",
 ]
+
+CIVIC_COLUMNS = [
+    "CIViC_Allele",
+    "CIViC_Consequence",
+    "CIViC_SYMBOL",
+    "CIViC_Entrez_Gene_ID",
+    "CIViC_Feature_type",
+    "CIViC_Feature",
+    "CIViC_HGVSc",
+    "CIViC_HGVSp",
+    "CIViC_Variant_Name",
+    "CIViC_Variant_ID",
+    "CIViC_Variant_Aliases",
+    "CIViC_Variant_URL",
+    "CIViC_Molecular_Profile_Name",
+    "CIViC_Molecular_Profile_ID",
+    "CIViC_Molecular_Profile_Aliases",
+    "CIViC_Molecular_Profile_URL",
+    "CIViC_HGVS",
+    "CIViC_Allele_Registry_ID",
+    "CIViC_ClinVar_IDs",
+    "CIViC_Molecular_Profile_Score",
+    "CIViC_Entity_Type",
+    "CIViC_Entity_ID",
+    "CIViC_Entity_URL",
+    "CIViC_Entity_Source",
+    "CIViC_Entity_Variant_Origin",
+    "CIViC_Entity_Status",
+    "CIViC_Entity_Significance",
+    "CIViC_Entity_Direction",
+    "CIViC_Entity_Disease",
+    "CIViC_Entity_Therapies",
+    "CIViC_Entity_Therapy_Interaction_Type",
+    "CIViC_Evidence_Phenotypes",
+    "CIViC_Evidence_Level",
+    "CIViC_Evidence_Rating",
+    "CIViC_Assertion_ACMG_Codes",
+    "CIViC_Assertion_AMP_Category",
+    "CIViC_Assertion_NCCN_Guideline",
+    "CIVIC_Assertion_Regulatory_Approval",
+    "CIVIC_Assertion_FDA_Companion_Test",
+]
+
+
+def split_civic(row):
+    """Split civic values column into multiple columns values."""
+    try:
+        parts = row.strip("[] ").split(",")
+        values = [part.split("|") for part in parts]
+        transformed_list = [
+            [inner[i] for inner in values] for i in range(len(values[0]))
+        ]
+        return transformed_list
+    except AttributeError:
+        return ""
 
 
 def read_maf(file: str) -> pd.DataFrame:
@@ -180,27 +234,3 @@ def assign_escat(
 
                 continue
     return maf
-
-
-def calculate_nmd(out, gr_nmd, filter_variant_type, filter_variant_classification):
-    if filter_variant_classification:
-        maf_gr = out[
-            (out["Variant_Type"].isin(filter_variant_type))
-            & (out["Variant_Classification"].isin(filter_variant_classification))
-        ][["Chromosome", "Start_Position", "End_Position"]]
-    else:
-        maf_gr = out[(out["Variant_Type"].isin(filter_variant_type))][
-            ["Chromosome", "Start_Position", "End_Position"]
-        ]
-    if len(maf_gr):
-        maf_gr.columns = ["Chromosome", "Start", "End"]
-        maf_gr = pyranges.PyRanges(df=maf_gr)
-        tmb_nmd_escapees = np.sum(
-            pyranges.count_overlaps(
-                grs={"nmd": gr_nmd}, how="containment", features=maf_gr
-            ).nmd
-            != 0
-        )
-        return tmb_nmd_escapees
-
-    return 0.0

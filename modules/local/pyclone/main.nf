@@ -1,6 +1,6 @@
 
 process generate_pyclone{
-    publishDir "${params.output}/${params.date}/biomarkers/${patient}/pyclone", mode: "copy"
+    publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/pyclone", mode: "copy"
     input:
         tuple val(patient), val(sex), path(mafs), val(cellularity), path(crams), path(crais), path(pluriploidy), path(cnvs)
     output:
@@ -66,7 +66,7 @@ process generate_pyclone{
 
 
 process pyclone{
-    publishDir "${params.output}/${params.date}/biomarkers/${patient}/", mode: "copy"
+    publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/", mode: "copy"
     input:
         tuple val(patient), path(pyclone)
     output:

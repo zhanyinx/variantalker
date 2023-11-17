@@ -16,7 +16,7 @@ MAXARGS=0
 # Latest release numbers for our references.
 # Update these numbers when a new Gencode is released.
 # LATEST_HG19_RELEASE=19
-LATEST_HG38_RELEASE=43
+LATEST_HG38_RELEASE=44
 
 DATA_SOURCE_NAME="Gencode"
 OUT_DIR_NAME='gencode'

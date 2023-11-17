@@ -14,6 +14,12 @@ params.intervar_init = "$projectDir/resources/configs/config.init.intervar"
 params.cancervar_db = "$projectDir/resources/CancerVar/cancervardb"
 params.intervar_db = "$projectDir/resources/InterVar/intervardb"
 
+if(params.build == "hg38"){
+    params.build_alt_name = "GRCh38"
+}else if(params.build == "hg19"){
+    params.build_alt_name = "GRCh37"
+}
+
 if (!params.cancervar_evidence_file || params.cancervar_evidence_file.isEmpty()) {
     params.cancervar_evidence_file = "None"
 }
@@ -28,7 +34,9 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include {fixvcf; rename_somatic_vcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation} from '../modules/local/annotation/main.nf'
+include {filter_maf; add_civic; add_alpha_missense; fixvcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/main.nf'
+include {filter_maf as filter_maf_germline} from '../modules/local/annotation/main.nf'
+include {add_alpha_missense as add_alpha_missense_germline} from '../modules/local/annotation/main.nf'
 include {cnvkit_call; annotate_cnv} from '../modules/local/cnv/main.nf'
 
 // extract channels from input annotation sample sheet 
@@ -65,10 +73,16 @@ def extract_csv(csv_file, sample_type) {
         }
         .filter { row -> row != null }
         .map { row ->
+            def meta = [:]
+
+            meta.tumor_tissue = row.tumor_tissue
+            meta.patient = row.patient
+            meta.sample_type = row.sample_type
+
             if(sample_type == "somatic"){
-                [row.patient, row.tumor_tissue, row.sample_file]
+                return [ meta, row.sample_file ]
             }else{
-                [row.patient, row.sample_file]
+                return [ meta, row.sample_file ]
             }
         }
 }
@@ -81,19 +95,25 @@ workflow VARIANTALKER{
 
     // Workflow for snp and indel variant annotation
     fixvcf(ch_somatic)
-    rename_somatic_vcf(fixvcf.out)
-    somatic_annotate_snp_indel(rename_somatic_vcf.out)
+    add_civic(fixvcf.out)
+    somatic_annotate_snp_indel(add_civic.out)
+    add_alpha_missense(somatic_annotate_snp_indel.out)
+    filter_maf(add_alpha_missense.out)
 
     if (params.pipeline.toUpperCase() == "SAREK") {
         filter_variants(ch_germline)
         normalise_rename_germline_vcf(filter_variants.out)
         germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
         germline_renovo_annotation(germline_annotate_snp_indel.out)
+        add_alpha_missense_germline(germline_renovo_annotation.out)
+        filter_maf_germline(add_alpha_missense_germline.out)
     }
     else{
         normalise_rename_germline_vcf(ch_germline)
         germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
         germline_renovo_annotation(germline_annotate_snp_indel.out)
+        add_alpha_missense_germline(germline_renovo_annotation.out)
+        filter_maf_germline(add_alpha_missense_germline.out)
     }
 
     // workflow for somatic cnv annotation
