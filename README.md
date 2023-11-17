@@ -71,7 +71,7 @@ For biomarkers:
 
 - ascat_genome_basedir: e.g. path2/public_databases
 
-
+The main command line for the annotation is the following
 
 ```bash
 nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --outdir outdir
