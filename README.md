@@ -13,6 +13,7 @@
 - [Usage](#usage)
 - [Input](#input)
 - [Output](#output)
+- [Liability](#liability)
 
 ## Overview
 
@@ -187,3 +188,8 @@ Default filters applied:
 - no filters on genes (somatic or germline)
 
 Logic OR filters: a variant is kept if at least one of the OR filters is true
+
+
+# Liability
+
+Variantalker assumes no responsibility for any injury to person or damage to persons or property arising out of, or related to any use of Variantalker, or for any errors or omissions. The user recognizes they are using Liability at their own risk.
