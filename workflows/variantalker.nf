@@ -34,6 +34,7 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// annotation
 include {filter_maf; add_civic; add_alpha_missense; fixvcf} from '../modules/local/annotation/small_variants/main.nf'
 include {filter_maf as filter_maf_germline} from '../modules/local/annotation/small_variants/main.nf'
 include {add_alpha_missense as add_alpha_missense_germline} from '../modules/local/annotation/small_variants/main.nf'
@@ -41,6 +42,9 @@ include {add_alpha_missense as add_alpha_missense_germline} from '../modules/loc
 include {somatic_annotate_snp_indel} from '../modules/local/annotation/small_variants/somatic/main.nf'
 include {filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/small_variants/germline/main.nf'
 include {cnvkit_call; annotate_cnv} from '../modules/local/annotation/cnv/main.nf'
+
+//biomarker
+include {extract_tpm; calculate_tmb_signature} from '../modules/local/biomarkers/main.nf'
 
 // extract channels from input annotation sample sheet 
 def extract_csv(csv_file, sample_type) {
@@ -129,7 +133,4 @@ workflow VARIANTALKER{
     if (params.pipeline.toUpperCase() == "DRAGEN"){
         annotate_cnv(ch_cnv)
     }
-
-    // biomarkers
-
 }
