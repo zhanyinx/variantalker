@@ -34,10 +34,13 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include {filter_maf; add_civic; add_alpha_missense; fixvcf; somatic_annotate_snp_indel; filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/main.nf'
-include {filter_maf as filter_maf_germline} from '../modules/local/annotation/main.nf'
-include {add_alpha_missense as add_alpha_missense_germline} from '../modules/local/annotation/main.nf'
-include {cnvkit_call; annotate_cnv} from '../modules/local/cnv/main.nf'
+include {filter_maf; add_civic; add_alpha_missense; fixvcf} from '../modules/local/annotation/small_variants/main.nf'
+include {filter_maf as filter_maf_germline} from '../modules/local/annotation/small_variants/main.nf'
+include {add_alpha_missense as add_alpha_missense_germline} from '../modules/local/annotation/small_variants/main.nf'
+
+include {somatic_annotate_snp_indel} from '../modules/local/annotation/small_variants/somatic/main.nf'
+include {filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/small_variants/germline/main.nf'
+include {cnvkit_call; annotate_cnv} from '../modules/local/annotation/cnv/main.nf'
 
 // extract channels from input annotation sample sheet 
 def extract_csv(csv_file, sample_type) {
@@ -93,13 +96,15 @@ workflow VARIANTALKER{
     ch_germline = extract_csv(file(params.input), "germline")
     ch_cnv = extract_csv(file(params.input), "cnv")
 
-    // Workflow for snp and indel variant annotation
+    // ********** Workflow for snp and indel variant annotation **********
+    // somatic 
     fixvcf(ch_somatic)
     add_civic(fixvcf.out)
     somatic_annotate_snp_indel(add_civic.out)
     add_alpha_missense(somatic_annotate_snp_indel.out)
     filter_maf(add_alpha_missense.out)
 
+    // germline
     if (params.pipeline.toUpperCase() == "SAREK") {
         filter_variants(ch_germline)
         normalise_rename_germline_vcf(filter_variants.out)
@@ -124,4 +129,7 @@ workflow VARIANTALKER{
     if (params.pipeline.toUpperCase() == "DRAGEN"){
         annotate_cnv(ch_cnv)
     }
+
+    // biomarkers
+
 }
