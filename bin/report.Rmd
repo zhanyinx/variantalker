@@ -190,9 +190,17 @@ if(length(cnv)>1){
     loss = str_squish(unlist(strsplit(del$All.protein.coding.genes, ",")))
     gain = str_squish(unlist(strsplit(dup$All.protein.coding.genes, ",")))
     
-    loss = data.frame(gene = loss, type="loss")
-    gain = data.frame(gene=gain, type="gain")
-    
+    if(length(loss)>0){
+      loss = data.frame(gene = loss, type="loss")
+    }else{
+      loss = NULL
+    }
+
+    if(length(gain)>0){
+      gain = data.frame(gene=gain, type="gain")
+    }else{
+      gain = NULL
+    }
     all = rbind(loss,gain)
     
     DT::datatable(all, filter="top", rownames=FALSE)
