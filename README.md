@@ -21,7 +21,7 @@ Variant annotation in cancer genomics involves identifying and characterizing th
 
 We have developed a Nextflow pipeline called variantalker that enables users to annotate variants from VCF files. Our pipeline supports VCF files generated from dragen, nf-sarek, and ION-torrent platforms.
 
-BETA version: we have implemented the possibility to extract biomarkers such as TMB, mutational signatures (apobec, uv and tabacco), clonal TMB (if bam/cram files and sex are provided) and expression of specific genes (if RNA-seq data are provided)
+BETA version: we have implemented the possibility to extract biomarkers such as TMB, mutational signatures (apobec, uv and tabacco), clonal TMB (if bam/cram files and sex are provided), expression of specific genes (if RNA-seq data are provided), gene cnv, etc..
 
 ## Installation
 Clone the repo
@@ -117,9 +117,24 @@ Available sample_type are: somatic, germline, cnv.
 
 Available tumor_tissue are: Adrenal_Gland Bile_Duct Bladder Blood Bone Bone_Marrow Brain Breast Cancer_all Cervix Colorectal Esophagus Eye Head_and_Neck Inflammatory Intrahepatic Kidney Liver Lung Lymph_Nodes Nervous_System Other Ovary Pancreas Pleura Prostate Skin Soft_Tissue Stomach Testis Thymus Thyroid Uterus
 
-__BETA version biomarkers__
+__BETA biomarkers report__
 
-To extract biomarkers, you can use the same type of input sheet. There are two types of sample files available: the maf format, which is the output of the annotation analysis, and the .sf file from the Illumina Dragen RNA pipeline. These sample files are categorized based on their sample type: dna for maf files and rna for .sf files.
+A follow-up step in variant annotation consists in biomarkers extraction. Here we provide a tool to extract biomarkers starting from files output from variantalker annotation pipeline and other sources of files. The pipeline has been tested for Illumina Dragen output. 
+
+The input file is a csv with 3 columns: patient,samplefile,sample_type. Header is required!
+the available sample_type are:
+
+- variant_germline (maf file from variantalker)
+
+- variant_somatic (maf file from variantalker)
+
+- rna (dragen illumina rna pipeline, sf output file)
+
+- msi (dragen msi output)
+
+- tmb (dragen tmb output)
+
+- cnv (output from variantalker)
 
 If clonal tmb biomarker calculation is also required, the --clonal_tmb_input parameter must be also specified.
 The format of the clonal_tmb_input file can be found [here](https://github.com/zhanyinx/clonal_evolution#input)
@@ -153,9 +168,8 @@ params.outdir
 |               `-- patient.maf
 |   `-- biomarkers
 |       |-- patient
-|       |       |-- patient.rna.tpm.csv
-|       |       |-- tmb_signatures.patient.txt
-|       |       |-- patient.clonalTMB.txt
+|       |       |-- patient.report.html
+|       |       |-- raw files with data for report
 ```
 
 variantalker outputs for each sample multiple files
@@ -164,6 +178,7 @@ variantalker outputs for each sample multiple files
 2) vcf file with the PASS variants 
 3) filtered pass file with variants passing the filters (see below).
 4) filtered nopass file with variants not passing the filters (see below).
+5) cnv annotated file (if cnv samples provided)
 
 Default filters applied:
 
