@@ -27,7 +27,7 @@ BETA version: we have implemented the possibility to extract biomarkers such as 
 Clone the repo
 
 ```bash
-git clone git@github.com:zhanyinx/variantalker.git
+git clone https://github.com/zhanyinx/variantalker.git
 ```
 
 variantalker relies on [Annovar](https://annovar.openbioinformatics.org/en/latest/) software and [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) databases.
@@ -54,9 +54,9 @@ To ensure the accuracy of the pipeline, the databases for Funcotator and Annovar
 
 ## Usage
 
-If you are using for the first time, update the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
+If you are using for the first time, please consider updating the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
 
-Update in the configuration file (nextflow.config) by setting the path to the databases:
+Modify the configuration file (nextflow.config) by setting the following parameters:
 
 - funcotator_germline_db: e.g. path2/public_databases/funcotator_dataSources.v1.7.20200521g
 
@@ -67,6 +67,10 @@ Update in the configuration file (nextflow.config) by setting the path to the da
 - annovar_software_folder: e.g. path2/annovar
 
 - alpha_mis_genome_basedir: e.g. path2/public_databases
+
+- fasta: path to fasta file used to generate the vcf
+
+- target: path to the target bed file
 
 For biomarkers:
 

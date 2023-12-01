@@ -18,14 +18,14 @@ def _parse_args():
         type=str,
         default=None,
         required=True,
-        help="Maf file",
+        help="Input maf file",
     )
     parser.add_argument(
         "-fam",
         "--filter_alpha_missense",
         type=str,
         default="likely_pathogenic,ambiguous",
-        help="Alpha missense filter available: likely_pathogenic,ambiguous,likely_benign",
+        help="Alpha missense filter. Available values: likely_pathogenic,ambiguous,likely_benign",
     )
     parser.add_argument(
         "-fc",
@@ -39,7 +39,7 @@ def _parse_args():
         "--filter_civic",
         type=str,
         default="A,B,C",
-        help="Cancervar filters, available: A,B,C,D,E",
+        help="Civic evidence level filter. Available values: A,B,C,D,E",
     )
     parser.add_argument(
         "-fi",

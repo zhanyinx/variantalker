@@ -225,7 +225,7 @@
             "properties": {
                 "filter_alpha_missense": {
                     "type": "string",
-                    "description": "comma separated list of alpha missense classes to keep",
+                    "description": "comma separated list of alpha missense classes to keep. Available values: likely_pathogenic,ambiguous,likely_benign",
                     "default": "likely_pathogenic,ambiguous",
                     "fa_icon": "fas fa-string-alphamissense-filter"
                 },
@@ -249,25 +249,25 @@
                 },
                 "filter_intervar": {
                     "type": "string",
-                    "description": "comma separated list of intervar classes to keep",
+                    "description": "comma separated list of intervar classes to keep. Available values: Pathogenic,Likely pathogenic,Uncertain significance,Likely benign,Benign",
                     "default": "Pathogenic,Likely pathogenic",
                     "fa_icon": "fas fa-string-intervar-filter"
                 },
                 "filter_cancervar": {
                     "type": "string",
-                    "description": "comma separated list of cancervar classes to keep",
+                    "description": "comma separated list of cancervar classes to keep. Available values: Tier_II_potential,Tier_I_strong,Tier_III_Uncertain,Tier_IV_benign",
                     "default": "Tier_II_potential,Tier_I_strong",
                     "fa_icon": "fas fa-string-cancervar-filter"
                 },
                 "filter_civic_evidence_level": {
                     "type": "string",
-                    "description": "comma separated list of civic evidence level to keep to keep",
+                    "description": "comma separated list of civic evidence level to keep to keep. Available values: A,B,C,D,E",
                     "default": "A,B,C",
                     "fa_icon": "fas fa-string-civic-filter"
                 },
                 "filter_renovo": {
                     "type": "string",
-                    "description": "comma separated list of renovo classes to keep",
+                    "description": "comma separated list of renovo classes to keep. Available values: LP Pathogenic,IP Pathogenic,HP Pathogenic,LP Benign,IP Benign,HP Benign",
                     "default": "LP Pathogenic,IP Pathogenic,HP Pathogenic",
                     "fa_icon": "fas fa-string-renovo-filter"
                 },
