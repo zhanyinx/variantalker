@@ -67,6 +67,7 @@ then
     exit
 fi
 
+input=`realpath $input`
 if ! [ -d $input ]; then
     echo "$input directory does not exist!"
     exit
@@ -92,7 +93,6 @@ if ! [ -f $output ];then
 fi
 
 for dir in $selected_folders; do
-
 	patient=`basename $dir`
 	file=`ls ${annotation_folder}/$patient/*maf`
 	normal=`ls $dir/*cram | grep -v tumor | grep -v "evidence"`

@@ -7,7 +7,7 @@
 
 
 function usage {
-    echo -e "usage : $(basename $0) -i INPUT -a ANNOTATION_FOLDER [-o OUTPUT] [-h]"
+    echo -e "usage : $(basename $0) -i INPUT -t TISSUE_SAMPLE [-o OUTPUT] [-h]"
     echo -e "Use option -h|--help for more information"
 }
 
@@ -68,14 +68,11 @@ then
     exit
 fi
 
-if ! [ -d $input ]; then
-    echo "$input directory does not exist!"
-    exit
-fi
 
+path=`realpath $path`
 
-if ! [ -d $annotation_folder ]; then
-    echo "$annotation_folder directory does not exist!"
+if ! [ -d $path ]; then
+    echo "$path directory does not exist!"
     exit
 fi
 

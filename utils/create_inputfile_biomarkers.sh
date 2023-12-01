@@ -72,7 +72,7 @@ then
     usage
     exit
 fi
-
+input=`realpath $input`
 if ! [ -d $input ]; then
     echo "$input directory does not exist!"
     exit
@@ -102,7 +102,7 @@ if [ -d $input/somatic ]; then
         patient_normal=`awk -F '\t' '{if(!($0~/^#/) && ($1!="Hugo_Symbol")) print $17}' $absfile | sort | uniq`
         echo "$patient,$absfile,variant_somatic" >> $output
         if ! [ -z $patient_normal ]; then
-            sed -i 's,'${patient_normal}','${patient}',g' $output
+            sed -i 's;'${patient_normal},';'${patient},';g' $output
         fi
     done
 
