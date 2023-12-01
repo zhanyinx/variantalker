@@ -122,6 +122,8 @@ process filter_maf{
         file("${meta.patient}.vcf")
     script:
     """
+        touch filtered.${meta.patient}.maf.pass.tsv filtered.${meta.patient}.maf.nopass.tsv
+
         filter_variants.py -m ${maf} \
          -o ${meta.patient}.maf \
          --filter_intervar "${params.filter_intervar}" \
