@@ -11,6 +11,8 @@ author: 'Yinxiu Zhan'
 
 params:
   patientid: NULL
+  annotation_filters: NULL
+  metrics_file: NULL
   variants_somatic_file: NULL 
   variants_germline_file: NULL 
   clonal_tmb_file: NULL 
@@ -69,7 +71,7 @@ library(stringr)
 ```
 
 
-```{r gather data}
+```{r gather data, echo=FALSE, results=FALSE, include=FALSE}
 variants_somatic = NULL
 variants_germline = NULL
 clonal_tmb = NULL
@@ -126,16 +128,18 @@ if(!is.null(variants_somatic)){
 
 # Whole exome sequencing
 
-Below the WES reports for the patient `r params$patientid`:
+The whole exome sequencing data have been processed using Illumina DRAGEN Bio-IT Platform (v.4.2.4). 
+The variants have been annotated and prioritized using [variantalker](https://github.com/zhanyinx/variantalker) v1.4
+
+The analysed samples are:
 
 - somatic sample: `r patientid_somatic`
 
 - germline sample: `r patientid_germline`
 
-
 ## Small Variants
 
-The list of variants passing DIMA's filtering is: 
+The list of variants passing the project filtering parameters (see Appendix) is: 
 
 ```{r}
 variants = NULL
@@ -150,8 +154,12 @@ if(!is.null(variants) && ncol(variants)>1){
 
 ## Biomarkers
 
-Below a list of all biomarkers calculated for the patient
-Recommendation: MSI instability for percentage >= 20; 
+We used different tools to extract biomarkers from whole exome sequencing and RNA-seq data. In particular, 
+Illumina DRAGEN Bio-IT Platform allows the extract of MSI and TMB from WES data. We then complemented the list of biomarkers
+using the biomarker pipeline from variantalker (see [here](https://github.com/zhanyinx/variantalker/tree/main/docs/biomarkers)).
+
+
+Recommendations: MSI instability if percentage >= 20 for solid tumor; 
 
 ```{r biomarkers}
 biomarkers = NULL
@@ -167,6 +175,9 @@ if(length(dragen_tmb)>1){
   dragen_tmb[,1] = paste0("dragen_",dragen_tmb[,1])
   biomarkers = add_biomarker(biomarkers, dragen_tmb)
 }
+
+biomarkers$value = round(as.numeric(biomarkers$value), 3)
+
 knitr::kable(
   biomarkers,
   booktabs = TRUE, valign = 't',
@@ -176,7 +187,11 @@ knitr::kable(
 
 ## Copy number variations
 
-Below the list of copy number variantion defined as pathogenic using the 2019 ACMG classification guidelines to assess CNV pathogenicity
+We prioritized the CNV using [2019 ACMG classification guidelines](https://www.sciencedirect.com/science/article/pii/S1098360021013009?via%3Dihub)
+
+Below all the of genes within CNVs defined as pathogenic or likely pathogenic according to the guidelines. 
+
+Probably it's better to have a list of genes we wanna check.
 ```{r cnv}
 keep = c("Likely pathogenic", "Pathogenic")
 
@@ -207,3 +222,77 @@ if(length(cnv)>1){
   }
 }
 ```
+
+
+# Appendix {#appendix}
+
+## Coverage
+
+For each sample, Dragen provides statistics on coverage. Below the coverage for all samples included in the report
+
+```{r coverage}
+if(!is.null(params$metrics_file)){
+  cleaned_string <- gsub("\\[|\\]", "", params$metrics_file)
+  single_paths <- unlist(strsplit(cleaned_string, ", "))
+
+  for(file in single_paths){
+    name = unlist(strsplit(basename(file), "\\."))[1] 
+    metrics_data = read.csv(file, header=FALSE)[,c(3,4)]
+    colnames(metrics_data) = c("metrics", "value")
+    metrics_data$value = as.character(metrics_data$value)
+    metrics_data = metrics_data[-c(1,2,6,7,8,9,10,11,12,13,14,15,16),]
+    print(kable(metrics_data, caption=name))
+  }
+}
+```
+
+
+
+## meta data 
+
+```{r database, echo=FALSE, results=FALSE, include=FALSE}
+somatic_annovar=NULL
+somatic_funcotator=NULL
+
+germline_annovar=NULL
+germline_funcotator=NULL
+
+if(isvalid(params$variants_somatic_file)) {
+  command=paste0('grep "  Funcotator" ', params$variants_somatic_file)
+  somatic_funcotator <- system(command, intern = TRUE)
+  somatic_funcotator = gsub("#", "", somatic_funcotator)
+
+  command=paste0('grep "Annovar" ', params$variants_somatic_file)
+  somatic_annovar <- system(command, intern = TRUE)
+  somatic_annovar = gsub("#", "", somatic_annovar)
+}
+
+if(isvalid(params$variants_germline_file)) {
+  command=paste0('grep "  Funcotator" ', params$variants_germline_file)
+  germline_funcotator <- system(command, intern = TRUE)
+  germline_funcotator = gsub("#", "", germline_funcotator)
+
+  command=paste0('grep "Annovar" ', params$variants_germline_file)
+  germline_annovar <- system(command, intern = TRUE)
+  germline_annovar = gsub("#", "", germline_annovar)
+}
+```
+
+
+The list of databases used for the annotation is the following:
+
+Somatic:
+
+- `r somatic_funcotator`
+
+- `r somatic_annovar`
+
+Germline:
+
+- `r germline_funcotator`
+
+- `r germline_annovar`
+
+The variants shown here pass the following list of filters: `r params$annotation_filters`. 
+
+For more info on filters, please have a look [here](https://github.com/zhanyinx/variantalker/tree/dev#output)
