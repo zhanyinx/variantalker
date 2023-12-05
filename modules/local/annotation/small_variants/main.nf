@@ -16,40 +16,44 @@ process add_civic{
     script:
     """
     zcat ${vcf} > appo.vcf
+    nline=`wc -l appo.vcf | awk '{print \$1}'`
+    check=0
+    while [ \$nline -ne \$check ]; do
+        # split on chromosomes
+        awk '{if(\$1~/^#/) print \$0}' appo.vcf > header
+        for chr in `awk '{if(!(\$1~/^#/)) print \$1}' appo.vcf | sort | uniq`; do
+            cp header tmp_\$chr
+        done
+        awk '{if(!(\$1~/^#/)) print \$0 >> "tmp_"\$1 }'  appo.vcf
 
-    # split on chromosomes
-    awk '{if(\$1~/^#/) print \$0}' appo.vcf > header
-    for chr in `awk '{if(!(\$1~/^#/)) print \$1}' appo.vcf | sort | uniq`; do
-        cp header tmp_\$chr
-    done
-    awk '{if(!(\$1~/^#/)) print \$0 >> "tmp_"\$1 }'  appo.vcf
+        cpu=0
+        for file in `ls tmp_*`; do
+            civicpy annotate-vcf --input-vcf  \$file --output-vcf out.\$file --reference ${params.build_alt_name}  --include-status accepted --include-status submitted > log.\$file 2>&1 &
+            let cpu=cpu+1
 
-    cpu=0
-    for file in `ls tmp_*`; do
-        civicpy annotate-vcf --input-vcf  \$file --output-vcf out.\$file --reference ${params.build_alt_name}  --include-status accepted --include-status submitted > log.\$file 2>&1 &
-        let cpu=cpu+1
+            if [ \$cpu -eq $task.cpus ]; then
+                cpu=0
+                wait
+            fi
+        done
+        wait
 
-        if [ \$cpu -eq $task.cpus ]; then
-            cpu=0
-            wait
+        if [ -f final.vcf ]; then
+            rm final.vcf
         fi
+
+        for file in `ls out*`; do
+            awk '{if(!(\$1~/^#/)) print \$0; else print \$0 > "header"}' \$file >> final.vcf
+        done
+
+        sort -k1,1V -k2,2n final.vcf > final.sorted.vcf
+        sed -i 's/ /_/g' final.sorted.vcf
+        cat header final.sorted.vcf > ${meta.patient}.vcf
+        rm ${vcf} ${index}
+        bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
+        tabix -p vcf ${meta.patient}.vcf.gz
+        check=`wc -l ${meta.patient}.vcf | awk '{print \$1-1}'`
     done
-    wait
-
-    if [ -f final.vcf ]; then
-        rm final.vcf
-    fi
-
-    for file in `ls out*`; do
-        awk '{if(!(\$1~/^#/)) print \$0; else print \$0 > "header"}' \$file >> final.vcf
-    done
-
-    sort -k1,1V -k2,2n final.vcf > final.sorted.vcf
-    sed -i 's/ /_/g' final.sorted.vcf
-    cat header final.sorted.vcf > ${meta.patient}.vcf
-    rm ${vcf} ${index}
-    bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
-    tabix -p vcf ${meta.patient}.vcf.gz
     """
 
 }
