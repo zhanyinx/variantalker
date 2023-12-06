@@ -21,6 +21,7 @@ params:
   dragen_msi_file: NULL
   rna_biomarker: NULL
   cnv_file: NULL
+  cnv_gene_file: NULL
 
 ---
 
@@ -191,9 +192,16 @@ We prioritized the CNV using [2019 ACMG classification guidelines](https://www.s
 
 Below all the of genes within CNVs defined as pathogenic or likely pathogenic according to the guidelines. 
 
-Probably it's better to have a list of genes we wanna check.
 ```{r cnv}
 keep = c("Likely pathogenic", "Pathogenic")
+
+if (isvalid(params$cnv_gene_file)) {
+  if (file.exists(params$cnv_gene_file)) {
+    tokeep = read.table(params$cnv_gene_file)[, 1]
+  }
+}else{
+  tokeep = c("all")
+}
 
 if(length(cnv)>1){
   filtered = cnv[cnv$Classification %in% keep, ]
@@ -217,12 +225,19 @@ if(length(cnv)>1){
       gain = NULL
     }
     all = rbind(loss,gain)
-    
-    DT::datatable(all, filter="top", rownames=FALSE)
+    if(isvalid(params$cnv_gene_file)){
+      if(file.exists(params$cnv_gene_file)){
+        all = all[all$gene %in% tokeep]
+      }
+    }
+    if(nrow(all)>0){
+      DT::datatable(all, filter="top", rownames=FALSE)
+    }
   }
 }
 ```
 
+For this report, we are considering `r tokeep` genes for CNVs.
 
 # Appendix {#appendix}
 

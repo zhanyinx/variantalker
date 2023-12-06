@@ -557,6 +557,23 @@
                     "hidden": true
                 }
             }
+        },
+        "report": {
+            "title": "Report generation",
+            "type": "object",
+            "description": "Parameters for report of biomarkers",
+            "default": "",
+            "fa_icon": "fas fa-toolbox",
+            "properties": {
+                "cnv_genes_keep": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "file with list of Hugo_Symbol genes to be kept for CNV",
+                    "default": null,
+                    "fa_icon": "fas fa-string-reportcnv-keep",
+                    "hidden": true
+                }
+            }
         }
     },
     "allOf": [
