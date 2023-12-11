@@ -13,6 +13,7 @@
 - [Usage](#usage)
 - [Input](#input)
 - [Output](#output)
+- [Liability](#liability)
 
 ## Overview
 
@@ -20,13 +21,13 @@ Variant annotation in cancer genomics involves identifying and characterizing th
 
 We have developed a Nextflow pipeline called variantalker that enables users to annotate variants from VCF files. Our pipeline supports VCF files generated from dragen, nf-sarek, and ION-torrent platforms.
 
-BETA version: we have implemented the possibility to extract biomarkers such as TMB, mutational signatures (apobec, uv and tabacco), clonal TMB (if bam/cram files and sex are provided) and expression of specific genes (if RNA-seq data are provided)
+BETA version: we have implemented the possibility to extract biomarkers such as TMB, mutational signatures (apobec, uv and tabacco), clonal TMB (if bam/cram files and sex are provided), expression of specific genes (if RNA-seq data are provided), gene cnv, etc. For more information, look at [here](https://github.com/zhanyinx/variantalker/tree/main/docs/biomarkers/)
 
 ## Installation
 Clone the repo
 
 ```bash
-git clone git@github.com:zhanyinx/variantalker.git
+git clone https://github.com/zhanyinx/variantalker.git
 ```
 
 variantalker relies on [Annovar](https://annovar.openbioinformatics.org/en/latest/) software and [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) databases.
@@ -53,9 +54,9 @@ To ensure the accuracy of the pipeline, the databases for Funcotator and Annovar
 
 ## Usage
 
-If you are using for the first time, update the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
+If you are using for the first time, please consider updating the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
 
-Update in the configuration file (nextflow.config) by setting the path to the databases:
+Modify the configuration file (nextflow.config) by setting the following parameters:
 
 - funcotator_germline_db: e.g. path2/public_databases/funcotator_dataSources.v1.7.20200521g
 
@@ -67,25 +68,15 @@ Update in the configuration file (nextflow.config) by setting the path to the da
 
 - alpha_mis_genome_basedir: e.g. path2/public_databases
 
-For biomarkers:
+- fasta: path to fasta file used to generate the vcf
 
-- ascat_genome_basedir: e.g. path2/public_databases
+- target: path to the target bed file
 
 The main command line for the annotation is the following
 
 ```bash
 nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --outdir outdir
 ```
-
-To perform biomarker analysis:
-
-```bash
-nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --outdir outdir --analysis biomarkers
-```
-
-Add --clonal_tmb_input samplesheet.clonaltmb.csv (see [format](https://github.com/zhanyinx/clonal_evolution#input)) to perform clonal tmb analysis
-
-To show the whole list of parameters:
 
 ```bash
 nextflow run path_to/main.nf --help --show_hidden_params
@@ -116,18 +107,6 @@ Available sample_type are: somatic, germline, cnv.
 
 Available tumor_tissue are: Adrenal_Gland Bile_Duct Bladder Blood Bone Bone_Marrow Brain Breast Cancer_all Cervix Colorectal Esophagus Eye Head_and_Neck Inflammatory Intrahepatic Kidney Liver Lung Lymph_Nodes Nervous_System Other Ovary Pancreas Pleura Prostate Skin Soft_Tissue Stomach Testis Thymus Thyroid Uterus
 
-__BETA version biomarkers__
-
-To extract biomarkers, you can use the same type of input sheet. There are two types of sample files available: the maf format, which is the output of the annotation analysis, and the .sf file from the Illumina Dragen RNA pipeline. These sample files are categorized based on their sample type: dna for maf files and rna for .sf files.
-
-If clonal tmb biomarker calculation is also required, the --clonal_tmb_input parameter must be also specified.
-The format of the clonal_tmb_input file can be found [here](https://github.com/zhanyinx/clonal_evolution#input)
-
-```bash
-nextflow run path_to/main.nf run -with-tower -c nextflow.config  -profile conda --input sample.csv --outdir variantalker_output/ --analysis biomarkers --clonal_tmb_input sample_clonal_tmb.csv
-```
-
-
 ## Output
 
 Output structure:
@@ -150,11 +129,6 @@ params.outdir
 |       |       |-- patient.cnv.annotated.tsv
 |       |       |-- patient.vcf
 |               `-- patient.maf
-|   `-- biomarkers
-|       |-- patient
-|       |       |-- patient.rna.tpm.csv
-|       |       |-- tmb_signatures.patient.txt
-|       |       |-- patient.clonalTMB.txt
 ```
 
 variantalker outputs for each sample multiple files
@@ -163,6 +137,7 @@ variantalker outputs for each sample multiple files
 2) vcf file with the PASS variants 
 3) filtered pass file with variants passing the filters (see below).
 4) filtered nopass file with variants not passing the filters (see below).
+5) cnv annotated file (if cnv samples provided)
 
 Default filters applied:
 
@@ -187,3 +162,8 @@ Default filters applied:
 - no filters on genes (somatic or germline)
 
 Logic OR filters: a variant is kept if at least one of the OR filters is true
+
+
+# Liability
+
+Variantalker assumes no responsibility for any injury to person or damage to persons or property arising out of, or related to any use of Variantalker, or for any errors or omissions. The user recognizes they are using Liability at their own risk.

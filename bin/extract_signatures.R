@@ -48,7 +48,7 @@ signature_apobec <- c(2, 13)
 
 # Read files
 raw_maf <- read.delim(opt$fname_maf)
-skip_rows <- which(!startsWith(raw_maf[, 1], "##"))[1]
+skip_rows <- which(!startsWith(raw_maf[, 1], "#"))[1]
 mutdat <- read.delim(opt$fname_maf, skip=skip_rows)
 mutdat$Tumor_Sample_Barcode = as.character(mutdat$Tumor_Sample_Barcode)
 samples <- unique(mutdat["Tumor_Sample_Barcode"])

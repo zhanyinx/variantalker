@@ -6,6 +6,7 @@ All processes to extract biomarkers from maf files
 
 // process to extract transcript per milion (tpm) from rnaseq count data from dragen
 process extract_tpm{
+    fair true
     cpus 1
     maxRetries = 2
     memory { 1.GB * task.attempt }
@@ -16,7 +17,7 @@ process extract_tpm{
     input: 
         tuple val(patient), path(counts)
     output:
-        file("${patient}.rna.tpm.csv")
+        tuple val(patient), file("${patient}.rna.tpm.csv")
     script:
     """
         gene_expression.py -i ${counts} -o ${patient}.rna.tpm.csv
@@ -28,6 +29,7 @@ process extract_tpm{
 
 // process to extract mutational signature, total and nmd-escapees tumor mutational burden from maf file 
 process calculate_tmb_signature{
+    fair true
     cpus 1
     maxRetries = 2
     memory { 1.GB * task.attempt }
@@ -37,8 +39,8 @@ process calculate_tmb_signature{
     input:
         tuple val(patient), path(maf)
     output:
-        file(maf)
-        file("tmb_signatures.${patient}.txt")
+        tuple val(patient), file(maf)
+        tuple val(patient), file("tmb_signatures.${patient}.txt")
     script:
 
     """

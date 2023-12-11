@@ -13,16 +13,23 @@ include {extract_tpm; calculate_tmb_signature} from '../modules/local/biomarkers
 include {ASCAT; generate_ascat_loci; generate_ascat_alleles; generate_ascat_rt; generate_ascat_gc} from '../modules/local/ascat/main.nf'
 include {SAMTOOLS_CONVERT as BAM_TO_CRAM} from '../modules/nf-core/samtools/convert/main.nf'
 include {generate_pyclone; pyclone} from '../modules/local/pyclone/main.nf'
-//include {report_raw} from '../modules/report.nf'
+include {reporter} from '../modules/local/report/report.nf'
 
 
 
 workflow BIOMARKERS {
 
     ch_rna = extract_csv(file(params.input), "rna")
-    ch_dna = extract_csv(file(params.input), "dna")
+    ch_variant_germline = extract_csv(file(params.input), "variant_germline")
+    ch_variant_somatic = extract_csv(file(params.input), "variant_somatic")
+    ch_msi = extract_csv(file(params.input), "msi")
+    ch_tmb = extract_csv(file(params.input), "tmb")
+    ch_cnv = extract_csv(file(params.input), "cnv")
+    ch_coverage = extract_csv(file(params.input), "coverage")
+    
+
     // tmb and mutational signatures
-    calculate_tmb_signature(ch_dna)
+    calculate_tmb_signature(ch_variant_somatic)
 
     // trascript per million from RNAseq
     if (params.pipeline.toUpperCase() == "DRAGEN"){
@@ -85,7 +92,13 @@ workflow BIOMARKERS {
         ASCAT(cram_variant_calling_pair, generate_ascat_alleles.out.first(), generate_ascat_loci.out.first(), Channel.fromPath(params.target).first(), Channel.fromPath(params.fasta).first(), generate_ascat_gc.out.first(), generate_ascat_rt.out.first())
         generate_pyclone(ASCAT.out.cram.groupTuple())
         pyclone(generate_pyclone.out)
+        ch_clonal_tmb = pyclone.out[0]
+
     }
+    
+    // join all channels
+    report_ch = ch_variant_somatic.join(ch_variant_germline, remainder: true).join(calculate_tmb_signature.out[1], remainder: true).join(ch_msi, remainder: true).join(ch_clonal_tmb, remainder: true).join(ch_tmb, remainder: true).join(ch_rna, remainder: true).join(ch_cnv, remainder: true).join(ch_coverage.groupTuple(), remainder: true)
+    reporter(report_ch)
 }
 
 /*
@@ -102,7 +115,7 @@ def extract_csv(csv_file, sample_type) {
         while ((line = reader.readLine()) != null) {
             numberOfLinesInSampleSheet++
             if (numberOfLinesInSampleSheet == 1){
-                def requiredColumns = ["patient", 'sample_file', 'sample_type']
+                def requiredColumns = ["patient", "sample_file", "sample_type"]
                 def headerColumns = line
                 if (!requiredColumns.every { headerColumns.contains(it) }) {
                     log.error "Header missing or CSV file does not contain all of the required columns in the header: ${requiredColumns}"
@@ -127,12 +140,7 @@ def extract_csv(csv_file, sample_type) {
             }
         }
         .filter { row -> row != null }
-        .map { row ->
-            if(sample_type == "rna"){
-                [row.patient, row.sample_file]
-            }else if(sample_type == "dna"){
-                [row.patient, row.sample_file]
-            }
+        .map { row -> [row.patient, row.sample_file]
         }
 }
 
