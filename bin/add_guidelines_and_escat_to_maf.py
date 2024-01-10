@@ -221,27 +221,32 @@ def main():
         if cosmic[0] != "cosmic95":
             out.drop(cosmic[0], inplace=True, axis=1)
 
-
-
-    # fill in vaf values for iontorrent
+    # fill in vaf values for iontorrent and alissa
     if out["t_ref_count"].isnull().values.any():
-        if "RO" in out.columns:
+        if "FRO" in out.columns:
             out["t_ref_count"] = out["FRO"]
+        elif "DP" in out.columns and "ALTCOUNT" in out.columns:
+            out["t_ref_count"] = out["DP"] - out["ALTCOUNT"]
         else:
             Warning("t_ref_count column is empty, probably malformatted VCF input file")
 
     if out["t_alt_count"].isnull().values.any():
-        if "AO" in out.columns:
+        if "FAO" in out.columns:
             out["t_alt_count"] = out["FAO"]
+        elif "DP" in out.columns and "ALTCOUNT" in out.columns:
+            out["t_alt_count"] = out["ALTCOUNT"]
         else:
             Warning("t_alt_count column is empty, probably malformatted VCF input file")
-    
+
     if out["tumor_f"].isnull().values.any():
         if "AF" in out.columns:
             out["tumor_f"] = out["AF"]
         else:
             Warning("tumor_f column is empty, probably malformatted VCF input file")
-    else:
+    elif (
+        not out["t_alt_count"].isnull().values.any()
+        and not out["t_ref_count"].isnull().values.any()
+    ):
         # recalculate tumor frequency in case of dragen
         out["tumor_f"] = out["t_alt_count"] / (out["t_alt_count"] + out["t_ref_count"])
 
