@@ -44,12 +44,17 @@ process calculate_tmb_signature{
     script:
 
     """
-    extract_signatures.R -i ${maf} \
-        -g ${params.build} \
-        -o signatures.txt
+    mkdir input
+    cp ${maf} input/
+
+    extract_signatures.py -i ./input \
+    -g ${params.build_alt_name} -c ${params.cosmic_version}\
+    --cosmic_group ${params.cosmic_group} \
+    -o signatures.txt
 
     calculate_tmb.py -m ${maf} \
         -t ${params.target} \
+        --nmd_scores ${projectDir}/resources/nmd_final_grange.tsv \
         -o tmb.txt
 
     cat signatures.txt tmb.txt > tmb_signatures.${patient}.txt
