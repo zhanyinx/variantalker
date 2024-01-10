@@ -533,6 +533,32 @@
                 }
             }
         },
+        "mutational_signature": {
+            "title": "Cosmic mutational signature activity estimation",
+            "type": "object",
+            "description": "Estimate mutational signature activity using https://github.com/AlexandrovLab/SigProfilerAssignment.",
+            "default": "",
+            "fa_icon": "fas fa-toolbox",
+            "properties": {
+                "cosmic_group": {
+                    "type": "string",
+                    "format": "file-path",
+                    "default": "${projectDir}/resources/cosmic_sbs_group.csv",
+                    "fa_icon": "fas fa-cosmic-group",
+                    "description": "Overwrites the group file provided by default.",
+                    "help_text": "Group file with two columns: grouping column and the correpsonding sbs.",
+                    "hidden": true
+                },
+                "cosmic_version": {
+                    "type": "number",
+                    "default": 3.4,
+                    "fa_icon": "fas fa-cosmic-version",
+                    "description": "Version of cosmic SBS database. Currently, with the version of sigprofilerassignment, the latest is 3.4",
+                    "help_text": "For more details, see [here](https://github.com/AlexandrovLab/SigProfilerAssignment).",
+                    "hidden": true
+                }
+            }
+        },
         "pyclone": {
             "title": "pyclone ccf estimation",
             "type": "object",
