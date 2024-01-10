@@ -14,12 +14,6 @@ params.intervar_init = "$projectDir/resources/configs/config.init.intervar"
 params.cancervar_db = "$projectDir/resources/CancerVar/cancervardb"
 params.intervar_db = "$projectDir/resources/InterVar/intervardb"
 
-if(params.build == "hg38"){
-    params.build_alt_name = "GRCh38"
-}else if(params.build == "hg19"){
-    params.build_alt_name = "GRCh37"
-}
-
 if (!params.cancervar_evidence_file || params.cancervar_evidence_file.isEmpty()) {
     params.cancervar_evidence_file = "None"
 }
