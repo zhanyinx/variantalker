@@ -227,7 +227,7 @@ if(length(cnv)>1){
     all = rbind(loss,gain)
     if(isvalid(params$cnv_gene_file)){
       if(file.exists(params$cnv_gene_file)){
-        all = all[all$gene %in% tokeep]
+        all = all[all$gene %in% tokeep,]
       }
     }
     if(nrow(all)>0){
@@ -246,7 +246,7 @@ For this report, we are considering `r tokeep` genes for CNVs.
 For each sample, Dragen provides statistics on coverage. Below the coverage for all samples included in the report
 
 ```{r coverage}
-if(!is.null(params$metrics_file)){
+if(isvalid(params$metrics_file)){
   cleaned_string <- gsub("\\[|\\]", "", params$metrics_file)
   single_paths <- unlist(strsplit(cleaned_string, ", "))
 
