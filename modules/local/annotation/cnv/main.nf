@@ -31,7 +31,6 @@ process annotate_cnv {
     script:
     if (params.pipeline.toUpperCase() == "DRAGEN")
         """
-        echo ${params}
         name="\$(basename ${input} | sed 's,vcf\\.gz,bed,g')"
         zcat ${input} | awk '{if(\$7=="PASS") print \$3,\$5}' > \$name
         sed -i 's/DRAGEN:GAIN://g' \$name

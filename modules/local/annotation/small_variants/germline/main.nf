@@ -160,6 +160,7 @@ process germline_annotate_snp_indel{
             -o tmp \
             -p ${params.projectid} \
             -d ${params.date} \
+            --escat ${params.escat_db} \
             --germline
         
         if ! [ -f ${meta.patient}.small_mutations.intervar.escat.maf ]; then

@@ -54,7 +54,7 @@ process calculate_tmb_signature{
 
     calculate_tmb.py -m ${maf} \
         -t ${params.target} \
-        --nmd_scores ${projectDir}/resources/nmd_final_grange.tsv \
+        --nmd_scores ${params.nmd_db} \
         -o tmb.txt
 
     cat signatures.txt tmb.txt > tmb_signatures.${patient}.txt

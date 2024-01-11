@@ -176,6 +176,7 @@ process somatic_annotate_snp_indel{
             -o tmp \
             -t ${meta.tumor_tissue} \
             -p ${params.projectid} \
+            --escat ${params.escat_db} \
             -d ${params.date} 
         
         if ! [ -f ${meta.patient}.small_mutations.cancervar.escat.maf ]; then

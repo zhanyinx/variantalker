@@ -213,6 +213,20 @@
                     "fa_icon": "fas fa-string-alphamissense-fa",
                     "description": "Base folder of alpha missense database files",
                     "help_text": "Path to the folder with alpha missense database files. e.g. path to the downloaded public_databases."
+                },
+                "escat_db" : {
+                    "type": "string",
+                    "format": "file-path",
+                    "fa_icon": "fas fa-string-escat-fa",
+                    "description": "File to the escat database",
+                    "help_text": "File to the escat database. Default provided in the resource directory in the repo"
+                },
+                "nmd_db" : {
+                    "type": "string",
+                    "format": "file-path",
+                    "fa_icon": "fas fa-string-nmd-fa",
+                    "description": "File to the nmd database",
+                    "help_text": "File to the nmd database. Default provided in the resource directory in the repo"
                 }
             }
         },
