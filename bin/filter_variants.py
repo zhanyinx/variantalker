@@ -20,13 +20,13 @@ def _parse_args():
         required=True,
         help="Input maf file",
     )
-    parser.add_argument(
-        "-fam",
-        "--filter_alpha_missense",
-        type=str,
-        default="likely_pathogenic,ambiguous",
-        help="Alpha missense filter. Available values: likely_pathogenic,ambiguous,likely_benign",
-    )
+    #   parser.add_argument(
+    #       "-fam",
+    #       "--filter_alpha_missense",
+    #       type=str,
+    #       default="likely_pathogenic,ambiguous",
+    #       help="Alpha missense filter. Available values: likely_pathogenic,ambiguous,likely_benign",
+    #   )
     parser.add_argument(
         "-fc",
         "--filter_cancervar",
@@ -135,8 +135,14 @@ def has_element_from_list(s: str, my_list: list):
                 return True
     return False
 
+
 def somatic_filters(
-    maf: pd.DataFrame, vaf: float, somatic_genes: str, cancervar_keep: list, civic_keep: list, alpha_missense_keep: list,
+    maf: pd.DataFrame,
+    vaf: float,
+    somatic_genes: str,
+    cancervar_keep: list,
+    civic_keep: list,
+    #  alpha_missense_keep: list,
 ):
     """Set of somatic specific filters."""
     clinvar_exclude = CLINVAR_EXCLUDE
@@ -154,9 +160,11 @@ def somatic_filters(
             ~maf["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude)
             & (~maf["ClinVar_VCF_CLNSIG"].isna())
         )
-        | (~(maf["ESCAT"].isin(escat_exclude))) 
-        | maf["CIViC_Evidence_Level"].apply(lambda x: has_element_from_list(x, civic_keep))
-        | (maf["am_class"].isin(alpha_missense_keep))
+        | (~(maf["ESCAT"].isin(escat_exclude)))
+        | maf["CIViC_Evidence_Level"].apply(
+            lambda x: has_element_from_list(x, civic_keep)
+        )
+        # | (maf["am_class"].isin(alpha_missense_keep))
     )
 
     # filter on variant allele frequency
@@ -184,7 +192,7 @@ def germline_filters(
     germline_genes: str,
     intervar_keep: list,
     renovo_keep: list,
-    alpha_missense_keep: list,
+    #  alpha_missense_keep: list,
 ):
     """Set of somatic specific filters."""
     clinvar_exclude = CLINVAR_EXCLUDE
@@ -196,7 +204,7 @@ def germline_filters(
             & (~maf["ClinVar_VCF_CLNSIG"].isna())
         )
         | (maf["RENOVO_Class"].isin(renovo_keep))
-        | (maf["am_class"].isin(alpha_missense_keep))
+        # | (maf["am_class"].isin(alpha_missense_keep))
     )
 
     # filter on variant allele frequency
@@ -217,9 +225,6 @@ def germline_filters(
             Warning(f"{germline_genes} file does not exist. No filters applied")
 
     return filter_guidelines & filter_vaf & filter_genes
-
-
-
 
 
 def main():
@@ -243,7 +248,7 @@ def main():
             f"sample_type must be somatic or germline; Provided {args.sample_type}"
         )
 
-    alpha_missense_keep = args.filter_alpha_missense.split(",")
+    # alpha_missense_keep = args.filter_alpha_missense.split(",")
 
     if args.sample_type == "somatic":
         cancervar_keep = args.filter_cancervar.split(",")
@@ -254,7 +259,7 @@ def main():
             cancervar_keep=cancervar_keep,
             civic_keep=civic_keep,
             vaf=args.vaf_threshold,
-            alpha_missense_keep = alpha_missense_keep
+            # alpha_missense_keep=alpha_missense_keep,
         )
 
     if args.sample_type == "germline":
@@ -266,7 +271,7 @@ def main():
             intervar_keep=intervar_keep,
             vaf=args.vaf_threshold_germline,
             renovo_keep=renovo_keep,
-            alpha_missense_keep = alpha_missense_keep
+            # alpha_missense_keep=alpha_missense_keep,
         )
 
     out["filter"] = "NOPASS"
