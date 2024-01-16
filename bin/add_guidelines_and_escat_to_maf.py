@@ -262,7 +262,8 @@ def main():
         if len(civic_splitted.columns) > 1:
             out[CIVIC_COLUMNS] = civic_splitted
         else:
-            out[CIVIC_COLUMNS] = None
+            for colname in CIVIC_COLUMNS:
+                out[colname] = None
 
     # write to file
     out.to_csv(args.output, sep="\t", index=False, mode="a")
