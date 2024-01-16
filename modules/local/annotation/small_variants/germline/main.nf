@@ -2,6 +2,7 @@ process filter_variants {
     cpus 1
     memory "4 G"
     tag "filter_variants"
+    container "docker://yinxiu/gatk:latest"
 
     input:
         tuple val(meta), path(vcf) 
@@ -27,6 +28,7 @@ process normalise_rename_germline_vcf {
     cpus 1
     memory "1 G"
     tag "rename_and_index"
+    container "docker://yinxiu/gatk:latest"
 
     input:
         tuple val(meta), path(vcf)
@@ -55,6 +57,7 @@ process germline_annotate_snp_indel{
     maxRetries = 3
     memory { 8.GB * task.attempt }
     tag "vcf2maf"
+    container "docker://yinxiu/gatk:latest"
 
     input:
         tuple val(meta), file(vcf), file(index) 
@@ -180,6 +183,7 @@ process germline_renovo_annotation{
     maxRetries = 2
     memory { 1.GB * task.attempt }
     tag "vcf2maf"
+    container "docker://yinxiu/renovo:latest"
 
     input:
         tuple val(meta), file(maf), file(vcf)

@@ -6,6 +6,7 @@ process add_civic{
     errorStrategy 'retry'
     maxRetries = 3
     memory { 4.GB * task.attempt }
+    container "docker://yinxiu/civicpy:latest"
 
     tag "civic2vcf"
 
@@ -66,6 +67,7 @@ process add_alpha_missense{
     maxRetries = 2
     memory { 3.GB * task.attempt }
     tag "alphamissense"
+    container "docker://ubuntu:20.04"
 
     input:
         tuple val(meta), file(maf), file(vcf)
@@ -117,7 +119,8 @@ process filter_maf{
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
     tag "filtermaf"
-
+    container "docker://yinxiu/gatk:latest"
+    
     input:
         tuple val(meta), file(maf), file(vcf)
     output:

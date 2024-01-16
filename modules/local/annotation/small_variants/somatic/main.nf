@@ -1,6 +1,7 @@
 process fixvcf{
     cpus 1
     memory "1 G"
+    container "docker://yinxiu/gatk:latest"
 
     input:
         tuple val(meta), path(vcf)
@@ -60,7 +61,7 @@ process somatic_annotate_snp_indel{
     maxRetries = 3
     memory { 8.GB * task.attempt }
     tag "vcf2maf"
-
+    container "docker://yinxiu/gatk:latest"
     input:
         tuple val(meta), file(vcf), file(index)
     output:

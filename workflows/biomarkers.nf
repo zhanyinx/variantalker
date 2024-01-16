@@ -94,6 +94,8 @@ workflow BIOMARKERS {
         pyclone(generate_pyclone.out)
         ch_clonal_tmb = pyclone.out[0]
 
+    }else{
+        ch_clonal_tmb = Channel.empty()
     }
     
     // join all channels

@@ -3,6 +3,10 @@ process cnvkit_call{
     cpus 5
     memory "5 G"
 
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://depot.galaxyproject.org/singularity/cnvkit:0.9.10--pyhdfd78af_0':
+        'biocontainers/cnvkit:0.9.10--pyhdfd78af_0' }"
+    
     input:
         tuple val(meta), path(cnr)
 
@@ -23,6 +27,7 @@ process annotate_cnv {
     cpus 5
     memory "5 G"
     publishDir "${params.outdir}/${params.date}/annotation/somatic/${meta.patient}", mode: "copy"
+    container "docker://yinxiu/classifycnv:latest"
 
     input:
         tuple val(meta), path(input)
