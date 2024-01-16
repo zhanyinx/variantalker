@@ -68,6 +68,7 @@ then
 fi
 
 input=`realpath $input`
+annotation_folder=`realpath $annotation_folder`
 if ! [ -d $input ]; then
     echo "$input directory does not exist!"
     exit
