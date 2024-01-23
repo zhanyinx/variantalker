@@ -119,12 +119,6 @@ if [ -d $dragen_rna_folder ]; then
     done
 fi
 
-# if both dragen folder and input are defined, we can generate also the input file for clonal_tmb
-
-if [ -d $dragen_folder ] && [ -d $input ]; then
-    sh $(dirname $0)/create_inputfile_clonal_tmb_input.sh -i $dragen_folder -a $input/somatic -o $output.clonal_tmb
-fi
-
 # Append germline maf samples
 if [ -d $input/germline ]; then
     echo "Appending germline samples...."

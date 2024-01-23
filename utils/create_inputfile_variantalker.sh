@@ -100,6 +100,6 @@ done
 
 for file in `ls -d $path/*/*cnv*vcf.gz`; do
         dir=`dirname $file`
-        name=`basename $dir | sed 's,_CNV,,g'`
+        name=`basename $dir`
         echo "$name,,$file,cnv" >> $output
 done
