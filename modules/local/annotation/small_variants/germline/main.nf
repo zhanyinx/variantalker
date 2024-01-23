@@ -86,6 +86,7 @@ process germline_annotate_snp_indel{
         #     --data-sources-path ${params.funcotator_germline_db} \
         #     --ref-version ${params.build} \
         #     --transcript-selection-mode ${params.transcript_selection} \
+        #     --splice-site-window-size ${params.splice_site_window_size} \
         #     --interval-padding ${params.target_padding}
 
         check=1
@@ -103,6 +104,7 @@ process germline_annotate_snp_indel{
                 --data-sources-path ${params.funcotator_germline_db}\
                 --ref-version ${params.build} \
                 --transcript-selection-mode ${params.transcript_selection} \
+                --splice-site-window-size ${params.splice_site_window_size} \
                 --interval-padding ${params.target_padding}
 
             check=\$?

@@ -207,6 +207,12 @@
                     "default": 2,
                     "fa_icon": "fas fa-folder-target-padding"
                 },
+                "splice_site_window_size": {
+                    "type": "number",
+                    "description": "Number of bases on either side of a splice site for a variant to be classified as a SPLICE_SITE variant",
+                    "default": 5,
+                    "fa_icon": "fas fa-number-splice-window"
+                },
                 "alpha_mis_genome_basedir": {
                     "type": "string",
                     "format": "directory-path",
