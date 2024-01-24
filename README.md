@@ -120,16 +120,17 @@ params.outdir
 |       |   `-- patient
 |       |       |-- filtered.patient.maf.pass.tsv
 |       |       |-- filtered.patient.maf.nopass.tsv
-|       |       |-- patient.cnv.annotated.tsv
 |       |       |-- patient.vcf
 |       |       `-- patient.maf
 |       `-- somatic
 |           `-- patient
 |       |       |-- filtered.patient.maf.pass.tsv
 |       |       |-- filtered.patient.maf.nopass.tsv
-|       |       |-- patient.cnv.annotated.tsv
 |       |       |-- patient.vcf
 |               `-- patient.maf
+|       `-- cnv
+|           `-- patient
+|       |       |-- patient.cnv.annotated.tsv
 ```
 
 variantalker outputs for each sample multiple files

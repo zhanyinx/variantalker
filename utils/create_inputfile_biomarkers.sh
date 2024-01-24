@@ -83,7 +83,7 @@ echo "patient,sample_file,sample_type" > $output
 
 # append dragen msi and tmb if they exist
 if [ -d $dragen_folder ]; then
-    echo "Appending dragen msi and tmb"
+    echo "Appending dragen msi, tmb, coverage, hrd"
     abspath=`realpath $dragen_folder`
     for file in `ls $abspath/*/*.tmb.metrics.csv`; do
         absfile=`realpath $file`
@@ -104,6 +104,13 @@ if [ -d $dragen_folder ]; then
         foldername=`dirname $absfile`
         patient=`basename $foldername`
         echo "$patient,$absfile,coverage" >> $output
+    done
+
+    for file in `ls $abspath/*/*hrd*`; do
+        absfile=`realpath $file`
+        foldername=`dirname $absfile`
+        patient=`basename $foldername`
+        echo "$patient,$absfile,hrd" >> $output
     done
 fi
 
@@ -143,8 +150,10 @@ if [ -d $input/somatic ]; then
             sed -i 's;'${patient_normal},';'${patient},';g' $output
         fi
     done
+fi
 
-    for file in `ls $input/somatic/*/*cnv*tsv`; do
+if [ -d $input/cnv ]; then
+    for file in `ls $input/cnv/*/*cnv*tsv`; do
         absfile=`realpath $file`
         foldername=`dirname $absfile`
         patient=`basename $foldername`
