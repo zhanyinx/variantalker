@@ -11,6 +11,7 @@ process extract_tpm{
     maxRetries = 2
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}", mode: "copy"
+    container "docker://yinxiu/clonal_evolution:latest"
 
     tag "extract_signatures_tpm"
 
@@ -35,6 +36,7 @@ process calculate_tmb_signature{
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/", mode: "copy"
     tag "tmb calculation"
+    container "docker://yinxiu/sigprofilerassignment:latest"
 
     input:
         tuple val(patient), path(maf)

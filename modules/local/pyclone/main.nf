@@ -2,6 +2,8 @@
 process generate_pyclone{
     fair true
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/pyclone", mode: "copy"
+    container "docker://yinxiu/clonal_evolution:latest"
+
     input:
         tuple val(patient), val(sex), path(mafs), val(cellularity), path(crams), path(crais), path(pluriploidy), path(cnvs)
     output:
@@ -69,6 +71,7 @@ process generate_pyclone{
 process pyclone{
     fair true
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/", mode: "copy"
+    container "docker://yinxiu/clonal_evolution:latest"
     input:
         tuple val(patient), path(pyclone)
     output:

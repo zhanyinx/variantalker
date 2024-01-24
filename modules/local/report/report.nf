@@ -7,6 +7,7 @@ process reporter{
     memory "5 G"
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}", mode: "copy"
     tag "report"
+    container "docker://yinxiu/reporter:latest"
 
     input:
         tuple val(patient), val(maf), val(maf_germline), val(variant_signatures), val(msi),  val(clonal_tmb), val(tmb), val(rna), val(cnv), val(metrics)
