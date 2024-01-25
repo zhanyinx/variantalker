@@ -22,6 +22,7 @@ params:
   rna_biomarker: NULL
   cnv_file: NULL
   cnv_gene_file: NULL
+  hrd_file: NULL
 
 ---
 
@@ -69,6 +70,7 @@ library(maftools)
 library(rjson)
 library(stringi)
 library(stringr)
+library(reshape2)
 ```
 
 
@@ -80,6 +82,7 @@ variant_signatures = NULL
 dragen_msi = NULL
 dragen_tmb = NULL
 cnv = NULL
+hrd = NULL
 
 if(isvalid(params$variants_somatic_file)) {
   variants_somatic = read.maf(params$variants_somatic_file)
@@ -102,6 +105,7 @@ if(isvalid(params$variant_signatures_file)) {variant_signatures = read.table(par
 if(isvalid(params$dragen_tmb_file)) {dragen_tmb = read.csv(params$dragen_tmb_file, header=FALSE)}
 if(isvalid(params$dragen_msi_file)) {dragen_msi = fromJSON(file=params$dragen_msi_file)}
 if(isvalid(params$cnv_file)) {cnv = read.delim(params$cnv_file)}
+if(isvalid(params$hrd_file)) {hrd = read.csv(params$hrd_file)}
 ```
 
 
@@ -156,11 +160,17 @@ if(!is.null(variants) && ncol(variants)>1){
 ## Biomarkers
 
 We used different tools to extract biomarkers from whole exome sequencing and RNA-seq data. In particular, 
-Illumina DRAGEN Bio-IT Platform allows the extract of MSI and TMB from WES data. We then complemented the list of biomarkers
+Illumina DRAGEN Bio-IT Platform allows the extract of MSI, TMB and HRD from WES data. We then complemented the list of biomarkers
 using the biomarker pipeline from variantalker (see [here](https://github.com/zhanyinx/variantalker/tree/main/docs/biomarkers)).
 
 
-Recommendations: MSI instability if percentage >= 20 for solid tumor; 
+Recommendations: 
+
+- MSI high if >= 20 for solid tumor (see [ref](https://support-docs.illumina.com/SW/dragen_v42/Content/SW/DRAGEN/Biomarkers_MSI.htm?Highlight=msi))
+
+- TMB high if >= 10 (see [ref](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10248461/))
+
+- HRD high if >=58 (or BRCA1/2 positive) (see [ref](https://doi.org/10.1200/JCO.2023.41.16_suppl.e12605))
 
 ```{r biomarkers}
 biomarkers = NULL
@@ -175,6 +185,12 @@ if(length(dragen_tmb)>1){
   dragen_tmb = dragen_tmb[c(nrow(dragen_tmb)-1, nrow(dragen_tmb)),c(ncol(dragen_tmb)-1, ncol(dragen_tmb))]
   dragen_tmb[,1] = paste0("dragen_",dragen_tmb[,1])
   biomarkers = add_biomarker(biomarkers, dragen_tmb)
+}
+
+if(length(hrd)>1){
+  hrd = melt(hrd)[,c(2,3)]
+  hrd[,1] = paste0("dragen_",hrd[,1])
+  biomarkers = add_biomarker(biomarkers, hrd)
 }
 
 biomarkers$value = round(as.numeric(biomarkers$value), 3)

@@ -24,6 +24,7 @@ workflow BIOMARKERS {
     ch_variant_somatic = extract_csv(file(params.input), "variant_somatic")
     ch_msi = extract_csv(file(params.input), "msi")
     ch_tmb = extract_csv(file(params.input), "tmb")
+    ch_hrd = extract_csv(file(params.input), "hrd")
     ch_cnv = extract_csv(file(params.input), "cnv")
     ch_coverage = extract_csv(file(params.input), "coverage")
     
@@ -99,7 +100,7 @@ workflow BIOMARKERS {
     }
     
     // join all channels
-    report_ch = ch_variant_somatic.join(ch_variant_germline, remainder: true).join(calculate_tmb_signature.out[1], remainder: true).join(ch_msi, remainder: true).join(ch_clonal_tmb, remainder: true).join(ch_tmb, remainder: true).join(ch_rna, remainder: true).join(ch_cnv, remainder: true).join(ch_coverage.groupTuple(), remainder: true)
+    report_ch = ch_variant_somatic.join(ch_variant_germline, remainder: true).join(calculate_tmb_signature.out[1], remainder: true).join(ch_msi, remainder: true).join(ch_clonal_tmb, remainder: true).join(ch_tmb, remainder: true).join(ch_rna, remainder: true).join(ch_cnv, remainder: true).join(ch_coverage.groupTuple(), remainder: true).join(ch_hrd, remainder: true)
     reporter(report_ch)
 }
 
