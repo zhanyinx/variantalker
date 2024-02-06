@@ -143,9 +143,9 @@ variantalker outputs for each sample multiple files
 
 Default filters applied:
 
-- "Silent", "Intron", "3'UTR", "5'UTR", "IGR", "5'Flank", "3'Flank", "RNA" variant types are filtered out
+- "Silent",  "IGR",  "RNA" variant types are filtered out (unless it's pathogenic or likely pathogenic for clinvar/cancervar/intervar)
 
-- minimum coverage 50
+- minimum coverage 50 (unless it's pathogenic or likely pathogenic for clinvar/cancervar/intervar)
 
 - minimum somatic VAF: 0.01
 
