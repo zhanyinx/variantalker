@@ -20,13 +20,6 @@ def _parse_args():
         required=True,
         help="Input maf file",
     )
-    #   parser.add_argument(
-    #       "-fam",
-    #       "--filter_alpha_missense",
-    #       type=str,
-    #       default="likely_pathogenic,ambiguous",
-    #       help="Alpha missense filter. Available values: likely_pathogenic,ambiguous,likely_benign",
-    #   )
     parser.add_argument(
         "-fc",
         "--filter_cancervar",
@@ -142,7 +135,6 @@ def somatic_filters(
     somatic_genes: str,
     cancervar_keep: list,
     civic_keep: list,
-    #  alpha_missense_keep: list,
 ):
     """Set of somatic specific filters."""
     clinvar_exclude = CLINVAR_EXCLUDE
@@ -164,7 +156,6 @@ def somatic_filters(
         | maf["CIViC_Evidence_Level"].apply(
             lambda x: has_element_from_list(x, civic_keep)
         )
-        # | (maf["am_class"].isin(alpha_missense_keep))
     )
 
     # filter on variant allele frequency
@@ -183,7 +174,20 @@ def somatic_filters(
         else:
             Warning(f"{somatic_genes} file does not exist. No filters applied")
 
-    return filter_guidelines & filter_vaf & filter_genes
+    # keep all pathogenetic variants
+    filter_patho = (
+        (maf["CancerVar"].isin(["Tier_II_potential", "Tier_I_strong"]))
+        | (maf["ClinVar_VCF_CLNSIG"].isin(CLINVAR_PATHO))
+        | (~(maf["ESCAT"].isin(["IA", "IB", "IC", "IIA", "IIB", "IIIA", "IIIB"])))
+        | maf["CIViC_Evidence_Level"].apply(
+            lambda x: has_element_from_list(x, ["A", "B"])
+        )
+    )
+
+    return (
+        filter_guidelines & filter_vaf & filter_genes,
+        filter_patho & filter_vaf & filter_genes,
+    )
 
 
 def germline_filters(
@@ -192,7 +196,6 @@ def germline_filters(
     germline_genes: str,
     intervar_keep: list,
     renovo_keep: list,
-    #  alpha_missense_keep: list,
 ):
     """Set of somatic specific filters."""
     clinvar_exclude = CLINVAR_EXCLUDE
@@ -204,7 +207,6 @@ def germline_filters(
             & (~maf["ClinVar_VCF_CLNSIG"].isna())
         )
         | (maf["RENOVO_Class"].isin(renovo_keep))
-        # | (maf["am_class"].isin(alpha_missense_keep))
     )
 
     # filter on variant allele frequency
@@ -224,7 +226,15 @@ def germline_filters(
         else:
             Warning(f"{germline_genes} file does not exist. No filters applied")
 
-    return filter_guidelines & filter_vaf & filter_genes
+    # keep all pathogenetic variants
+    filter_patho = (maf["InterVar"].isin(["Pathogenic", "Likely pathogenic"])) | (
+        maf["ClinVar_VCF_CLNSIG"].isin(CLINVAR_PATHO)
+    )
+
+    return (
+        filter_guidelines & filter_vaf & filter_genes,
+        filter_patho & filter_vaf & filter_genes,
+    )
 
 
 def main():
@@ -248,33 +258,30 @@ def main():
             f"sample_type must be somatic or germline; Provided {args.sample_type}"
         )
 
-    # alpha_missense_keep = args.filter_alpha_missense.split(",")
-
     if args.sample_type == "somatic":
         cancervar_keep = args.filter_cancervar.split(",")
         civic_keep = args.filter_civic.upper().split(",")
-        out["filter_specific"] = somatic_filters(
+        out["filter_specific"], filter_patho = somatic_filters(
             out,
             somatic_genes=args.filter_genes_somatic,
             cancervar_keep=cancervar_keep,
             civic_keep=civic_keep,
             vaf=args.vaf_threshold,
-            # alpha_missense_keep=alpha_missense_keep,
         )
 
     if args.sample_type == "germline":
         intervar_keep = args.filter_intervar.split(",")
         renovo_keep = args.filter_renovo.split(",")
-        out["filter_specific"] = germline_filters(
+        out["filter_specific"], filter_patho = germline_filters(
             out,
             germline_genes=args.filter_genes_germline,
             intervar_keep=intervar_keep,
             vaf=args.vaf_threshold_germline,
             renovo_keep=renovo_keep,
-            # alpha_missense_keep=alpha_missense_keep,
         )
 
     out["filter"] = "NOPASS"
+    out.loc[filter_patho, "filter"] = "PASS"
     out.loc[out[["filter_common", "filter_specific"]].all(axis=1), "filter"] = "PASS"
     out = out.drop(["filter_common", "filter_specific"], axis=1)
 

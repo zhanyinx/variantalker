@@ -32,6 +32,37 @@ CLINVAR_EXCLUDE = [
     "not_provided",
 ]
 
+CLINVAR_PATHO = [
+    "Likely_pathogenic",
+    "Likely_pathogenic,_low_penetrance",
+    "Likely_pathogenic/Likely_risk_allele",
+    "Likely_pathogenic/Pathogenic,_low_penetrance",
+    "Likely_pathogenic|Affects",
+    "Likely_pathogenic|association",
+    "Likely_pathogenic|drug_response",
+    "Likely_pathogenic|other",
+    "Likely_pathogenic|risk_factor",
+    "Pathogenic",
+    "Pathogenic/Likely_pathogenic",
+    "Pathogenic/Likely_pathogenic/Likely_risk_allele",
+    "Pathogenic/Likely_pathogenic/Pathogenic,_low_penetrance",
+    "Pathogenic/Likely_pathogenic/Pathogenic,_low_penetrance|other",
+    "Pathogenic/Likely_pathogenic|drug_response",
+    "Pathogenic/Likely_pathogenic|other",
+    "Pathogenic/Likely_pathogenic|risk_factor",
+    "Pathogenic/Likely_risk_allele",
+    "Pathogenic/Likely_risk_allele|risk_factor",
+    "Pathogenic|Affects",
+    "Pathogenic|association",
+    "Pathogenic|association|protective",
+    "Pathogenic|confers_sensitivity",
+    "Pathogenic|drug_response",
+    "Pathogenic|drug_response|other",
+    "Pathogenic|other",
+    "Pathogenic|protective",
+    "Pathogenic|risk_factor",
+]
+
 CIVIC_COLUMNS = [
     "CIViC_Allele",
     "CIViC_Consequence",
@@ -199,7 +230,6 @@ def assign_escat(
                     )
                 )
                 if exon_number == int(float(row["Transcript_Exon"])):
-
                     best_score_idx = list(
                         subset.loc[subset["transcript_exon"] != "NAN", "ESCAT"].values
                     )
