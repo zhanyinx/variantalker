@@ -396,7 +396,6 @@ def read_datasets():
     # 11.BS2 variants of recessive homo, domin heter
     try:
         with myGzipFile(paras["bs2_snps"], "rb") as fh:
-
             # fh = open(paras['bs2_snps'], "r")
             strs = fh.read().decode()
             for line2 in strs.split("\n"):
@@ -647,7 +646,12 @@ def check_annovar_result():
     inputft = paras["inputfile_type"]
     annovar_options = " "
     if re.findall("true", paras["otherinfo"], flags=re.IGNORECASE):
-        annovar_options = annovar_options + "--otherinfo "
+        annovar_options = (
+            annovar_options
+            + "-intronhgvs 20 --otherinfo --convertarg '--splicing_threshold "
+            + paras["splice_window"]
+            + "' --codingarg '--alltranscript' "
+        )
     if re.findall("true", paras["onetranscript"], flags=re.IGNORECASE):
         annovar_options = annovar_options + "--onetranscript "
 
@@ -1555,7 +1559,9 @@ def check_PP3(line, Funcanno_flgs, Allels_flgs):
         # if float(cls[Funcanno_flgs['SIFT_score']]) < sift_cutoff:
         if float(cls[Funcanno_flgs["MetaSVM_score"]]) > metasvm_cutoff:
             PP3_t1 = 1
-    except ValueError:  # the sift absent means many:  synonymous indel  stop, but synonymous also is no impact
+    except (
+        ValueError
+    ):  # the sift absent means many:  synonymous indel  stop, but synonymous also is no impact
         funcs_tmp = ["synon", "coding-synon"]
         line_tmp = (
             cls[Funcanno_flgs["Func.refGene"]]
@@ -1695,7 +1701,9 @@ def check_BS2(line, Freqs_flgs, Allels_flgs, Funcanno_flgs):
         try:
             if mim_adultonset_dict[mim1] == "1":  # means adult oneset disorder
                 BS2 = 0
-        except KeyError:  # means not adult onset, begin to check recessive or domiant ,the genotype from 1000 genome
+        except (
+            KeyError
+        ):  # means not adult onset, begin to check recessive or domiant ,the genotype from 1000 genome
             try:
                 if (
                     mim_recessive_dict[mim1] == "1"
@@ -1730,7 +1738,6 @@ def check_BS2(line, Freqs_flgs, Allels_flgs, Funcanno_flgs):
                 pass
 
         else:
-
             pass
 
     except KeyError:  # means no information of recessive or domiant so BS2=0
@@ -1857,7 +1864,9 @@ def check_BP4(line, Funcanno_flgs, Allels_flgs):
         # if float(cls[Funcanno_flgs['SIFT_score']]) >= sift_cutoff:
         if float(cls[Funcanno_flgs["MetaSVM_score"]]) < metasvm_cutoff:
             BP4_t1 = 1
-    except ValueError:  # the sift absent means many:  synonymous indel  stop, but synonymous also is no impact
+    except (
+        ValueError
+    ):  # the sift absent means many:  synonymous indel  stop, but synonymous also is no impact
         funcs_tmp = ["synon", "coding-synon"]
         funcs_tmp2 = "nonsynon"
         line_tmp = (
@@ -2469,7 +2478,6 @@ def my_inter_var(annovar_outfile):
 
 
 def main():
-
     if platform.python_version() < "3.0.0":
         config = ConfigParser.ConfigParser()
     else:

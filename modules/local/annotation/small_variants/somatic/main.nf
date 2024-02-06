@@ -156,6 +156,7 @@ process somatic_annotate_snp_indel{
         sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
         sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
         sed -i "s,CANCERVARDB,${params.cancervar_db},g" config.init
+        sed -i "s,SPLICE_WINDOW,${params.splice_site_window_size},g" config.init
 
         if ! [ ${params.cancervar_evidence_file} == "None" ]; then
             if ! [ -f ${params.cancervar_evidence_file} ]; then
