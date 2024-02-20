@@ -178,7 +178,7 @@ def somatic_filters(
     filter_patho = (
         (maf["CancerVar"].isin(["Tier_II_potential", "Tier_I_strong"]))
         | (maf["ClinVar_VCF_CLNSIG"].isin(CLINVAR_PATHO))
-        | (~(maf["ESCAT"].isin(["IA", "IB", "IC", "IIA", "IIB", "IIIA", "IIIB"])))
+        | ((maf["ESCAT"].isin(["IA", "IB", "IC", "IIA", "IIB", "IIIA", "IIIB"])))
         | maf["CIViC_Evidence_Level"].apply(
             lambda x: has_element_from_list(x, ["A", "B"])
         )

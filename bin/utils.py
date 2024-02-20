@@ -61,6 +61,20 @@ CLINVAR_PATHO = [
     "Pathogenic|other",
     "Pathogenic|protective",
     "Pathogenic|risk_factor",
+    "Conflicting_interpretations_of_pathogenicity",
+    "Conflicting_interpretations_of_pathogenicity|Affects",
+    "Conflicting_interpretations_of_pathogenicity|association",
+    "Conflicting_interpretations_of_pathogenicity|association|other",
+    "Conflicting_interpretations_of_pathogenicity|association|risk_factor",
+    "Conflicting_interpretations_of_pathogenicity|drug_response",
+    "Conflicting_interpretations_of_pathogenicity|drug_response|other",
+    "Conflicting_interpretations_of_pathogenicity|other",
+    "Conflicting_interpretations_of_pathogenicity|other|risk_factor",
+    "Conflicting_interpretations_of_pathogenicity|protective",
+    "Conflicting_interpretations_of_pathogenicity|risk_factor",
+    "drug_response",
+    "drug_response|other",
+    "drug_response|risk_factor",
 ]
 
 CIVIC_COLUMNS = [
