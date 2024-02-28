@@ -101,6 +101,15 @@ for dir in $selected_folders; do
 	tumor=`ls $dir/*cram | grep tumor | grep -v evidence`
 	tumorbai=`ls $tumor*i`
 	sex="XX"
+    if [ -z $tumorbai ]; then
+        samtools index -c $tumor
+        tumorbai=`ls $tumor*i`
+    fi
+
+    if [ -z $normalbai ]; then
+        samtools index -c $normal  
+        normalbai=`ls $normal*i`
+    fi
 	echo "$patient,$sex,1,tumor,1,$tumor,$tumorbai,,$file" >> $output
 	echo "$patient,$sex,0,normal,1,$normal,$normalbai,," >> $output
 done
