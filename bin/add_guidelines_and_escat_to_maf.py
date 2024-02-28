@@ -223,16 +223,16 @@ def main():
 
     # fill in vaf values for iontorrent and alissa
     if out["t_ref_count"].isnull().values.any():
-        if "FRO" in out.columns:
-            out["t_ref_count"] = out["FRO"]
+        if "RO" in out.columns:
+            out["t_ref_count"] = out["RO"]
         elif "DP" in out.columns and "ALTCOUNT" in out.columns:
             out["t_ref_count"] = out["DP"] - out["ALTCOUNT"]
         else:
             Warning("t_ref_count column is empty, probably malformatted VCF input file")
 
     if out["t_alt_count"].isnull().values.any():
-        if "FAO" in out.columns:
-            out["t_alt_count"] = out["FAO"]
+        if "AO" in out.columns:
+            out["t_alt_count"] = out["AO"]
         elif "DP" in out.columns and "ALTCOUNT" in out.columns:
             out["t_alt_count"] = out["ALTCOUNT"]
         else:
