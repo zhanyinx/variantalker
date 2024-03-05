@@ -215,24 +215,18 @@ def main():
         if "cosmic" != cosmic[0]:
             out["cosmic"] = out[cosmic[0]]
 
-        # TODO remove this hack for reply dashboard
-        if "cosmic95" not in cosmic:
-            out["cosmic95"] = out[cosmic[0]]
-        if cosmic[0] != "cosmic95":
-            out.drop(cosmic[0], inplace=True, axis=1)
-
     # fill in vaf values for iontorrent and alissa
     if out["t_ref_count"].isnull().values.any():
-        if "RO" in out.columns:
-            out["t_ref_count"] = out["RO"]
+        if "FRO" in out.columns:
+            out["t_ref_count"] = out["FRO"]
         elif "DP" in out.columns and "ALTCOUNT" in out.columns:
             out["t_ref_count"] = out["DP"] - out["ALTCOUNT"]
         else:
             Warning("t_ref_count column is empty, probably malformatted VCF input file")
 
     if out["t_alt_count"].isnull().values.any():
-        if "AO" in out.columns:
-            out["t_alt_count"] = out["AO"]
+        if "FAO" in out.columns:
+            out["t_alt_count"] = out["FAO"]
         elif "DP" in out.columns and "ALTCOUNT" in out.columns:
             out["t_alt_count"] = out["ALTCOUNT"]
         else:
@@ -250,8 +244,12 @@ def main():
         # recalculate tumor frequency in case of dragen
         out["tumor_f"] = out["t_alt_count"] / (out["t_alt_count"] + out["t_ref_count"])
 
+    # recalculate depth
+    if "DP" not in out.columns or out["DP"].isnull().values.any():
+        out["DP"] = out["t_alt_count"] + out["t_ref_count"]
+
     # remove variants without support
-    out = out[(out["t_alt_count"] + out["t_ref_count"]) > 0]
+    out = out[out["DP"] > 0]
 
     # drop duplicates
     out = out.drop_duplicates()
