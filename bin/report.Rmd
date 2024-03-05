@@ -170,7 +170,7 @@ Recommendations:
 
 - TMB high if >= 10 (see [ref](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10248461/))
 
-- HRD high if >=58 (or BRCA1/2 positive) (see [ref](https://doi.org/10.1200/JCO.2023.41.16_suppl.e12605))
+- HRD high if >=42 (or BRCA1/2 positive) (from Illumina)
 
 ```{r biomarkers}
 biomarkers = NULL
