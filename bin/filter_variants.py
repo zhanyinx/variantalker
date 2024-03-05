@@ -219,7 +219,6 @@ def germline_filters(
     if germline_genes != "null":
         if os.path.exists(germline_genes):
             genes = pd.read_csv(germline_genes, header=None)
-            print(genes)
             filter_genes = (
                 maf["Hugo_Symbol"].str.upper().isin(genes[0].str.upper().values)
             )
@@ -293,7 +292,7 @@ def main():
         "Matched_Norm_Sample_Barcode",
         "project_id",
         "Hugo_Symbol",
-        "HGNC_RefSeq_IDs",
+        "Annotation_Transcript",
         "Chromosome",
         "Start_Position",
         "End_Position",
@@ -308,6 +307,7 @@ def main():
         "Protein_Change",
         "Transcript_Exon",
         "tumor_f",
+        "DP",
         "t_alt_count",
         "t_ref_count",
         "n_alt_count",
@@ -327,7 +327,7 @@ def main():
         "am_pathogenicity",
         "Otherinfo",
         "tumor_tissue",
-        "cosmic95",  # TODO cosmic update when change version cosmic
+        "cosmic",
         "Freq_ExAC_ALL",
         "Freq_esp6500siv2_all",
         "Freq_1000g2015aug_all",
@@ -336,8 +336,7 @@ def main():
 
     if args.sample_type == "germline":
         keep.remove("Tumor_Sample_Barcode")
-        keep.remove("HGNC_RefSeq_IDs")
-        keep.remove("cosmic95")
+        keep.remove("cosmic")
         keep.remove("Freq_ExAC_ALL")
         idx = keep.index("CancerVar")
         keep.remove("CancerVar")
