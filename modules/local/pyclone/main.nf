@@ -56,11 +56,16 @@ process generate_pyclone{
             sed -i 's, ,\\t,g' tmp_maf
 
             sex=`echo \${sexes[\$index]}  | sed 's,\\[,,g' | sed 's,\\],,g' | sed 's/,//g'`
-            if [[ \${cellularity[\$index]} =~ \$re ]] ; then
-                cell=`echo \${cellularity[\$index]}   | sed 's,\\[,,g' | sed 's,\\],,g' | sed 's/,//g'`
-                create_input4pyclone.py -as \${cnvs[\$index]} -c \${cell} -m tmp_maf -o ${patient}.pyclone.tsv -s \$sex
+            if ! grep -q '[^[:space:]]' \${cnvs[\$index]}; then
+                rm ${patient}.pyclone.tsv
+                touch ${patient}.pyclone.tsv
             else
-                create_input4pyclone.py -as \${cnvs[\$index]} -m tmp_maf -o ${patient}.pyclone.tsv -ac \${pluriploidy[\$index]} -s \$sex
+                if [[ \${cellularity[\$index]} =~ \$re ]] ; then
+                    cell=`echo \${cellularity[\$index]}   | sed 's,\\[,,g' | sed 's,\\],,g' | sed 's/,//g'`
+                    create_input4pyclone.py -as \${cnvs[\$index]} -c \${cell} -m tmp_maf -o ${patient}.pyclone.tsv -s \$sex
+                else
+                    create_input4pyclone.py -as \${cnvs[\$index]} -m tmp_maf -o ${patient}.pyclone.tsv -ac \${pluriploidy[\$index]} -s \$sex
+                fi
             fi
         done
 
@@ -79,19 +84,24 @@ process pyclone{
        file("${patient}.pyclone.output.tsv")
     script:
     """
-        # run pyclone
-        pyclone-vi fit -i ${pyclone} -o ${patient}.pyclone.h5 -c ${params.num_clusters} -d beta-binomial -r ${params.num_restarts}
-        pyclone-vi write-results-file -i ${patient}.pyclone.h5 -o ${patient}.pyclone.output.tsv
-        
-        # extract clonal tmb
-        awk 'BEGIN{
-            max=-99; ncount=0; getline
-        }{
-            if(\$4>max){
-                max = \$4; ncount = 1;
-            }else if(\$4 == max){
-                ncount++
-            }
-        }END{print "Clonal TMB: ", ncount}' ${patient}.pyclone.output.tsv > ${patient}.clonalTMB.txt
+        if ! grep -q '[^[:space:]]' $pyclone; then
+            echo "Clonal TMB: NA" > ${patient}.clonalTMB.txt
+            touch ${patient}.pyclone.output.tsv
+        else
+            # run pyclone
+            pyclone-vi fit -i ${pyclone} -o ${patient}.pyclone.h5 -c ${params.num_clusters} -d beta-binomial -r ${params.num_restarts}
+            pyclone-vi write-results-file -i ${patient}.pyclone.h5 -o ${patient}.pyclone.output.tsv
+            
+            # extract clonal tmb
+            awk 'BEGIN{
+                max=-99; ncount=0; getline
+            }{
+                if(\$4>max){
+                    max = \$4; ncount = 1;
+                }else if(\$4 == max){
+                    ncount++
+                }
+            }END{print "Clonal TMB: ", ncount}' ${patient}.pyclone.output.tsv > ${patient}.clonalTMB.txt
+        fi
     """
 }
