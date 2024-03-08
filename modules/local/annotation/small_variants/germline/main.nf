@@ -68,6 +68,10 @@ process germline_annotate_snp_indel{
     zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${meta.patient}.vcf
 
     cat ${meta.patient}.vcf | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
+    trascript_params=""
+    if [ -f ${params.transcript_list} ]; then
+        trascript_params=" --transcript-list ${params.transcript_list}"
+    fi
     
     for file in `ls tmp_*vcf`; do
         cat header \$file > file.vcf
@@ -87,7 +91,7 @@ process germline_annotate_snp_indel{
         #     --ref-version ${params.build} \
         #     --transcript-selection-mode ${params.transcript_selection} \
         #     --splice-site-window-size ${params.splice_site_window_size} \
-        #     --interval-padding ${params.target_padding}
+        #     --interval-padding ${params.target_padding} \$trascript_params
 
         check=1
         while [[ \$check -ne 0 ]]
@@ -105,7 +109,8 @@ process germline_annotate_snp_indel{
                 --ref-version ${params.build} \
                 --transcript-selection-mode ${params.transcript_selection} \
                 --splice-site-window-size ${params.splice_site_window_size} \
-                --interval-padding ${params.target_padding}
+                --interval-padding ${params.target_padding} \
+                \$trascript_params
 
             check=\$?
             if [[ \$check -ne 0 ]]; then

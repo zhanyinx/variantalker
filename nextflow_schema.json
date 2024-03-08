@@ -213,6 +213,12 @@
                     "default": 5,
                     "fa_icon": "fas fa-number-splice-window"
                 },
+                "transcript_list": {
+                    "type": "string",
+                    "description": "file with the list of transcripts. This list must match the ensembl transcript id in gencode source file provided to funcotator.",
+                    "default": null,
+                    "fa_icon": "fas fa-number-transcript-file"
+                },
                 "alpha_mis_genome_basedir": {
                     "type": "string",
                     "format": "directory-path",
