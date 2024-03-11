@@ -1,6 +1,7 @@
 process fixvcf{
     cpus 1
     memory "1 G"
+    container "docker://yinxiu/gatk:latest"
 
     input:
         tuple val(meta), path(vcf)
@@ -60,7 +61,7 @@ process somatic_annotate_snp_indel{
     maxRetries = 3
     memory { 8.GB * task.attempt }
     tag "vcf2maf"
-
+    container "docker://yinxiu/gatk:latest"
     input:
         tuple val(meta), file(vcf), file(index)
     output:
@@ -72,6 +73,10 @@ process somatic_annotate_snp_indel{
     zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${meta.patient}.vcf
 
     awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}' ${meta.patient}.vcf
+    trascript_params=""
+    if [ -f ${params.transcript_list} ]; then
+        trascript_params=" --transcript-list ${params.transcript_list}"
+    fi
 
     for file in `ls tmp_*vcf`; do
         cat header \$file > file.vcf
@@ -92,7 +97,8 @@ process somatic_annotate_snp_indel{
         #    --data-sources-path ${params.funcotator_somatic_db}\
         #    --ref-version ${params.build} \
         #    --transcript-selection-mode ${params.transcript_selection} \
-        #    --interval-padding ${params.target_padding}
+        #    --splice-site-window-size ${params.splice_site_window_size}  \
+        #    --interval-padding ${params.target_padding} \$trascript_params
 
         
         check=1
@@ -112,7 +118,9 @@ process somatic_annotate_snp_indel{
                 --data-sources-path ${params.funcotator_somatic_db}\
                 --ref-version ${params.build} \
                 --transcript-selection-mode ${params.transcript_selection} \
-                --interval-padding ${params.target_padding}
+                --splice-site-window-size ${params.splice_site_window_size} \
+                --interval-padding ${params.target_padding} \
+                \$trascript_params
 
             check=\$?
             if [[ \$check -ne 0 ]]; then
@@ -153,6 +161,7 @@ process somatic_annotate_snp_indel{
         sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
         sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
         sed -i "s,CANCERVARDB,${params.cancervar_db},g" config.init
+        sed -i "s,SPLICE_WINDOW,${params.splice_site_window_size},g" config.init
 
         if ! [ ${params.cancervar_evidence_file} == "None" ]; then
             if ! [ -f ${params.cancervar_evidence_file} ]; then
@@ -176,6 +185,7 @@ process somatic_annotate_snp_indel{
             -o tmp \
             -t ${meta.tumor_tissue} \
             -p ${params.projectid} \
+            --escat ${params.escat_db} \
             -d ${params.date} 
         
         if ! [ -f ${meta.patient}.small_mutations.cancervar.escat.maf ]; then

@@ -45,3 +45,4 @@ annotate_variation= ANNOVAR/annotate_variation.pl
 database_locat = ANNOVARDB
 # the database location/dir from annnovar   check if database file exists
 database_names = refGene ensGene knownGene esp6500siv2_all 1000g2015aug exac03 dbscsnv11 dbnsfp31a_interpro gnomad_genome avsnp150 dbnsfp42c icgc28 cosmic98 clinvar_20231109
+splice_window = SPLICE_WINDOW

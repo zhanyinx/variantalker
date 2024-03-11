@@ -207,12 +207,38 @@
                     "default": 2,
                     "fa_icon": "fas fa-folder-target-padding"
                 },
+                "splice_site_window_size": {
+                    "type": "number",
+                    "description": "Number of bases on either side of a splice site for a variant to be classified as a SPLICE_SITE variant",
+                    "default": 5,
+                    "fa_icon": "fas fa-number-splice-window"
+                },
+                "transcript_list": {
+                    "type": "string",
+                    "description": "file with the list of transcripts. This list must match the ensembl transcript id in gencode source file provided to funcotator.",
+                    "default": null,
+                    "fa_icon": "fas fa-number-transcript-file"
+                },
                 "alpha_mis_genome_basedir": {
                     "type": "string",
                     "format": "directory-path",
                     "fa_icon": "fas fa-string-alphamissense-fa",
                     "description": "Base folder of alpha missense database files",
                     "help_text": "Path to the folder with alpha missense database files. e.g. path to the downloaded public_databases."
+                },
+                "escat_db" : {
+                    "type": "string",
+                    "format": "file-path",
+                    "fa_icon": "fas fa-string-escat-fa",
+                    "description": "File to the escat database",
+                    "help_text": "File to the escat database. Default provided in the resource directory in the repo"
+                },
+                "nmd_db" : {
+                    "type": "string",
+                    "format": "file-path",
+                    "fa_icon": "fas fa-string-nmd-fa",
+                    "description": "File to the nmd database",
+                    "help_text": "File to the nmd database. Default provided in the resource directory in the repo"
                 }
             }
         },
@@ -529,6 +555,32 @@
                     "fa_icon": "fas fa-broom",
                     "description": "Overwrite ASCAT purity.",
                     "help_text": "Overwrites ASCAT's `rho_manual` parameter. Expert use only, see [here](https://raw.githubusercontent.com/VanLoo-lab/ascat/master/man/ASCAT-manual.pdf) for details.\nRequires that `--ascat_ploidy` is set.",
+                    "hidden": true
+                }
+            }
+        },
+        "mutational_signature": {
+            "title": "Cosmic mutational signature activity estimation",
+            "type": "object",
+            "description": "Estimate mutational signature activity using https://github.com/AlexandrovLab/SigProfilerAssignment.",
+            "default": "",
+            "fa_icon": "fas fa-toolbox",
+            "properties": {
+                "cosmic_group": {
+                    "type": "string",
+                    "format": "file-path",
+                    "default": "${projectDir}/resources/cosmic_sbs_group.csv",
+                    "fa_icon": "fas fa-cosmic-group",
+                    "description": "Overwrites the group file provided by default.",
+                    "help_text": "Group file with two columns: grouping column and the correpsonding sbs.",
+                    "hidden": true
+                },
+                "cosmic_version": {
+                    "type": "number",
+                    "default": 3.4,
+                    "fa_icon": "fas fa-cosmic-version",
+                    "description": "Version of cosmic SBS database. Currently, with the version of sigprofilerassignment, the latest is 3.4",
+                    "help_text": "For more details, see [here](https://github.com/AlexandrovLab/SigProfilerAssignment).",
                     "hidden": true
                 }
             }

@@ -11,6 +11,7 @@ process extract_tpm{
     maxRetries = 2
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}", mode: "copy"
+    container "docker://yinxiu/clonal_evolution:latest"
 
     tag "extract_signatures_tpm"
 
@@ -35,6 +36,7 @@ process calculate_tmb_signature{
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/", mode: "copy"
     tag "tmb calculation"
+    container "docker://yinxiu/sigprofilerassignment:latest"
 
     input:
         tuple val(patient), path(maf)
@@ -44,12 +46,17 @@ process calculate_tmb_signature{
     script:
 
     """
-    extract_signatures.R -i ${maf} \
-        -g ${params.build} \
-        -o signatures.txt
+    mkdir input
+    cp ${maf} input/
+
+    extract_signatures.py -i ./input \
+    -g ${params.build_alt_name} -c ${params.cosmic_version}\
+    --cosmic_group ${params.cosmic_group} \
+    -o signatures.txt
 
     calculate_tmb.py -m ${maf} \
         -t ${params.target} \
+        --nmd_scores ${params.nmd_db} \
         -o tmb.txt
 
     cat signatures.txt tmb.txt > tmb_signatures.${patient}.txt

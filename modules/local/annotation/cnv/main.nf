@@ -3,6 +3,10 @@ process cnvkit_call{
     cpus 5
     memory "5 G"
 
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://depot.galaxyproject.org/singularity/cnvkit:0.9.10--pyhdfd78af_0':
+        'biocontainers/cnvkit:0.9.10--pyhdfd78af_0' }"
+    
     input:
         tuple val(meta), path(cnr)
 
@@ -22,7 +26,8 @@ process cnvkit_call{
 process annotate_cnv {
     cpus 5
     memory "5 G"
-    publishDir "${params.outdir}/${params.date}/annotation/somatic/${meta.patient}", mode: "copy"
+    publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
+    container "docker://yinxiu/classifycnv:latest"
 
     input:
         tuple val(meta), path(input)
@@ -31,7 +36,6 @@ process annotate_cnv {
     script:
     if (params.pipeline.toUpperCase() == "DRAGEN")
         """
-        echo ${params}
         name="\$(basename ${input} | sed 's,vcf\\.gz,bed,g')"
         zcat ${input} | awk '{if(\$7=="PASS") print \$3,\$5}' > \$name
         sed -i 's/DRAGEN:GAIN://g' \$name

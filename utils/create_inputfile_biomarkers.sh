@@ -83,7 +83,7 @@ echo "patient,sample_file,sample_type" > $output
 
 # append dragen msi and tmb if they exist
 if [ -d $dragen_folder ]; then
-    echo "Appending dragen msi and tmb"
+    echo "Appending dragen msi, tmb, coverage, hrd"
     abspath=`realpath $dragen_folder`
     for file in `ls $abspath/*/*.tmb.metrics.csv`; do
         absfile=`realpath $file`
@@ -105,6 +105,13 @@ if [ -d $dragen_folder ]; then
         patient=`basename $foldername`
         echo "$patient,$absfile,coverage" >> $output
     done
+
+    for file in `ls $abspath/*/*hrd*`; do
+        absfile=`realpath $file`
+        foldername=`dirname $absfile`
+        patient=`basename $foldername`
+        echo "$patient,$absfile,hrd" >> $output
+    done
 fi
 
 # append rna if they exist
@@ -117,12 +124,6 @@ if [ -d $dragen_rna_folder ]; then
         patient=`basename $foldername`
         echo "$patient,$absfile,rna" >> $output
     done
-fi
-
-# if both dragen folder and input are defined, we can generate also the input file for clonal_tmb
-
-if [ -d $dragen_folder ] && [ -d $input ]; then
-    sh $(dirname $0)/create_inputfile_clonal_tmb_input.sh -i $dragen_folder -a $input/somatic -o $output.clonal_tmb
 fi
 
 # Append germline maf samples
@@ -149,8 +150,10 @@ if [ -d $input/somatic ]; then
             sed -i 's;'${patient_normal},';'${patient},';g' $output
         fi
     done
+fi
 
-    for file in `ls $input/somatic/*/*cnv*tsv`; do
+if [ -d $input/cnv ]; then
+    for file in `ls $input/cnv/*/*cnv*tsv`; do
         absfile=`realpath $file`
         foldername=`dirname $absfile`
         patient=`basename $foldername`

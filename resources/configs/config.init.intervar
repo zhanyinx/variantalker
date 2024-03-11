@@ -64,3 +64,4 @@ database_names = refGene esp6500siv2_all 1000g2015aug gnomad_genome dbscsnv11 rm
 current_version = Intervar_20210727 
 # pipeline version
 public_dev = https://github.com/WGLab/InterVar/releases
+splice_window = SPLICE_WINDOW

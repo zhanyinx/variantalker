@@ -758,7 +758,11 @@ def check_input():
 def check_annovar_result():
     # table_annovar.pl example/ex1.avinput humandb/ -buildver hg19 -out myanno -remove -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp144,ljb26_all,CLNSIG,exac03   -operation  g,f,f,f,f,f,f   -nastring . -csvout
     inputft = paras["inputfile_type"]
-    annovar_options = " --otherinfo "
+    annovar_options = (
+        " -intronhgvs 20 --otherinfo --convertarg '--splicing_threshold "
+        + paras["splice_window"]
+        + "' --codingarg '--alltranscript' "
+    )
     # if re.findall('true',paras['otherinfo'], flags=re.IGNORECASE)  :
     #    annovar_options=annovar_options+"--otherinfo "
     if re.findall("true", paras["onetranscript"], flags=re.IGNORECASE):
@@ -1617,7 +1621,9 @@ def check_PreP(line, Funcanno_flgs, Allels_flgs, lof_genes_dict):
             ben = ben + 1
         else:
             dam = dam + 1
-    except ValueError:  # the sift absent means many:  synonymous indel  stop, but synonymous also is no impact
+    except (
+        ValueError
+    ):  # the sift absent means many:  synonymous indel  stop, but synonymous also is no impact
         var = var + 1
     else:
         pass
@@ -1832,7 +1838,6 @@ def check_Pubs(line, Funcanno_flgs, Allels_flgs, lof_genes_dict):
 
 
 def assign(BP, line, Freqs_flgs, Funcanno_flgs, Allels_flgs):
-
     CBP = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     Therapeutic = check_Thera(line, Funcanno_flgs, Allels_flgs, lof_genes_dict)
@@ -2313,7 +2318,6 @@ def my_inter_var_can(annovar_outfile):
 
 
 def main():
-
     if platform.python_version() < "3.0.0":
         config = ConfigParser.ConfigParser()
     else:

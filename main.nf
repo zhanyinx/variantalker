@@ -20,6 +20,12 @@ def checkPathParamList = [
 
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
+if(params.build == "hg38"){
+    params.build_alt_name = "GRCh38"
+}else if(params.build == "hg19"){
+    params.build_alt_name = "GRCh37"
+}
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     NAMED WORKFLOW FOR PIPELINE

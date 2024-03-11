@@ -32,10 +32,11 @@ git clone https://github.com/zhanyinx/variantalker.git
 
 variantalker relies on [Annovar](https://annovar.openbioinformatics.org/en/latest/) software and [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) databases.
 
-Download the updated databases 
+Download the updated databases. Separate repositories for hg19 and hg38 are available.
 
 ```bash
-wget -r -N --no-parent -nH --cut-dirs=2 -P public_databases https://bioserver.ieo.it/repo/dima/ 
+wget -r -N --no-parent -nH --cut-dirs=3 -P public_databases/hg38 https://bioserver.ieo.it/repo/dima/hg38 
+wget -r -N --no-parent -nH --cut-dirs=3 -P public_databases/hg19 https://bioserver.ieo.it/repo/dima/hg19
 ```
 
 ## Documentation
@@ -119,16 +120,17 @@ params.outdir
 |       |   `-- patient
 |       |       |-- filtered.patient.maf.pass.tsv
 |       |       |-- filtered.patient.maf.nopass.tsv
-|       |       |-- patient.cnv.annotated.tsv
 |       |       |-- patient.vcf
 |       |       `-- patient.maf
 |       `-- somatic
 |           `-- patient
 |       |       |-- filtered.patient.maf.pass.tsv
 |       |       |-- filtered.patient.maf.nopass.tsv
-|       |       |-- patient.cnv.annotated.tsv
 |       |       |-- patient.vcf
 |               `-- patient.maf
+|       `-- cnv
+|           `-- patient
+|       |       |-- patient.cnv.annotated.tsv
 ```
 
 variantalker outputs for each sample multiple files
@@ -141,9 +143,9 @@ variantalker outputs for each sample multiple files
 
 Default filters applied:
 
-- "Silent", "Intron", "3'UTR", "5'UTR", "IGR", "5'Flank", "3'Flank", "RNA" variant types are filtered out
+- "Silent",  "IGR",  "RNA" variant types are filtered out (unless it's pathogenic or likely pathogenic for clinvar/cancervar/intervar)
 
-- minimum coverage 50
+- minimum coverage 50 (unless it's pathogenic or likely pathogenic for clinvar/cancervar/intervar)
 
 - minimum somatic VAF: 0.01
 
