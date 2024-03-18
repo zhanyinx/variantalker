@@ -30,8 +30,10 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 
 // annotation
 include {filter_maf; add_civic; add_alpha_missense} from '../modules/local/annotation/small_variants/main.nf'
+include {pharmgkb} from '../modules/local/pharmgkb/main.nf'
 include {filter_maf as filter_maf_germline} from '../modules/local/annotation/small_variants/main.nf'
 include {add_alpha_missense as add_alpha_missense_germline} from '../modules/local/annotation/small_variants/main.nf'
+include {pharmgkb as pharmgkb_germline} from '../modules/local/pharmgkb/main.nf'
 
 include {fixvcf; somatic_annotate_snp_indel} from '../modules/local/annotation/small_variants/somatic/main.nf'
 include {filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/small_variants/germline/main.nf'
@@ -117,6 +119,12 @@ workflow VARIANTALKER{
         germline_renovo_annotation(germline_annotate_snp_indel.out)
         add_alpha_missense_germline(germline_renovo_annotation.out)
         filter_maf_germline(add_alpha_missense_germline.out)
+    }
+
+    // pharmGKB only for hg38
+    if (params.build == "hg38"){
+        pharmgkb(fixvcf.out)
+        pharmgkb_germline(normalise_rename_germline_vcf.out)
     }
 
     // workflow for somatic cnv annotation
