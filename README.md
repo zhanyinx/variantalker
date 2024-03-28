@@ -159,8 +159,6 @@ Default filters applied:
 
 - CIViC evidence levels to be kept: A,B,C (logic OR)
 
-- Alpha missense class to be kept: ambigous,likely_pathogenic (logic OR)
-
 - no filters on genes (somatic or germline)
 
 Logic OR filters: a variant is kept if at least one of the OR filters is true
