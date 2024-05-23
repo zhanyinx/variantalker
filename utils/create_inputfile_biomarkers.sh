@@ -158,6 +158,10 @@ if [ -d $input/cnv ]; then
         foldername=`dirname $absfile`
         patient=`basename $foldername`
         patient=`basename $patient | sed 's,_CNV,,g'`
-        echo "$patient,$absfile,cnv" >> $output
+        if ls $input/germline/${patient}* 1> /dev/null 2>&1; then
+            echo "skilling $patient CNV"
+        else
+            echo "$patient,$absfile,cnv" >> $output
+        fi
     done
 fi
