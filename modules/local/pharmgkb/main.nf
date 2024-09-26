@@ -1,7 +1,7 @@
 process pharmgkb {
     fair true
     cpus 1
-    maxRetries = 2
+    maxRetries = 3
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
     container "docker://pgkb/pharmcat:2.9.0"
