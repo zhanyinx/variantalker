@@ -188,6 +188,7 @@ if(length(dragen_tmb)>1){
 }
 
 if(length(hrd)>1){
+  hrd$Sample = as.character(hrd$Sample)
   hrd = melt(hrd)[,c(2,3)]
   hrd[,1] = paste0("dragen_",hrd[,1])
   biomarkers = add_biomarker(biomarkers, hrd)
