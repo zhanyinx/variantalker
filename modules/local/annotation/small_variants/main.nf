@@ -6,7 +6,7 @@ process add_civic{
     errorStrategy 'retry'
     maxRetries = 3
     memory { 4.GB * task.attempt }
-    container "docker://yinxiu/civicpy:latest"
+    container "docker://yinxiu/civicpy:v1.0"
 
     tag "civic2vcf"
 
@@ -26,6 +26,10 @@ process add_civic{
             cp header tmp_\$chr
         done
         awk '{if(!(\$1~/^#/)) print \$0 >> "tmp_"\$1 }'  appo.vcf
+
+        export CIVICPY_CACHE_FILE="/home/.civicpy/cache.pkl"
+        export CIVICPY_CACHE_TIMEOUT_DAYS=${params.civic_cache_timeout_days}        
+        
 
         cpu=0
         for file in `ls tmp_*`; do

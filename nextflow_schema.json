@@ -226,6 +226,12 @@
                     "description": "Base folder of alpha missense database files",
                     "help_text": "Path to the folder with alpha missense database files. e.g. path to the downloaded public_databases."
                 },
+                "civic_cache_timeout_days": {
+                    "type": "number",
+                    "fa_icon": "fas fa-number-civic_cache-fa",
+                    "description": "Set to 0 if you want to get the latest version of the civic db. Current is updated Dec. 18th 2024",
+                    "help_text": "Number of days for cache timeout in civic. Current version is from Dec. 18th 2024."
+                },
                 "escat_db" : {
                     "type": "string",
                     "format": "file-path",
