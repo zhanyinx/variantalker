@@ -349,7 +349,11 @@ def main():
             out["filter"] == "NOPASS", ~(out == "__UNKNOWN__").all()
         ]  # remove unknown columns
         out_nopass = out_nopass[keep]
-        out_nopass.to_csv(f"filtered.{args.output}.nopass.tsv", sep="\t", index=False)
+        out_nopass.to_csv(
+            f"filtered.{args.output}.nopass.tsv",
+            sep="\t",
+            index=False,
+        )
 
     if len(out[out["filter"] == "PASS"]):
         # filtering columns
@@ -358,11 +362,6 @@ def main():
         ]  # remove unknown columns
         out = out[keep]
         out.to_csv(f"filtered.{args.output}.pass.tsv", sep="\t", index=False)
-    else:
-        with open(f"filtered.{args.output}.pass.tsv", "a") as f:
-            f.write(
-                f"EMPTY! No mutations passing filters! Double check VAF to make sure!"
-            )
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ process fixvcf{
     input:
         tuple val(meta), path(vcf)
     output:
-        tuple val(meta), file("${meta.patient}.vcf.gz"), file("${meta.patient}.vcf.gz.tbi")
+        tuple val(meta), file("${meta.patient}.vcf.gz")
     script:
     if (params.pipeline.toUpperCase() != "SAREK")
         if (params.tumoronly)
@@ -24,7 +24,6 @@ process fixvcf{
             # remove 0 allele frequency and wt genotype
             awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${meta.patient}.vcf
             bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
-            tabix -p vcf ${meta.patient}.vcf.gz
             """
         else
             """
@@ -36,7 +35,6 @@ process fixvcf{
             bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
             awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${meta.patient}.vcf
             bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
-            tabix -p vcf ${meta.patient}.vcf.gz
             """
 
 
@@ -50,150 +48,128 @@ process fixvcf{
         bcftools norm -m-any --check-ref -w -f ${params.fasta} tmp.vcf -o tmp1.vcf
         awk '{if(!(\$8~/AF=0;/) && !(\$NF~/0\\/0/)) print \$0}' tmp1.vcf > ${meta.patient}.vcf
         bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
-        tabix -p vcf ${meta.patient}.vcf.gz
         """
 }
 
-
-process somatic_annotate_snp_indel{
+process run_somatic_funcotator{
     cpus 1
     errorStrategy 'retry'
     maxRetries = 3
-    memory { 8.GB * task.attempt }
-    tag "vcf2maf"
+    memory { 4.GB * task.attempt }
+    tag "somatic_funcotator"
     container "docker://yinxiu/gatk:latest"
     input:
-        tuple val(meta), file(vcf), file(index)
+        tuple val(meta), val(chunk_index), file(vcf), file(index)
     output:
-        tuple val(meta), file("${meta.patient}.small_mutations.cancervar.escat.maf"), file("${meta.patient}.vcf")
+        tuple val(meta), val(chunk_index), file("${meta.patient}.maf"), file("${meta.patient}.vcf")
     script:
     """
     normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
     tumor="\$(zcat ${vcf} | grep 'tumor_sample'  | cut -d'=' -f2)"
-    zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${meta.patient}.vcf
-
-    awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}' ${meta.patient}.vcf
     trascript_params=""
     if [ -f ${params.transcript_list} ]; then
         trascript_params=" --transcript-list ${params.transcript_list}"
     fi
 
-    for file in `ls tmp_*vcf`; do
-        cat header \$file > file.vcf
-        bgzip -c file.vcf > file.vcf.gz
-        tabix -p vcf file.vcf.gz
+    gatk Funcotator \
+        -L ${params.funcotator_target} \
+        -R ${params.fasta} \
+        -V ${vcf} \
+        -O ${meta.patient}.maf \
+        --annotation-default Matched_Norm_Sample_Barcode:\${normal} \
+        --annotation-default Tumor_Sample_Barcode:\${tumor} \
+        --annotation-default Tumor_type:${meta.tumor_tissue} \
+        --remove-filtered-variants true \
+        --output-file-format MAF \
+        --data-sources-path ${params.funcotator_somatic_db}\
+        --ref-version ${params.build} \
+        --transcript-selection-mode ${params.transcript_selection} \
+        --splice-site-window-size ${params.splice_site_window_size} \
+        --interval-padding ${params.target_padding} \
+        \$trascript_params
 
-        # GATK funcotator
-        # gatk Funcotator \
-        #    -L ${params.funcotator_target} \
-        #    -R ${params.fasta} \
-        #    -V file.vcf.gz \
-        #    -O ${meta.patient}.maf \
-        #    --annotation-default Matched_Norm_Sample_Barcode:\${normal} \
-        #    --annotation-default Tumor_Sample_Barcode:\${tumor} \
-        #    --annotation-default Tumor_type:${meta.tumor_tissue} \
-        #    --remove-filtered-variants true \
-        #    --output-file-format MAF \
-        #    --data-sources-path ${params.funcotator_somatic_db}\
-        #    --ref-version ${params.build} \
-        #    --transcript-selection-mode ${params.transcript_selection} \
-        #    --splice-site-window-size ${params.splice_site_window_size}  \
-        #    --interval-padding ${params.target_padding} \$trascript_params
+    zcat ${vcf} > ${meta.patient}.vcf
 
-        
-        check=1
-        while [[ \$check -ne 0 ]]
-        do
-            # GATK funcotator
-            gatk Funcotator \
-                -L ${params.funcotator_target} \
-                -R ${params.fasta} \
-                -V file.vcf.gz \
-                -O ${meta.patient}.maf \
-                --annotation-default Matched_Norm_Sample_Barcode:\${normal} \
-                --annotation-default Tumor_Sample_Barcode:\${tumor} \
-                --annotation-default Tumor_type:${meta.tumor_tissue} \
-                --remove-filtered-variants true \
-                --output-file-format MAF \
-                --data-sources-path ${params.funcotator_somatic_db}\
-                --ref-version ${params.build} \
-                --transcript-selection-mode ${params.transcript_selection} \
-                --splice-site-window-size ${params.splice_site_window_size} \
-                --interval-padding ${params.target_padding} \
-                \$trascript_params
+    # check completeness of maf file
+    nrow_maf=\$(wc -l ${meta.patient}.maf | cut -f1 -d' ')
+    nrow_vcf=\$(wc -l ${meta.patient}.vcf | cut -f1 -d' ')
+    diff=\$((\$nrow_maf-\$nrow_vcf))
+    if [ \$diff -lt 5 ]; then
+        echo "Funcotator maf file is incomplete!"
+        exit
+    fi
+    """
+}
 
-            check=\$?
-            if [[ \$check -ne 0 ]]; then
-                grep -nr "ERROR GencodeFuncotationFactory" .command.err | awk '{split(\$14,res,"-"); print res[1]}'  | sort | uniq | awk '{split(\$0,res,":"); print res[1],res[2]}'  > remove
-                awk 'BEGIN{fn=0; count=1; a=0}{
-                    if(FNR==1) fn++;
+process run_cancervar{
+    cpus 1
+    errorStrategy 'retry'
+    maxRetries = 3
+    memory { 4.GB * task.attempt }
+    tag "cancervar"
+    container "docker://yinxiu/gatk:latest"
+    input:
+        tuple val(meta), val(chunk_index), file(vcf), file(index)
+    output:
+        tuple val(meta), val(chunk_index), file("${meta.patient}.cancervar"), file("${meta.patient}.grl_p"), file("config.init")
+    script:
+    """
+    # cancervar call
+    zcat ${vcf} > file.vcf
+    cp ${params.cancervar_init} config.init
+    sed -i "s,INPUTYPE,${params.cancervar_input_type},g" config.init
+    sed -i "s,BUILD,${params.build},g" config.init
+    sed -i "s,INPUTFILE,file.vcf,g" config.init
+    sed -i "s,OUTFILE,cancervar,g" config.init
+    sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
+    sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
+    sed -i "s,CANCERVARDB,${params.cancervar_db},g" config.init
+    sed -i "s,SPLICE_WINDOW,${params.splice_site_window_size},g" config.init
 
-                    if(fn==1){
-                        chr[count] = \$1
-                        pos[count] = \$2
-                        count++
-                    }    
-
-                    if(fn==2){
-                        bool=1
-                        for(i=1;i<count;i++){
-                            if(\$1 == chr[i] && \$2 == pos[i]){
-                                bool=0
-                                break
-                            }
-                        }
-                        if(bool==1) print \$0
-                    }
-                }' remove file.vcf > appo
-                mv appo file.vcf
-                bgzip -c file.vcf > file.vcf.gz
-                tabix -p vcf file.vcf.gz
-            fi
-        done
-
-
-        # cancervar call
-        cp ${params.cancervar_init} config.init
-        sed -i "s,INPUTYPE,${params.cancervar_input_type},g" config.init
-        sed -i "s,BUILD,${params.build},g" config.init
-        sed -i "s,INPUTFILE,file.vcf,g" config.init
-        sed -i "s,OUTFILE,cancervar,g" config.init
-        sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
-        sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
-        sed -i "s,CANCERVARDB,${params.cancervar_db},g" config.init
-        sed -i "s,SPLICE_WINDOW,${params.splice_site_window_size},g" config.init
-
-        if ! [ ${params.cancervar_evidence_file} == "None" ]; then
-            if ! [ -f ${params.cancervar_evidence_file} ]; then
-                echo "${params.cancervar_evidence_file} cancervar evidence file does not exist!"
-                exit
-            fi
-            sed -i "s,None,${params.cancervar_evidence_file},g" config.init
+    if ! [ ${params.cancervar_evidence_file} == "None" ]; then
+        if ! [ -f ${params.cancervar_evidence_file} ]; then
+            echo "${params.cancervar_evidence_file} cancervar evidence file does not exist!"
+            exit
         fi
+        sed -i "s,None,${params.cancervar_evidence_file},g" config.init
+    fi
 
-        python ${params.cancervar_folder}/CancerVar.py -c config.init --cancer_type=${meta.tumor_tissue}
+    python ${params.cancervar_folder}/CancerVar.py -c config.init --cancer_type=${meta.tumor_tissue}
 
-        # merge cancervar and funcotator
-        if [ ${params.tumoronly} == "true" ]; then
-            cancervar_file="cancervar.${params.build}_multianno.txt.cancervar"
-        else
-            cancervar_file="\$(ls cancervar.${vcf.simpleName}*.${params.build}_multianno.txt.cancervar)"
-        fi
-        add_guidelines_and_escat_to_maf.py -m ${meta.patient}.maf \
-            -c \${cancervar_file} \
-            -cc config.init \
-            -o tmp \
-            -t ${meta.tumor_tissue} \
-            -p ${params.projectid} \
-            --escat ${params.escat_db} \
-            -d ${params.date} 
-        
-        if ! [ -f ${meta.patient}.small_mutations.cancervar.escat.maf ]; then
-            cp tmp ${meta.patient}.small_mutations.cancervar.escat.maf
-        else
-            awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${meta.patient}.small_mutations.cancervar.escat.maf
-        fi
+    # merge cancervar and funcotator
+    if [ ${params.tumoronly} == "true" ]; then
+        cancervar_file="cancervar.${params.build}_multianno.txt.cancervar"
+    else
+        cancervar_file="\$(ls cancervar.${vcf.simpleName}*.${params.build}_multianno.txt.cancervar)"
+    fi
+    cp \${cancervar_file} ${meta.patient}.cancervar
+    grl_p=`echo \$cancervar_file | sed 's/\\.cancervar/\\.grl_p/g'`
+    cp \$grl_p ${meta.patient}.grl_p
+    """
+}
 
-    done
+process add_guidelines_escat{
+    cpus 1
+    memory "1 G"
+    container "docker://yinxiu/gatk:latest"
+    errorStrategy 'retry'
+    maxRetries = 3
+    tag "add_guidelines_escat"
+    input:
+        tuple val(meta), val(chunk_index), file(maf), file(vcf), file(cancervar), file(grl_p), file(config)
+    output:
+        tuple val(meta), val(chunk_index), file("${chunk_index}.guidelines.maf"), file("${chunk_index}.vcf")
+    script:
+    """
+    add_guidelines_and_escat_to_maf.py -m ${maf} \
+        -c ${cancervar} \
+        -cc ${config} \
+        -o ${chunk_index}.guidelines.maf \
+        -t ${meta.tumor_tissue} \
+        -p ${params.projectid} \
+        --escat ${params.escat_db} \
+        -d ${params.date} 
+
+    cp ${vcf} ${chunk_index}.vcf
     """
 }

@@ -29,13 +29,13 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 */
 
 // annotation
-include {filter_maf; add_civic; add_alpha_missense} from '../modules/local/annotation/small_variants/main.nf'
+include {filter_maf; add_civic; add_alpha_missense; split_chunks; merge_chunks} from '../modules/local/annotation/small_variants/main.nf'
 include {pharmgkb} from '../modules/local/pharmgkb/main.nf'
 include {filter_maf as filter_maf_germline} from '../modules/local/annotation/small_variants/main.nf'
 include {add_alpha_missense as add_alpha_missense_germline} from '../modules/local/annotation/small_variants/main.nf'
 include {pharmgkb as pharmgkb_germline} from '../modules/local/pharmgkb/main.nf'
 
-include {fixvcf; somatic_annotate_snp_indel} from '../modules/local/annotation/small_variants/somatic/main.nf'
+include {fixvcf; run_somatic_funcotator; run_cancervar; add_guidelines_escat} from '../modules/local/annotation/small_variants/somatic/main.nf'
 include {filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/small_variants/germline/main.nf'
 include {cnvkit_call; annotate_cnv} from '../modules/local/annotation/cnv/main.nf'
 
@@ -99,10 +99,23 @@ workflow VARIANTALKER{
     // ********** Workflow for snp and indel variant annotation **********
     // somatic 
     fixvcf(ch_somatic)
-    add_civic(fixvcf.out)
-    somatic_annotate_snp_indel(add_civic.out)
-    add_alpha_missense(somatic_annotate_snp_indel.out)
+    split_chunks(fixvcf.out)
+    chunks = split_chunks.out.map{ it->
+        def meta = it[0]
+        def vcf_files = it[1] instanceof List ? it[1] : [it[1]]
+        return vcf_files.collect { vcf_file ->                    
+            return [ meta, vcf_file.simpleName, vcf_file]
+        }
+
+    }.flatMap { it }
+    add_civic(chunks)
+    run_cancervar(add_civic.out)
+    run_somatic_funcotator(add_civic.out)
+    combined = run_somatic_funcotator.out.combine(run_cancervar.out, by: [0,1])
+    add_guidelines_escat(combined)
+    add_alpha_missense(add_guidelines_escat.out)
     filter_maf(add_alpha_missense.out)
+    merge_chunks(filter_maf.out.groupTuple(by: 0))
 
     // germline
     if (params.pipeline.toUpperCase() == "SAREK") {
@@ -123,7 +136,7 @@ workflow VARIANTALKER{
 
     // pharmGKB only for hg38
     if (params.build == "hg38"){
-        pharmgkb(fixvcf.out)
+        //pharmgkb(fixvcf.out)
         pharmgkb_germline(normalise_rename_germline_vcf.out)
     }
 
