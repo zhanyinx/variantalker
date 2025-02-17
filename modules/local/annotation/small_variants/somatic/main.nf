@@ -1,4 +1,4 @@
-process fixvcf{
+process standardize_somatic_vcf{
     cpus 1
     memory "1 G"
     container "docker://yinxiu/gatk:latest"

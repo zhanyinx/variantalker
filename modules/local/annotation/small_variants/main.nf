@@ -4,7 +4,7 @@ process split_chunks{
     cpus 1
     errorStrategy 'retry'
     maxRetries = 3
-    memory { 4.GB * task.attempt }
+    memory { 2.GB * task.attempt }
     container "docker://yinxiu/civicpy:v1.0"
     tag "split_chunk"
 

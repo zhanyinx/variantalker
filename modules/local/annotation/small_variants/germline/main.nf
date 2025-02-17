@@ -24,7 +24,7 @@ process filter_variants {
         """
 }
 
-process normalise_rename_germline_vcf {
+process standardize_germline_vcf {
     cpus 1
     memory "1 G"
     tag "rename_and_index"
@@ -33,7 +33,7 @@ process normalise_rename_germline_vcf {
     input:
         tuple val(meta), path(vcf)
     output:
-        tuple val(meta), file("*.vcf1.gz"), file("*.vcf1.gz.tbi")
+        tuple val(meta), file("*.vcf1.gz")
     script:
         """
         if [[ $vcf != *.gz ]]; then 
