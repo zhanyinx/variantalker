@@ -9,7 +9,7 @@ process pharmgkb {
     tag "pharmgkb"    
 
     input:
-        tuple val(meta), path(vcf), path(index)
+        tuple val(meta), path(vcf)
     output:
         tuple val(meta), file("*.html")
     script:

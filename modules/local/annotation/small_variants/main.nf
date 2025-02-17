@@ -185,7 +185,8 @@ process merge_chunks{
     input:
         tuple val(meta), path(mafs), path(pass), path(nopass), path(vcfs)
     output:
-        tuple val(meta), file("${meta.patient}.maf"), file("${meta.patient}.pass.tsv"), file("${meta.patient}.nopass.tsv"), file("${meta.patient}.vcf")
+        tuple val(meta), file("${meta.patient}.maf"), file("${meta.patient}.pass.tsv"), file("${meta.patient}.nopass.tsv"), file("${meta.patient}.vcf"), emit: all
+        tuple val(meta), path("${meta.patient}.vcf"), emit: vcf
     script:
     """
         sorted_mafs=`echo ${mafs} | tr ' ' '\\n' | sort | tr '\\n' ' '`

@@ -136,7 +136,7 @@ workflow VARIANTALKER{
 
     // pharmGKB only for hg38
     if (params.build == "hg38"){
-        //pharmgkb(fixvcf.out)
+        pharmgkb(merge_chunks.out.vcf)
         pharmgkb_germline(normalise_rename_germline_vcf.out)
     }
 
