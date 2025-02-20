@@ -2,6 +2,7 @@ process standardize_somatic_vcf{
     cpus 1
     memory "1 G"
     container "docker://yinxiu/gatk:latest"
+    tag "standardize_vcf"
 
     input:
         tuple val(meta), path(vcf)
@@ -51,57 +52,66 @@ process standardize_somatic_vcf{
         """
 }
 
-process run_somatic_funcotator{
-    cpus 1
+// add civic data to vcf
+process add_somatic_civic{
+    cpus 3
     errorStrategy 'retry'
     maxRetries = 3
     memory { 4.GB * task.attempt }
-    tag "somatic_funcotator"
-    container "docker://yinxiu/gatk:latest"
+    container "docker://yinxiu/civicpy:v1.0"
+
+    tag "civic2vcf"
+
     input:
-        tuple val(meta), val(chunk_index), file(vcf), file(index)
+        tuple val(meta), val(chunk_index), file(vcf) 
     output:
-        tuple val(meta), val(chunk_index), file("${meta.patient}.maf"), file("${meta.patient}.vcf")
+        tuple val(meta), val(chunk_index), file("${meta.patient}.vcf.gz")
     script:
     """
-    normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
-    tumor="\$(zcat ${vcf} | grep 'tumor_sample'  | cut -d'=' -f2)"
-    trascript_params=""
-    if [ -f ${params.transcript_list} ]; then
-        trascript_params=" --transcript-list ${params.transcript_list}"
-    fi
+    zcat ${vcf} > appo.vcf
+    nline=`wc -l appo.vcf | awk '{print \$1}'`
+    check=0
+    while [ \$nline -ne \$check ]; do
 
-    gatk Funcotator \
-        -L ${params.funcotator_target} \
-        -R ${params.fasta} \
-        -V ${vcf} \
-        -O ${meta.patient}.maf \
-        --annotation-default Matched_Norm_Sample_Barcode:\${normal} \
-        --annotation-default Tumor_Sample_Barcode:\${tumor} \
-        --annotation-default Tumor_type:${meta.tumor_tissue} \
-        --remove-filtered-variants true \
-        --output-file-format MAF \
-        --data-sources-path ${params.funcotator_somatic_db}\
-        --ref-version ${params.build} \
-        --transcript-selection-mode ${params.transcript_selection} \
-        --splice-site-window-size ${params.splice_site_window_size} \
-        --interval-padding ${params.target_padding} \
-        \$trascript_params
+        # split header and body
+        awk '{if(\$1~/^#/) print \$0 > "header"; else print \$0 > "body"}' appo.vcf
+        nlines=`wc -l body | awk '{print int(\$1/"'${task.cpus}'" + 1)}'`
+        split -l \$nlines body chunks
 
-    zcat ${vcf} > ${meta.patient}.vcf
+        for file in `ls chunks*`; do
+            awk '{print \$0}' header \$file > tmp
+            mv tmp \$file
+        done
 
-    # check completeness of maf file
-    nrow_maf=\$(wc -l ${meta.patient}.maf | cut -f1 -d' ')
-    nrow_vcf=\$(wc -l ${meta.patient}.vcf | cut -f1 -d' ')
-    diff=\$((\$nrow_maf-\$nrow_vcf))
-    if [ \$diff -lt 5 ]; then
-        echo "Funcotator maf file is incomplete!"
-        exit
-    fi
+        export CIVICPY_CACHE_FILE="/home/.civicpy/cache.pkl"
+        export CIVICPY_CACHE_TIMEOUT_DAYS=${params.civic_cache_timeout_days}        
+        
+
+        for file in `ls chunks*`; do
+            civicpy annotate-vcf --input-vcf  \$file --output-vcf out.\$file --reference ${params.build_alt_name}  --include-status accepted --include-status submitted > log.\$file 2>&1 &
+        done
+        wait
+
+        if [ -f final.vcf ]; then
+            rm final.vcf
+        fi
+
+        for file in `ls out*`; do
+            awk '{if(!(\$1~/^#/)) print \$0; else print \$0 > "header"}' \$file >> final.vcf
+        done
+
+        sort -k1,1V -k2,2n final.vcf > final.sorted.vcf
+        sed -i 's/ /_/g' final.sorted.vcf
+        cat header final.sorted.vcf > ${meta.patient}.vcf
+        rm ${vcf}
+        bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
+        check=`wc -l ${meta.patient}.vcf | awk '{print \$1-1}'`
+    done
     """
+
 }
 
-process run_cancervar{
+process run_somatic_cancervar{
     cpus 1
     errorStrategy 'retry'
     maxRetries = 3
@@ -109,7 +119,7 @@ process run_cancervar{
     tag "cancervar"
     container "docker://yinxiu/gatk:latest"
     input:
-        tuple val(meta), val(chunk_index), file(vcf), file(index)
+        tuple val(meta), val(chunk_index), file(vcf)
     output:
         tuple val(meta), val(chunk_index), file("${meta.patient}.cancervar"), file("${meta.patient}.grl_p"), file("config.init")
     script:
@@ -148,28 +158,3 @@ process run_cancervar{
     """
 }
 
-process add_guidelines_escat{
-    cpus 1
-    memory "1 G"
-    container "docker://yinxiu/gatk:latest"
-    errorStrategy 'retry'
-    maxRetries = 3
-    tag "add_guidelines_escat"
-    input:
-        tuple val(meta), val(chunk_index), file(maf), file(vcf), file(cancervar), file(grl_p), file(config)
-    output:
-        tuple val(meta), val(chunk_index), file("${chunk_index}.guidelines.maf"), file("${chunk_index}.vcf")
-    script:
-    """
-    add_guidelines_and_escat_to_maf.py -m ${maf} \
-        -c ${cancervar} \
-        -cc ${config} \
-        -o ${chunk_index}.guidelines.maf \
-        -t ${meta.tumor_tissue} \
-        -p ${params.projectid} \
-        --escat ${params.escat_db} \
-        -d ${params.date} 
-
-    cp ${vcf} ${chunk_index}.vcf
-    """
-}

@@ -1,4 +1,4 @@
-process filter_variants {
+process filter_germline_variants {
     cpus 1
     memory "4 G"
     tag "filter_variants"
@@ -51,141 +51,50 @@ process standardize_germline_vcf {
 }
 
 
-process germline_annotate_snp_indel{
+process run_germline_intervar{
     cpus 1
     errorStrategy 'retry'
     maxRetries = 3
-    memory { 8.GB * task.attempt }
-    tag "vcf2maf"
+    memory { 4.GB * task.attempt }
+    tag "cancervar"
     container "docker://yinxiu/gatk:latest"
-
     input:
-        tuple val(meta), file(vcf), file(index) 
+        tuple val(meta), val(chunk_index), file(vcf)
     output:
-        tuple val(meta), file("${meta.patient}.small_mutations.intervar.escat.maf"), file("${meta.patient}.vcf")
+        tuple val(meta), val(chunk_index), file("${meta.patient}.intervar"), file("${meta.patient}.grl_p"), file("config.init")
     script:
     """
-    zcat ${vcf} | awk '{if(\$7 == "PASS") print \$0; if( (\$0 ~/^#/) ) print \$0}' > ${meta.patient}.vcf
+    # Intervar call
+    zcat ${vcf} > file.vcf
+    cp ${params.intervar_init} config.init
+    sed -i "s,INPUTYPE,${params.intervar_input_type},g" config.init
+    sed -i "s,BUILD,${params.build},g" config.init
+    sed -i "s,INPUTFILE,file.vcf,g" config.init
+    sed -i "s,OUTFILE,intervar,g" config.init
+    sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
+    sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
+    sed -i "s,INTERVARDB,${params.intervar_db},g" config.init
+    sed -i "s,SPLICE_WINDOW,${params.splice_site_window_size},g" config.init
 
-    cat ${meta.patient}.vcf | awk 'BEGIN{counts = 0}{ if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else {print \$0 > "tmp_"counts".vcf"}; pos=\$2; chr=\$1}'
-    trascript_params=""
-    if [ -f ${params.transcript_list} ]; then
-        trascript_params=" --transcript-list ${params.transcript_list}"
+    if ! [ ${params.intervar_evidence_file} == "None" ]; then
+        if ! [ -f ${params.intervar_evidence_file} ]; then
+            echo "${params.intervar_evidence_file} intervar evidence file does not exist!"
+            exit
+        fi
+        sed -i "s,None,${params.intervar_evidence_file},g" config.init
     fi
-    
-    for file in `ls tmp_*vcf`; do
-        cat header \$file > file.vcf
-        bgzip -c file.vcf > file.vcf.gz
-        tabix -p vcf file.vcf.gz
 
-        # # GATK funcotator
-        # gatk Funcotator \
-        #     -L ${params.funcotator_target} \
-        #     -R ${params.fasta} \
-        #     -V file.vcf.gz \
-        #     -O ${meta.patient}.maf \
-        #     --annotation-default Matched_Norm_Sample_Barcode:${meta.patient} \
-        #     --remove-filtered-variants true \
-        #     --output-file-format MAF \
-        #     --data-sources-path ${params.funcotator_germline_db} \
-        #     --ref-version ${params.build} \
-        #     --transcript-selection-mode ${params.transcript_selection} \
-        #     --splice-site-window-size ${params.splice_site_window_size} \
-        #     --interval-padding ${params.target_padding} \$trascript_params
+    python ${params.intervar_folder}/Intervar.py -c config.init
 
-        check=1
-        while [[ \$check -ne 0 ]]
-        do
-            # GATK funcotator
-            gatk Funcotator \
-                -L ${params.funcotator_target} \
-                -R ${params.fasta} \
-                -V file.vcf.gz \
-                -O ${meta.patient}.maf \
-                --annotation-default Matched_Norm_Sample_Barcode:${meta.patient} \
-                --remove-filtered-variants true \
-                --output-file-format MAF \
-                --data-sources-path ${params.funcotator_germline_db}\
-                --ref-version ${params.build} \
-                --transcript-selection-mode ${params.transcript_selection} \
-                --splice-site-window-size ${params.splice_site_window_size} \
-                --interval-padding ${params.target_padding} \
-                \$trascript_params
-
-            check=\$?
-            if [[ \$check -ne 0 ]]; then
-                grep -nr "ERROR GencodeFuncotationFactory" .command.err | awk '{split(\$14,res,"-"); print res[1]}'  | sort | uniq | awk '{split(\$0,res,":"); print res[1],res[2]}'  > remove
-                awk 'BEGIN{fn=0; count=1; a=0}{
-                    if(FNR==1) fn++;
-
-                    if(fn==1){
-                        chr[count] = \$1
-                        pos[count] = \$2
-                        count++
-                    }    
-
-                    if(fn==2){
-                        bool=1
-                        for(i=1;i<count;i++){
-                            if(\$1 == chr[i] && \$2 == pos[i]){
-                                bool=0
-                                break
-                            }
-                        }
-                        if(bool==1) print \$0
-                    }
-                }' remove file.vcf > appo
-                mv appo file.vcf
-                bgzip -c file.vcf > file.vcf.gz
-                tabix -p vcf file.vcf.gz
-            fi
-        done
-
-        # intervar call
-        cp ${params.intervar_init} config.init
-        sed -i "s,INPUTYPE,${params.intervar_input_type},g" config.init
-        sed -i "s,BUILD,${params.build},g" config.init
-        sed -i "s,INPUTFILE,file.vcf,g" config.init
-        sed -i "s,OUTFILE,intervar,g" config.init
-        sed -i "s,ANNOVARDB,${params.annovar_db},g" config.init
-        sed -i "s,ANNOVAR,${params.annovar_software_folder},g" config.init
-        sed -i "s,INTERVARDB,${params.intervar_db},g" config.init
-        sed -i "s,SPLICE_WINDOW,${params.splice_site_window_size},g" config.init
-        if ! [ ${params.intervar_evidence_file} == "None" ]; then
-            if ! [ -f ${params.intervar_evidence_file} ]; then
-                echo "${params.intervar_evidence_file} intervar evidence file does not exist!"
-                exit
-            fi
-            sed -i "s,None,${params.intervar_evidence_file},g" config.init
-        fi
-
-
-        python ${params.intervar_folder}/Intervar.py -c config.init
-
-        # merge intervar and funcotator
-        # intervarfile="\$(ls intervar.${vcf.simpleName}*.${params.build}_multianno.txt.intervar)"
-        intervarfile="intervar.${params.build}_multianno.txt.intervar"
-        add_guidelines_and_escat_to_maf.py -m ${meta.patient}.maf \
-            -c \${intervarfile} \
-            -cc config.init \
-            -o tmp \
-            -p ${params.projectid} \
-            -d ${params.date} \
-            --escat ${params.escat_db} \
-            --germline
-        
-        if ! [ -f ${meta.patient}.small_mutations.intervar.escat.maf ]; then
-            cp tmp ${meta.patient}.small_mutations.intervar.escat.maf
-        else
-            awk '{if(!(\$0 ~/^#/) && \$1!="Hugo_Symbol") print \$0}' tmp >> ${meta.patient}.small_mutations.intervar.escat.maf
-        fi
-
-    done
+    intervarfile="intervar.${params.build}_multianno.txt.intervar"
+    cp \${intervarfile} ${meta.patient}.intervar
+    grl_p=`echo \$intervarfile | sed 's/\\.intervar/\\.grl_p/g'`
+    cp \$grl_p ${meta.patient}.grl_p
     """
 }
 
 
-process germline_renovo_annotation{
+process run_germline_renovo{
     cpus 1
     errorStrategy 'retry'
     maxRetries = 2
@@ -194,9 +103,9 @@ process germline_renovo_annotation{
     container "docker://yinxiu/renovo:latest"
 
     input:
-        tuple val(meta), file(maf), file(vcf)
+        tuple val(meta), val(chunk_index), file(maf), file(vcf)
     output:
-        tuple val(meta), file("${maf.baseName}.renovo.maf"), file("${meta.patient}.vcf")
+        tuple val(meta), val(chunk_index), file("${maf.baseName}.renovo.maf"), file(vcf)
     script:
     """
         python ${params.renovo_path}/ReNOVo.py \

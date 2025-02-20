@@ -15,7 +15,7 @@ process split_chunks{
     script:
     """
         zcat ${vcf} > appo.vcf
-        nfile=`awk 'BEGIN{counts = 0}{if(\$1==chr && \$2==pos){counts++;}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else if(\$7=="PASS"){print \$0 > "body_"counts".vcf"}; pos=\$2; chr=\$1}END{print counts}' appo.vcf`
+        nfile=`awk 'BEGIN{counts = 0; nfile=0}{if(\$1==chr && \$2==pos){counts++; if(counts>nfile) nfile=counts}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else if(\$7=="PASS"){print \$0 > "body_"counts".vcf"}; pos=\$2; chr=\$1}END{print nfile}' appo.vcf`
         for i in `seq 0 \$nfile`; do
             split -l ${params.chunk_size} body_\$i.vcf ${meta.patient}_chunk_\$i
         done
@@ -27,66 +27,89 @@ process split_chunks{
     """
 }
 
-// add civic data to vcf
-process add_civic{
-    cpus 3
+process run_funcotator{
+    cpus 1
     errorStrategy 'retry'
     maxRetries = 3
     memory { 4.GB * task.attempt }
-    container "docker://yinxiu/civicpy:v1.0"
-
-    tag "civic2vcf"
-
+    tag "funcotator_annotation"
+    container "docker://yinxiu/gatk:latest"
     input:
-        tuple val(meta), val(chunk_index), file(vcf) 
+        tuple val(meta), val(chunk_index), file(vcf)
     output:
-        tuple val(meta), val(chunk_index), file("${meta.patient}.vcf.gz"), file("${meta.patient}.vcf.gz.tbi")
+        tuple val(meta), val(chunk_index), file("${meta.patient}.maf"), file("${meta.patient}.vcf")
     script:
     """
-    zcat ${vcf} > appo.vcf
-    nline=`wc -l appo.vcf | awk '{print \$1}'`
-    check=0
-    while [ \$nline -ne \$check ]; do
+    tabix -p vcf ${vcf}
 
-        # split header and body
-        awk '{if(\$1~/^#/) print \$0 > "header"; else print \$0 > "body"}' appo.vcf
-        nlines=`wc -l body | awk '{print int(\$1/"'${task.cpus}'" + 1)}'`
-        split -l \$nlines body chunks
+    trascript_params=""
+    if [ -f ${params.transcript_list} ]; then
+        trascript_params=" --transcript-list ${params.transcript_list}"
+    fi
 
-        for file in `ls chunks*`; do
-            awk '{print \$0}' header \$file > tmp
-            mv tmp \$file
-        done
+    if [ "${meta.sample_type}" == "germline" ]; then
+        extra_params=" --annotation-default Matched_Norm_Sample_Barcode:${meta.patient} --data-sources-path ${params.funcotator_germline_db}"
+    else
+        normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
+        tumor="\$(zcat ${vcf} | grep 'tumor_sample'  | cut -d'=' -f2)"
+        extra_params=" --annotation-default Matched_Norm_Sample_Barcode:\${normal} --annotation-default Tumor_Sample_Barcode:\${tumor} --annotation-default Tumor_type:${meta.tumor_tissue} --data-sources-path ${params.funcotator_somatic_db}"
+    fi
 
-        export CIVICPY_CACHE_FILE="/home/.civicpy/cache.pkl"
-        export CIVICPY_CACHE_TIMEOUT_DAYS=${params.civic_cache_timeout_days}        
-        
+    gatk Funcotator \
+        -L ${params.funcotator_target} \
+        -R ${params.fasta} \
+        -V ${vcf} \
+        -O ${meta.patient}.maf \
+        --remove-filtered-variants true \
+        --output-file-format MAF \
+        --ref-version ${params.build} \
+        --transcript-selection-mode ${params.transcript_selection} \
+        --splice-site-window-size ${params.splice_site_window_size} \
+        --interval-padding ${params.target_padding} \
+        \$trascript_params \$extra_params
 
-        for file in `ls chunks*`; do
-            civicpy annotate-vcf --input-vcf  \$file --output-vcf out.\$file --reference ${params.build_alt_name}  --include-status accepted --include-status submitted > log.\$file 2>&1 &
-        done
-        wait
+    zcat ${vcf} > ${meta.patient}.vcf
 
-        if [ -f final.vcf ]; then
-            rm final.vcf
-        fi
-
-        for file in `ls out*`; do
-            awk '{if(!(\$1~/^#/)) print \$0; else print \$0 > "header"}' \$file >> final.vcf
-        done
-
-        sort -k1,1V -k2,2n final.vcf > final.sorted.vcf
-        sed -i 's/ /_/g' final.sorted.vcf
-        cat header final.sorted.vcf > ${meta.patient}.vcf
-        rm ${vcf}
-        bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
-        tabix -p vcf ${meta.patient}.vcf.gz
-        check=`wc -l ${meta.patient}.vcf | awk '{print \$1-1}'`
-    done
+    # check completeness of maf file
+    nrow_maf=\$(wc -l ${meta.patient}.maf | cut -f1 -d' ')
+    nrow_vcf=\$(wc -l ${meta.patient}.vcf | cut -f1 -d' ')
+    diff=\$((\$nrow_maf-\$nrow_vcf))
+    if [ \$diff -lt 5 ]; then
+        echo "Funcotator maf file is incomplete!"
+        exit
+    fi
     """
-
 }
 
+process add_guidelines_escat{
+    cpus 1
+    memory "1 G"
+    container "docker://yinxiu/gatk:latest"
+    errorStrategy 'retry'
+    maxRetries = 3
+    tag "add_guidelines_escat"
+    input:
+        tuple val(meta), val(chunk_index), file(maf), file(vcf), file(guidelines), file(grl_p), file(config)
+    output:
+        tuple val(meta), val(chunk_index), file("${chunk_index}.guidelines.maf"), file("${chunk_index}.vcf")
+    script:
+    """
+    if [ "${meta.sample_type}" == "somatic" ]; then
+        extraopts=" -t ${meta.tumor_tissue}"
+    else
+        extraopts=" --germline"
+    fi
+    add_guidelines_and_escat_to_maf.py -m ${maf} \
+        -c ${guidelines} \
+        -cc ${config} \
+        -o ${chunk_index}.guidelines.maf \
+        -p ${params.projectid} \
+        --escat ${params.escat_db} \
+        -d ${params.date} \$extraopts
+
+    cp ${vcf} ${chunk_index}.vcf
+    """
+}
 
 // alpha_missense
 process add_alpha_missense{
@@ -177,7 +200,7 @@ process merge_chunks{
     cpus 1
     errorStrategy 'retry'
     maxRetries = 3
-    memory { 2.GB * task.attempt }
+    memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
     container "docker://ubuntu:20.04"
     tag "merge_chunk"
