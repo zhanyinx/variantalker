@@ -1,13 +1,6 @@
 // List of functions and processes used to annotate snp and indel from whole exome sequences
 
 process split_chunks{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 3
-    memory { 2.GB * task.attempt }
-    container "docker://yinxiu/civicpy:v1.0"
-    tag "split_chunk"
-
     input:
         tuple val(meta), file(vcf)
     output:
@@ -15,7 +8,27 @@ process split_chunks{
     script:
     """
         zcat ${vcf} > appo.vcf
-        nfile=`awk 'BEGIN{counts = 0; nfile=0}{if(\$1==chr && \$2==pos){counts++; if(counts>nfile) nfile=counts}else{counts=0;}; if(\$0~/^#/){print \$0 > "header";} else if(\$7=="PASS"){print \$0 > "body_"counts".vcf"}; pos=\$2; chr=\$1}END{print nfile}' appo.vcf`
+        nfile=`awk 'BEGIN{
+                    counts = 0; 
+                    nfile=0
+                }{
+                    if(\$0~/^#/){
+                        print \$0 > "header";
+                    } else {
+                        if(\$1==chr && \$2==pos && \$7 == "PASS"){
+                            counts++; 
+                            if(counts>nfile) nfile=counts
+                        }else{
+                            counts=0
+                        }
+                        if(\$7=="PASS"){  
+                            print \$0 > "body_"counts".vcf"; 
+                            pos=\$2; 
+                            chr=\$1
+                        }
+                    }
+                }END{print nfile}' appo.vcf`
+                
         for i in `seq 0 \$nfile`; do
             split -l ${params.chunk_size} body_\$i.vcf ${meta.patient}_chunk_\$i
         done
@@ -28,12 +41,6 @@ process split_chunks{
 }
 
 process run_funcotator{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 3
-    memory { 4.GB * task.attempt }
-    tag "funcotator_annotation"
-    container "docker://yinxiu/gatk:latest"
     input:
         tuple val(meta), val(chunk_index), file(vcf)
     output:
