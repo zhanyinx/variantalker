@@ -1,9 +1,4 @@
 process filter_germline_variants {
-    cpus 1
-    memory "4 G"
-    tag "filter_variants"
-    container "docker://yinxiu/gatk:latest"
-
     input:
         tuple val(meta), path(vcf) 
     output:
@@ -25,11 +20,6 @@ process filter_germline_variants {
 }
 
 process standardize_germline_vcf {
-    cpus 1
-    memory "1 G"
-    tag "rename_and_index"
-    container "docker://yinxiu/gatk:latest"
-
     input:
         tuple val(meta), path(vcf)
     output:
@@ -52,12 +42,6 @@ process standardize_germline_vcf {
 
 
 process run_germline_intervar{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 3
-    memory { 4.GB * task.attempt }
-    tag "cancervar"
-    container "docker://yinxiu/gatk:latest"
     input:
         tuple val(meta), val(chunk_index), file(vcf)
     output:
@@ -95,13 +79,6 @@ process run_germline_intervar{
 
 
 process run_germline_renovo{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 2
-    memory { 1.GB * task.attempt }
-    tag "vcf2maf"
-    container "docker://yinxiu/renovo:latest"
-
     input:
         tuple val(meta), val(chunk_index), file(maf), file(vcf)
     output:

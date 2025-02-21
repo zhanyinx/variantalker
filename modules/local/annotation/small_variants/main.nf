@@ -89,12 +89,6 @@ process run_funcotator{
 }
 
 process add_guidelines_escat{
-    cpus 1
-    memory "1 G"
-    container "docker://yinxiu/gatk:latest"
-    errorStrategy 'retry'
-    maxRetries = 3
-    tag "add_guidelines_escat"
     input:
         tuple val(meta), val(chunk_index), file(maf), file(vcf), file(guidelines), file(grl_p), file(config)
     output:
@@ -120,13 +114,6 @@ process add_guidelines_escat{
 
 // alpha_missense
 process add_alpha_missense{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 2
-    memory { 3.GB * task.attempt }
-    tag "alphamissense"
-    container "docker://ubuntu:20.04"
-
     input:
         tuple val(meta), val(chunk_index), file(maf), file(vcf)
     output:
@@ -171,13 +158,6 @@ process add_alpha_missense{
 
 // filter maf file
 process filter_maf{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 2
-    memory { 1.GB * task.attempt }
-    tag "filtermaf"
-    container "docker://yinxiu/gatk:latest"
-    
     input:
         tuple val(meta), val(chunk_index), file(maf), file(vcf)
     output:
@@ -204,14 +184,8 @@ process filter_maf{
 }
 
 process merge_chunks{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 3
-    memory { 1.GB * task.attempt }
+    
     publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
-    container "docker://ubuntu:20.04"
-    tag "merge_chunk"
-
     input:
         tuple val(meta), path(mafs), path(pass), path(nopass), path(vcfs)
     output:

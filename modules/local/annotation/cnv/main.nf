@@ -24,10 +24,7 @@ process cnvkit_call{
 }
 
 process annotate_cnv {
-    cpus 5
-    memory "5 G"
     publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
-    container "docker://yinxiu/classifycnv:latest"
 
     input:
         tuple val(meta), path(input)

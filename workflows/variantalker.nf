@@ -127,45 +127,18 @@ workflow VARIANTALKER{
     add_alpha_missense(merged_ch)
     filter_maf(add_alpha_missense.out)
     merge_chunks(filter_maf.out.groupTuple(by: 0))
-    // combined = run_funcotator.out.combine(run_somatic_cancervar.out.mix(run_germline_intervar), by: [0,1])
-    // combined.view()
-    // add_guidelines_escat(combined)
 
-    // 
-    // run_funcotator(chunks.filter{it -> it[0].sample_type == 'germline'})
- // add_alpha_missense(add_guidelines_escat.out)
- // filter_maf(add_alpha_missense.out)
- // merge_chunks(filter_maf.out.groupTuple(by: 0))
+    // pharmGKB only for hg38
+    if (params.build == "hg38"){
+        pharmgkb(merge_chunks.out.vcf)
+    }
 
- // // germline
- // if (params.pipeline.toUpperCase() == "SAREK") {
- //     filter_variants(ch_germline)
- //     normalise_rename_germline_vcf(filter_variants.out)
- //     germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
- //     germline_renovo_annotation(germline_annotate_snp_indel.out)
- //     add_alpha_missense_germline(germline_renovo_annotation.out)
- //     filter_maf_germline(add_alpha_missense_germline.out)
- // }
- // else{
- //     normalise_rename_germline_vcf(ch_germline)
- //     germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
- //     germline_renovo_annotation(germline_annotate_snp_indel.out)
- //     add_alpha_missense_germline(germline_renovo_annotation.out)
- //     filter_maf_germline(add_alpha_missense_germline.out)
- // }
-
- // // pharmGKB only for hg38
- // if (params.build == "hg38"){
- //     pharmgkb(merge_chunks.out.vcf)
- //     pharmgkb_germline(normalise_rename_germline_vcf.out)
- // }
-
- // // workflow for somatic cnv annotation
- // if (params.pipeline.toUpperCase() == "SAREK") {
- //     cnvkit_call(ch_cnv)
- //     annotate_cnv(cnvkit_call.out)
- // }
- // if (params.pipeline.toUpperCase() == "DRAGEN"){
- //     annotate_cnv(ch_cnv)
- // }
+    // workflow for somatic cnv annotation
+    if (params.pipeline.toUpperCase() == "SAREK") {
+        cnvkit_call(ch_cnv)
+        annotate_cnv(cnvkit_call.out)
+    }
+    if (params.pipeline.toUpperCase() == "DRAGEN"){
+        annotate_cnv(ch_cnv)
+    }
 }

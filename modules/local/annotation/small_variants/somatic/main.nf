@@ -1,9 +1,4 @@
 process standardize_somatic_vcf{
-    cpus 1
-    memory "1 G"
-    container "docker://yinxiu/gatk:latest"
-    tag "standardize_vcf"
-
     input:
         tuple val(meta), path(vcf)
     output:
@@ -112,12 +107,6 @@ process add_somatic_civic{
 }
 
 process run_somatic_cancervar{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 3
-    memory { 4.GB * task.attempt }
-    tag "cancervar"
-    container "docker://yinxiu/gatk:latest"
     input:
         tuple val(meta), val(chunk_index), file(vcf)
     output:
