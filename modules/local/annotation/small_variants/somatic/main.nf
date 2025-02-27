@@ -98,7 +98,6 @@ process add_somatic_civic{
         sort -k1,1V -k2,2n final.vcf > final.sorted.vcf
         sed -i 's/ /_/g' final.sorted.vcf
         cat header final.sorted.vcf > ${meta.patient}.vcf
-        rm ${vcf}
         bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
         check=`wc -l ${meta.patient}.vcf | awk '{print \$1-1}'`
     done
