@@ -284,6 +284,8 @@ def main():
     out = out.drop(["filter_common", "filter_specific"], axis=1)
 
     writeheader(args.maf, args.output)
+    overlapping_columns = list(set(out.columns) & set(COLUMNS_TO_REMOVE))
+    out = out.drop(columns=overlapping_columns)
     out.to_csv(args.output, sep="\t", index=False, mode="a")
 
     keep = [
