@@ -4,7 +4,7 @@ process pharmgkb {
     maxRetries = 3
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
-    container "docker://pgkb/pharmcat:2.9.0"
+    container "docker://pgkb/pharmcat:2.15.5"
 
     tag "pharmgkb"    
 
