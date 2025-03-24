@@ -18,7 +18,6 @@ COLUMNS_TO_REMOVE = [
     "CosmicFusion_fusion_id",
     "Diag_list",
     "End",
-    "Freq_ExAC_ALL",
     "Freq_gnomAD_genome_ALL",
     "Freq_gnomAD_genome_POPs",
     "Func.refGene",
