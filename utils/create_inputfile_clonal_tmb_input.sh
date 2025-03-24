@@ -93,12 +93,14 @@ if ! [ -f $output ];then
 	echo "patient,sex,status,sample,lane,cram,crai,cellularity,maf" > $output
 fi
 
+echo  $selected_folders
+
 for dir in $selected_folders; do
 	patient=`basename $dir`
 	file=`ls ${annotation_folder}/$patient/*maf`
-	normal=`ls $dir/*cram | grep -v tumor | grep -v "evidence"`
+	normal=`ls $dir/*cram | grep -v "_tumor.cram" | grep -v "evidence"`
 	normalbai=`ls $normal*i`
-	tumor=`ls $dir/*cram | grep tumor | grep -v evidence`
+	tumor=`ls $dir/*cram | grep "_tumor.cram" | grep -v evidence`
 	tumorbai=`ls $tumor*i`
 	sex="XX"
     if [ -z $tumorbai ]; then
