@@ -4,12 +4,12 @@ process pharmgkb {
     maxRetries = 3
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
-    container "docker://pgkb/pharmcat:2.9.0"
+    container "docker://pgkb/pharmcat:2.15.5"
 
     tag "pharmgkb"    
 
     input:
-        tuple val(meta), path(vcf), path(index)
+        tuple val(meta), path(vcf)
     output:
         tuple val(meta), file("*.html")
     script:

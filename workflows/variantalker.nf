@@ -29,14 +29,10 @@ if (!params.intervar_evidence_file || params.intervar_evidence_file.isEmpty()) {
 */
 
 // annotation
-include {filter_maf; add_civic; add_alpha_missense} from '../modules/local/annotation/small_variants/main.nf'
+include {split_chunks; run_funcotator; add_guidelines_escat; add_alpha_missense; filter_maf; merge_chunks} from '../modules/local/annotation/small_variants/main.nf'
+include {standardize_somatic_vcf; add_somatic_civic; run_somatic_cancervar; } from '../modules/local/annotation/small_variants/somatic/main.nf'
+include {filter_germline_variants; standardize_germline_vcf; run_germline_intervar; run_germline_renovo} from '../modules/local/annotation/small_variants/germline/main.nf'
 include {pharmgkb} from '../modules/local/pharmgkb/main.nf'
-include {filter_maf as filter_maf_germline} from '../modules/local/annotation/small_variants/main.nf'
-include {add_alpha_missense as add_alpha_missense_germline} from '../modules/local/annotation/small_variants/main.nf'
-include {pharmgkb as pharmgkb_germline} from '../modules/local/pharmgkb/main.nf'
-
-include {fixvcf; somatic_annotate_snp_indel} from '../modules/local/annotation/small_variants/somatic/main.nf'
-include {filter_variants; normalise_rename_germline_vcf; germline_annotate_snp_indel; germline_renovo_annotation;} from '../modules/local/annotation/small_variants/germline/main.nf'
 include {cnvkit_call; annotate_cnv} from '../modules/local/annotation/cnv/main.nf'
 
 //biomarker
@@ -96,35 +92,45 @@ workflow VARIANTALKER{
     ch_germline = extract_csv(file(params.input), "germline")
     ch_cnv = extract_csv(file(params.input), "cnv")
 
-    // ********** Workflow for snp and indel variant annotation **********
-    // somatic 
-    fixvcf(ch_somatic)
-    add_civic(fixvcf.out)
-    somatic_annotate_snp_indel(add_civic.out)
-    add_alpha_missense(somatic_annotate_snp_indel.out)
-    filter_maf(add_alpha_missense.out)
-
-    // germline
+    /* Standardize vcf */
+    standardize_somatic_vcf(ch_somatic) 
     if (params.pipeline.toUpperCase() == "SAREK") {
-        filter_variants(ch_germline)
-        normalise_rename_germline_vcf(filter_variants.out)
-        germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
-        germline_renovo_annotation(germline_annotate_snp_indel.out)
-        add_alpha_missense_germline(germline_renovo_annotation.out)
-        filter_maf_germline(add_alpha_missense_germline.out)
+        filter_germline_variants(ch_germline)
+        standardize_germline_vcf(filter_germline_variants.out)
     }
     else{
-        normalise_rename_germline_vcf(ch_germline)
-        germline_annotate_snp_indel(normalise_rename_germline_vcf.out)
-        germline_renovo_annotation(germline_annotate_snp_indel.out)
-        add_alpha_missense_germline(germline_renovo_annotation.out)
-        filter_maf_germline(add_alpha_missense_germline.out)
+        standardize_germline_vcf(ch_germline)
     }
+    vcf_ch = standardize_somatic_vcf.out.mix(standardize_germline_vcf.out)
+
+    // split into chunks
+    split_chunks(vcf_ch)
+    chunks = split_chunks.out.map{ it->
+        def meta = it[0]
+        def vcf_files = it[1] instanceof List ? it[1] : [it[1]]
+        return vcf_files.collect { vcf_file ->                    
+            return [ meta, vcf_file.simpleName, vcf_file]
+        }
+    }.flatMap { it }
+
+    // Annotations
+    add_somatic_civic(chunks.filter{it -> it[0].sample_type == 'somatic'}) // CIViC
+    run_somatic_cancervar(add_somatic_civic.out) // cancervar annotation on somatic
+
+    merged_ch = add_somatic_civic.out.mix(chunks.filter{it -> it[0].sample_type == 'germline'})
+    run_funcotator(merged_ch) // funcotator annotation
+    run_germline_intervar(chunks.filter{it -> it[0].sample_type == 'germline'}) // intervar annotation on germline
+    combined = run_funcotator.out.combine(run_somatic_cancervar.out.mix(run_germline_intervar.out), by: [0,1])
+    add_guidelines_escat(combined)
+    run_germline_renovo(add_guidelines_escat.out.filter(it -> it[0].sample_type == 'germline'))
+    merged_ch = add_guidelines_escat.out.filter(it -> it[0].sample_type == 'somatic').mix(run_germline_renovo.out)
+    add_alpha_missense(merged_ch)
+    filter_maf(add_alpha_missense.out)
+    merge_chunks(filter_maf.out.groupTuple(by: 0))
 
     // pharmGKB only for hg38
     if (params.build == "hg38"){
-        pharmgkb(fixvcf.out)
-        pharmgkb_germline(normalise_rename_germline_vcf.out)
+        pharmgkb(merge_chunks.out.vcf)
     }
 
     // workflow for somatic cnv annotation

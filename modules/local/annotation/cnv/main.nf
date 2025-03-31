@@ -24,10 +24,7 @@ process cnvkit_call{
 }
 
 process annotate_cnv {
-    cpus 5
-    memory "5 G"
     publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
-    container "docker://yinxiu/classifycnv:latest"
 
     input:
         tuple val(meta), path(input)
@@ -37,19 +34,18 @@ process annotate_cnv {
     if (params.pipeline.toUpperCase() == "DRAGEN")
         """
         name="\$(basename ${input} | sed 's,vcf\\.gz,bed,g')"
-        zcat ${input} | awk '{if(\$7=="PASS") print \$3,\$5}' > \$name
+        zcat ${input} | awk '{if(\$7=="PASS") print \$3,\$5, \$10}' > \$name
         sed -i 's/DRAGEN:GAIN://g' \$name
         sed -i 's/DRAGEN:LOSS://g' \$name
         sed -i 's/:/\\t/g' \$name
         sed -i 's/-/\\t/g' \$name
         sed -i 's/<//g' \$name
         sed -i 's/>//g' \$name
-        awk '{print \$1, \$2, \$3 +1, \$4}' \$name > appo
+        awk '{print \$1, \$2, \$3 +1, \$4, \$6}' \$name > appo
         mv appo \$name
         sed -i 's/ /\\t/g' \$name
         python ${params.classifyCNV_folder}/ClassifyCNV.py --infile \$name --GenomeBuild ${params.build} --cores 5 --outdir tmp
-        mv tmp/Scoresheet.txt ${meta.patient}.cnv.annotated.tsv
-
+        awk 'BEGIN{fn=0}{if(FNR==1) fn++; if(fn==1){score[\$1,\$2,\$3] = \$5}; if(fn==2){if(header==0) {print \$0, "logRatio"; header++}else{print \$0, score[\$2,\$3,\$4]}}}' \$name tmp/Scoresheet.txt > ${meta.patient}.cnv.annotated.tsv
         """
     else if (params.pipeline.toUpperCase() == "SAREK")
         """

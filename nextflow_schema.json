@@ -505,6 +505,12 @@
                     "format": "directory-path",
                     "description": "Path to the folder containing annovar software",
                     "fa_icon": "fas fa-folder-anno"
+                },
+                "chunk_size":{
+                    "type": "number",
+                    "description": "Number of variants to process in a single chunk",
+                    "default": 1000,
+                    "fa_icon": "fas fa-chunk-size"
                 }
             }
         },

@@ -1,82 +1,123 @@
 // List of functions and processes used to annotate snp and indel from whole exome sequences
 
-// add civic data to vcf
-process add_civic{
-    cpus 10
-    errorStrategy 'retry'
-    maxRetries = 3
-    memory { 4.GB * task.attempt }
-    container "docker://yinxiu/civicpy:v1.0"
-
-    tag "civic2vcf"
-
+process split_chunks{
     input:
-        tuple val(meta), file(vcf), file(index)
+        tuple val(meta), file(vcf)
     output:
-        tuple val(meta), file("${meta.patient}.vcf.gz"), file("${meta.patient}.vcf.gz.tbi")
+        tuple val(meta), file("${meta.patient}_chunk_*.vcf.gz")
     script:
     """
-    zcat ${vcf} > appo.vcf
-    nline=`wc -l appo.vcf | awk '{print \$1}'`
-    check=0
-    while [ \$nline -ne \$check ]; do
-        # split on chromosomes
-        awk '{if(\$1~/^#/) print \$0}' appo.vcf > header
-        for chr in `awk '{if(!(\$1~/^#/)) print \$1}' appo.vcf | sort | uniq`; do
-            cp header tmp_\$chr
-        done
-        awk '{if(!(\$1~/^#/)) print \$0 >> "tmp_"\$1 }'  appo.vcf
-
-        export CIVICPY_CACHE_FILE="/home/.civicpy/cache.pkl"
-        export CIVICPY_CACHE_TIMEOUT_DAYS=${params.civic_cache_timeout_days}        
-        
-
-        cpu=0
-        for file in `ls tmp_*`; do
-            civicpy annotate-vcf --input-vcf  \$file --output-vcf out.\$file --reference ${params.build_alt_name}  --include-status accepted --include-status submitted > log.\$file 2>&1 &
-            let cpu=cpu+1
-
-            if [ \$cpu -eq $task.cpus ]; then
-                cpu=0
-                wait
-            fi
-        done
-        wait
-
-        if [ -f final.vcf ]; then
-            rm final.vcf
-        fi
-
-        for file in `ls out*`; do
-            awk '{if(!(\$1~/^#/)) print \$0; else print \$0 > "header"}' \$file >> final.vcf
+        zcat ${vcf} > appo.vcf
+        nfile=`awk 'BEGIN{
+                    counts = 0; 
+                    nfile=0
+                }{
+                    if(\$0~/^#/){
+                        print \$0 > "header";
+                    } else {
+                        if(\$1==chr && \$2==pos && \$7 == "PASS"){
+                            counts++; 
+                            if(counts>nfile) nfile=counts
+                        }else{
+                            counts=0
+                        }
+                        if(\$7=="PASS"){  
+                            print \$0 > "body_"counts".vcf"; 
+                            pos=\$2; 
+                            chr=\$1
+                        }
+                    }
+                }END{print nfile}' appo.vcf`
+                
+        for i in `seq 0 \$nfile`; do
+            split -l ${params.chunk_size} body_\$i.vcf ${meta.patient}_chunk_\$i
         done
 
-        sort -k1,1V -k2,2n final.vcf > final.sorted.vcf
-        sed -i 's/ /_/g' final.sorted.vcf
-        cat header final.sorted.vcf > ${meta.patient}.vcf
-        rm ${vcf} ${index}
-        bgzip -c ${meta.patient}.vcf > ${meta.patient}.vcf.gz
-        tabix -p vcf ${meta.patient}.vcf.gz
-        check=`wc -l ${meta.patient}.vcf | awk '{print \$1-1}'`
-    done
+        for i in `ls ${meta.patient}_chunk_*`; do
+            cat header \$i > \$i.vcf
+            bgzip -c \$i.vcf > \$i.vcf.gz
+        done
     """
-
 }
 
+process run_funcotator{
+    input:
+        tuple val(meta), val(chunk_index), file(vcf)
+    output:
+        tuple val(meta), val(chunk_index), file("${meta.patient}.maf"), file("${meta.patient}.vcf")
+    script:
+    """
+    tabix -p vcf ${vcf}
+
+    trascript_params=""
+    if [ -f ${params.transcript_list} ]; then
+        trascript_params=" --transcript-list ${params.transcript_list}"
+    fi
+
+    if [ "${meta.sample_type}" == "germline" ]; then
+        extra_params=" --annotation-default Matched_Norm_Sample_Barcode:${meta.patient} --data-sources-path ${params.funcotator_germline_db}"
+    else
+        normal="\$(zcat ${vcf} | grep 'normal_sample'  | cut -d'=' -f2)"
+        tumor="\$(zcat ${vcf} | grep 'tumor_sample'  | cut -d'=' -f2)"
+        extra_params=" --annotation-default Matched_Norm_Sample_Barcode:\${normal} --annotation-default Tumor_Sample_Barcode:\${tumor} --annotation-default Tumor_type:${meta.tumor_tissue} --data-sources-path ${params.funcotator_somatic_db}"
+    fi
+
+    gatk Funcotator \
+        -L ${params.funcotator_target} \
+        -R ${params.fasta} \
+        -V ${vcf} \
+        -O ${meta.patient}.maf \
+        --remove-filtered-variants true \
+        --output-file-format MAF \
+        --ref-version ${params.build} \
+        --transcript-selection-mode ${params.transcript_selection} \
+        --splice-site-window-size ${params.splice_site_window_size} \
+        --interval-padding ${params.target_padding} \
+        \$trascript_params \$extra_params
+
+    zcat ${vcf} > ${meta.patient}.vcf
+
+    # check completeness of maf file
+    nrow_maf=\$(wc -l ${meta.patient}.maf | cut -f1 -d' ')
+    nrow_vcf=\$(wc -l ${meta.patient}.vcf | cut -f1 -d' ')
+    diff=\$((\$nrow_maf-\$nrow_vcf))
+    if [ \$diff -lt 5 ]; then
+        echo "Funcotator maf file is incomplete!"
+        exit
+    fi
+    """
+}
+
+process add_guidelines_escat{
+    input:
+        tuple val(meta), val(chunk_index), file(maf), file(vcf), file(guidelines), file(grl_p), file(config)
+    output:
+        tuple val(meta), val(chunk_index), file("${chunk_index}.guidelines.maf"), file("${chunk_index}.vcf")
+    script:
+    """
+    if [ "${meta.sample_type}" == "somatic" ]; then
+        extraopts=" -t ${meta.tumor_tissue}"
+    else
+        extraopts=" --germline"
+    fi
+    add_guidelines_and_escat_to_maf.py -m ${maf} \
+        -c ${guidelines} \
+        -cc ${config} \
+        -o ${chunk_index}.guidelines.maf \
+        -p ${params.projectid} \
+        --escat ${params.escat_db} \
+        -d ${params.date} \$extraopts
+
+    cp ${vcf} ${chunk_index}.vcf
+    """
+}
 
 // alpha_missense
 process add_alpha_missense{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 2
-    memory { 3.GB * task.attempt }
-    tag "alphamissense"
-    container "docker://ubuntu:20.04"
-
     input:
-        tuple val(meta), file(maf), file(vcf)
+        tuple val(meta), val(chunk_index), file(maf), file(vcf)
     output:
-        tuple val(meta), file("${maf.baseName}.missense.maf"), file("${meta.patient}.vcf")
+        tuple val(meta), val(chunk_index), file("${chunk_index}.missense.maf"), file(vcf)
     script:
     """
         if ! [ -f ${params.genomes[params.build].alpha_missense} ]; then
@@ -110,33 +151,23 @@ process add_alpha_missense{
                     }
                 }
             }
-        }END{for(i=0;i<count;i++) printf "%s\\t%s\\t%s\\n", line[i], am_pathogenicity[i], am_class[i]}' ${maf} tmp > ${maf.baseName}.missense.maf
+        }END{for(i=0;i<count;i++) printf "%s\\t%s\\t%s\\n", line[i], am_pathogenicity[i], am_class[i]}' ${maf} tmp > ${chunk_index}.missense.maf
         rm tmp
     """
 }
 
 // filter maf file
 process filter_maf{
-    cpus 1
-    errorStrategy 'retry'
-    maxRetries = 2
-    memory { 1.GB * task.attempt }
-    publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
-    tag "filtermaf"
-    container "docker://yinxiu/gatk:latest"
-    
     input:
-        tuple val(meta), file(maf), file(vcf)
+        tuple val(meta), val(chunk_index), file(maf), file(vcf)
     output:
-        tuple val(meta), file("${meta.patient}.maf")
-        tuple file("filtered*.pass.tsv"), file("filtered*.nopass.tsv")
-        file("${meta.patient}.vcf")
+        tuple val(meta), file("${chunk_index}.maf"), file("filtered*.pass.tsv"), file("filtered*.nopass.tsv"), file(vcf)
     script:
     """
-        touch filtered.${meta.patient}.maf.pass.tsv filtered.${meta.patient}.maf.nopass.tsv
+        touch filtered.${chunk_index}.maf.pass.tsv filtered.${chunk_index}.maf.nopass.tsv
 
         filter_variants.py -m ${maf} \
-         -o ${meta.patient}.maf \
+         -o ${chunk_index}.maf \
          --filter_intervar "${params.filter_intervar}" \
          --filter_cancervar "${params.filter_cancervar}" \
          --filter_renovo "${params.filter_renovo}" \
@@ -150,7 +181,27 @@ process filter_maf{
          --filter_civic "${params.filter_civic_evidence_level}"
 
     """
-    
 }
 
+process merge_chunks{
+    
+    publishDir "${params.outdir}/${params.date}/annotation/${meta.sample_type}/${meta.patient}", mode: "copy"
+    input:
+        tuple val(meta), path(mafs), path(pass), path(nopass), path(vcfs)
+    output:
+        tuple val(meta), file("${meta.patient}.maf"), file("${meta.patient}.pass.tsv"), file("${meta.patient}.nopass.tsv"), file("${meta.patient}.vcf"), emit: all
+        tuple val(meta), path("${meta.patient}.vcf"), emit: vcf
+    script:
+    """
+        sorted_mafs=`echo ${mafs} | tr ' ' '\\n' | sort | tr '\\n' ' '`
+        sorted_vcfs=`echo ${vcfs} | tr ' ' '\\n' | sort | tr '\\n' ' '`
+        sorted_pass=`echo ${pass} | tr ' ' '\\n' | sort | tr '\\n' ' '`
+        sorted_nopass=`echo ${nopass} | tr ' ' '\\n' | sort | tr '\\n' ' '`
+
+        awk 'BEGIN{fn=0}{if(FNR==1) fn++; if(fn==1){print \$0} else if(!(\$0~/^#/) && (\$1!="Hugo_Symbol")){print \$0}}' \${sorted_mafs} > ${meta.patient}.maf
+        awk 'BEGIN{fn=0}{if(FNR==1) {fn++; if(fn>1) getline}; print \$0}' \${sorted_nopass} > ${meta.patient}.nopass.tsv
+        awk 'BEGIN{fn=0}{if(FNR==1) {fn++; if(fn>1) getline}; print \$0}' \${sorted_pass} > ${meta.patient}.pass.tsv
+        awk 'BEGIN{fn=0}{if(FNR==1) fn++; if(fn==1){print \$0} else if(!(\$0~/^#/)){print \$0}}' \${sorted_vcfs} > ${meta.patient}.vcf
+    """
+}
 

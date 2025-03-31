@@ -240,52 +240,6 @@ def main():
     # Parse input
     args = _parse_args()
 
-    if not os.path.exists(args.maf):
-        raise ValueError(f"Maf file {args.maf} does not exist!")
-
-    out = read_maf(args.maf)
-    variant_classification_filter = args.filter_variant_classification.split(",")
-    out["filter_common"] = common_filters(
-        out,
-        coverage=args.min_depth,
-        variant_classification_filter=variant_classification_filter,
-    )
-
-    if args.sample_type not in ["somatic", "germline"]:
-        raise ValueError(
-            f"sample_type must be somatic or germline; Provided {args.sample_type}"
-        )
-
-    if args.sample_type == "somatic":
-        cancervar_keep = args.filter_cancervar.split(",")
-        civic_keep = args.filter_civic.upper().split(",")
-        out["filter_specific"], filter_patho = somatic_filters(
-            out,
-            somatic_genes=args.filter_genes_somatic,
-            cancervar_keep=cancervar_keep,
-            civic_keep=civic_keep,
-            vaf=args.vaf_threshold,
-        )
-
-    if args.sample_type == "germline":
-        intervar_keep = args.filter_intervar.split(",")
-        renovo_keep = args.filter_renovo.split(",")
-        out["filter_specific"], filter_patho = germline_filters(
-            out,
-            germline_genes=args.filter_genes_germline,
-            intervar_keep=intervar_keep,
-            vaf=args.vaf_threshold_germline,
-            renovo_keep=renovo_keep,
-        )
-
-    out["filter"] = "NOPASS"
-    out.loc[filter_patho, "filter"] = "PASS"
-    out.loc[out[["filter_common", "filter_specific"]].all(axis=1), "filter"] = "PASS"
-    out = out.drop(["filter_common", "filter_specific"], axis=1)
-
-    writeheader(args.maf, args.output)
-    out.to_csv(args.output, sep="\t", index=False, mode="a")
-
     keep = [
         "Tumor_Sample_Barcode",
         "Matched_Norm_Sample_Barcode",
@@ -344,12 +298,69 @@ def main():
         keep.append("RENOVO_pls")
         keep = [item for item in keep if not item.startswith("CIViC")]
 
+    if not os.path.exists(args.maf):
+        raise ValueError(f"Maf file {args.maf} does not exist!")
+
+    out = read_maf(args.maf)
+    variant_classification_filter = args.filter_variant_classification.split(",")
+    out["filter_common"] = common_filters(
+        out,
+        coverage=args.min_depth,
+        variant_classification_filter=variant_classification_filter,
+    )
+
+    if args.sample_type not in ["somatic", "germline"]:
+        raise ValueError(
+            f"sample_type must be somatic or germline; Provided {args.sample_type}"
+        )
+
+    if args.sample_type == "somatic":
+        cancervar_keep = args.filter_cancervar.split(",")
+        civic_keep = args.filter_civic.upper().split(",")
+        out["filter_specific"], filter_patho = somatic_filters(
+            out,
+            somatic_genes=args.filter_genes_somatic,
+            cancervar_keep=cancervar_keep,
+            civic_keep=civic_keep,
+            vaf=args.vaf_threshold,
+        )
+
+    if args.sample_type == "germline":
+        intervar_keep = args.filter_intervar.split(",")
+        renovo_keep = args.filter_renovo.split(",")
+        out["filter_specific"], filter_patho = germline_filters(
+            out,
+            germline_genes=args.filter_genes_germline,
+            intervar_keep=intervar_keep,
+            vaf=args.vaf_threshold_germline,
+            renovo_keep=renovo_keep,
+        )
+
+    out["filter"] = "NOPASS"
+    out.loc[filter_patho, "filter"] = "PASS"
+    out.loc[out[["filter_common", "filter_specific"]].all(axis=1), "filter"] = "PASS"
+    out = out.drop(["filter_common", "filter_specific"], axis=1)
+
+    writeheader(args.maf, args.output)
+    overlapping_columns = list(set(out.columns) & set(COLUMNS_TO_REMOVE))
+    columns_to_remove = np.array([False] * len(out.columns))
+    columns_to_remove[(out == "__UNKNOWN__").all()] = True
+    columns_to_remove[out.T.duplicated()] = True
+    columns_to_remove[out.columns.isin(overlapping_columns)] = True
+    columns_to_remove[out.columns.isin(keep)] = False
+    out = out.loc[:, ~columns_to_remove]
+    out.to_csv(args.output, sep="\t", index=False, mode="a")
+
     if len(out[out["filter"] == "NOPASS"]):
         out_nopass = out.loc[
             out["filter"] == "NOPASS", ~(out == "__UNKNOWN__").all()
         ]  # remove unknown columns
         out_nopass = out_nopass[keep]
-        out_nopass.to_csv(f"filtered.{args.output}.nopass.tsv", sep="\t", index=False)
+        out_nopass.to_csv(
+            f"filtered.{args.output}.nopass.tsv",
+            sep="\t",
+            index=False,
+        )
 
     if len(out[out["filter"] == "PASS"]):
         # filtering columns
@@ -358,11 +369,6 @@ def main():
         ]  # remove unknown columns
         out = out[keep]
         out.to_csv(f"filtered.{args.output}.pass.tsv", sep="\t", index=False)
-    else:
-        with open(f"filtered.{args.output}.pass.tsv", "a") as f:
-            f.write(
-                f"EMPTY! No mutations passing filters! Double check VAF to make sure!"
-            )
 
 
 if __name__ == "__main__":
