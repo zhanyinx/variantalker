@@ -320,7 +320,7 @@ class TestUninstallKeepsTheUsersWork(unittest.TestCase):
     def test_every_rule_names_something_the_app_can_regenerate(self):
         for name in self._names():
             with self.subTest(name=name):
-                match = re.match(r"\{userprofile\}\\\.mafigate\\([^\\]+)", name)
+                match = re.match(r"\{%USERPROFILE\}\\\.mafigate\\([^\\]+)", name)
                 self.assertIsNotNone(
                     match,
                     f"{name} is not a path under the app's own directory; an uninstall "
@@ -898,6 +898,97 @@ class TestEveryPathTheCompilerReadsExists(unittest.TestCase):
             _iss_source_paths("[Setup]\nSetupIconFile=nonesuch.ico\n"),
             [("SetupIconFile", "nonesuch.ico")],
         )
+
+
+#: Inno Setup's own directory and system constants — the ones a script may write as
+#: ``{name}``. Not the whole documented set: the ones this project has any occasion to use,
+#: plus everything already in the script. An unlisted constant that is genuinely Inno's is a
+#: one-line addition here, and the failure message says so; the point is that an *invented*
+#: one cannot reach a compiler again.
+INNO_CONSTANTS = frozenset(
+    """
+    app win sys sysnative src sd commonpf commonpf32 commonpf64 commoncf commoncf32
+    commoncf64 tmp commonfonts group groupname localappdata userappdata commonappdata
+    usercf userfonts userdesktop commondesktop userdocs commondocs userfavorites userpf
+    userprograms commonprograms usersendto userstartmenu commonstartmenu userstartup
+    commonstartup usertemplates commontemplates autoappdata autocf autocf32 autocf64
+    autodesktop autodocs autofonts autopf autopf32 autopf64 autoprograms autostartmenu
+    autostartup uninstallexe language hwnd wizardhwnd computername username sysuserinfoname
+    sysuserinfoorg userinfoname userinfoorg userinfoserial srcexe log dotnet40 syswow64
+    """.split()
+)
+
+#: The prefixed forms, each with its own grammar after the marker: an environment variable,
+#: a custom message, a registry read, a Pascal function, a command-line parameter, and the
+#: preprocessor's own output. Recognised by prefix because what follows is not a constant
+#: name and must not be looked up as one.
+INNO_CONSTANT_PREFIXES = ("%", "cm:", "reg:", "code:", "param:", "drive:", "ini:", "#")
+
+
+def _iss_constants(iss: str):
+    """Every ``{…}`` constant the script uses, comments excluded, as a sorted list.
+
+    Comments are excluded deliberately, and this file needs it: the ``[UninstallDelete]``
+    commentary quotes the wrong constant on purpose, as the record of what the rule used to
+    say. A guard that read comments would either fail on that line or force the history out
+    of the file.
+    """
+    body = "\n".join(
+        line for line in iss.splitlines() if not line.strip().startswith(";")
+    )
+    return sorted(set(re.findall(r"\{([^{}]+)\}", body)))
+
+
+@needs_build_scripts
+class TestEveryConstantIsOneInnoDefines(unittest.TestCase):
+    """The third defect the release rehearsals found, and the last of its kind.
+
+    ``mafigate-v1.0.0-rc3`` compiled ``[Setup]``, ``[Languages]``, ``[Tasks]`` and
+    ``[Icons]`` and then stopped on ``Unknown constant "userprofile"``. There is no such Inno
+    Setup constant. The home directory is reached as ``{%USERPROFILE}`` — the environment
+    variable form — which is also what ``launch.bat`` builds the same two paths from, so the
+    uninstaller and the launcher now agree by construction rather than by coincidence.
+
+    Every guard in this module until now read the script for *what it says*. This one reads
+    it for whether the compiler will understand it, which is a different question and the one
+    that had been failing releases: a plausible-looking constant is indistinguishable from a
+    real one to a reader, and costs a full rehearsal cycle to discover.
+    """
+
+    def setUp(self):
+        self.constants = _iss_constants(ISS_SCRIPT.read_text(encoding="utf-8"))
+
+    def test_the_parse_found_the_constants(self):
+        """Without this, a regex that stopped matching would make the guard below vacuous."""
+        self.assertIn("app", self.constants, self.constants)
+        self.assertGreaterEqual(len(self.constants), 5, self.constants)
+
+    def test_no_constant_is_one_inno_setup_does_not_have(self):
+        unknown = [
+            constant
+            for constant in self.constants
+            if not constant.startswith(INNO_CONSTANT_PREFIXES)
+            and constant not in INNO_CONSTANTS
+        ]
+        self.assertFalse(
+            unknown,
+            f"installer.iss uses {unknown}, which Inno Setup does not define — it aborts the "
+            "compile with `Unknown constant`, so this is a failed release rather than a "
+            "cosmetic problem. If one of these really is an Inno constant, add it to "
+            "INNO_CONSTANTS; if it is meant to be an environment variable, the form is "
+            "{%NAME}.",
+        )
+
+    def test_an_invented_constant_is_recognised_as_one(self):
+        """Proved by planting, since a list-membership check is the easy thing to get backwards."""
+        planted = _iss_constants('[UninstallDelete]\nName: "{userprofile}\\.mafigate"\n')
+        self.assertEqual(planted, ["userprofile"])
+        self.assertNotIn("userprofile", INNO_CONSTANTS)
+        self.assertFalse("userprofile".startswith(INNO_CONSTANT_PREFIXES))
+
+    def test_a_comment_quoting_a_wrong_constant_is_not_read_as_use(self):
+        """This script's own history depends on it — see :func:`_iss_constants`."""
+        self.assertEqual(_iss_constants('; it used to say {userprofile}\nName: "{app}"\n'), ["app"])
 
 
 if __name__ == "__main__":
