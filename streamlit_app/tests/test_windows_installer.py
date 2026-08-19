@@ -36,6 +36,7 @@ PR that closes #261 records the hand-verification instead.
 from __future__ import annotations
 
 import re
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -737,6 +738,166 @@ class TestThePinIsTypedOnce(unittest.TestCase):
                     "then be edited apart",
                 )
                 self.assertNotIn(pinned["PYTHON_TAG"], text)
+
+
+#: The ``[Setup]`` directives whose value is a path the **compiler** reads. Inno resolves
+#: each relative to the directory holding the script, and aborts the compile when one is
+#: missing — there is no ``skipifsourcedoesntexist`` for these, which is the whole trouble:
+#: the ``[Files]`` entries below express tolerance and these cannot.
+#:
+#: ``UninstallDisplayIcon`` is deliberately absent. Its value is a ``{app}\…`` path resolved
+#: on the *user's* machine at install time, so it names nothing this repository has.
+COMPILE_TIME_PATH_DIRECTIVES = (
+    "SetupIconFile",
+    "LicenseFile",
+    "InfoBeforeFile",
+    "InfoAfterFile",
+    "WizardImageFile",
+    "WizardSmallImageFile",
+)
+
+
+def _iss_source_paths(iss: str):
+    """Every path ``installer.iss`` asks the compiler to read, as (directive, value) pairs.
+
+    ``[Setup]`` directives and ``[Files]`` ``Source:`` entries alike, since both are read at
+    compile time and both abort the build when absent. Lines inside an ``#ifexist`` block are
+    skipped: that is exactly how a script says *use this if it is there*, and holding a guarded
+    directive to existing would forbid the one construction that makes absence safe.
+    """
+    found = []
+    guarded = False
+    section = None
+    for raw_line in iss.splitlines():
+        line = raw_line.strip()
+        if line.startswith("#ifexist"):
+            guarded = True
+            continue
+        if line.startswith("#endif"):
+            guarded = False
+            continue
+        if guarded or not line or line.startswith(";"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1]
+            continue
+        if section == "Setup" and "=" in line:
+            name, _, value = line.partition("=")
+            if name.strip() in COMPILE_TIME_PATH_DIRECTIVES:
+                found.append((name.strip(), value.strip().strip('"')))
+        elif section == "Files":
+            parts = _directive(line)
+            source = parts.get("Source")
+            if source and "skipifsourcedoesntexist" not in parts.get("Flags", ""):
+                found.append(("Source", source))
+    return found
+
+
+def _is_a_build_product(path: Path) -> bool:
+    """Does this repository ignore *path* — i.e. is it something a build makes?
+
+    ``Source: "python\\*"`` names the interpreter tree ``build_installer.bat`` extracts before
+    it calls the compiler, so it is legitimately absent from a checkout. Asked of git rather
+    than listed here, because ``build/.gitignore`` is already the one place every build product
+    of these two scripts is declared (issue #260 consolidated it there) — and a hand-written
+    exemption list is the thing that goes stale the next time one is added.
+
+    That a staged path is staged *in time* is a separate claim, and
+    :meth:`test_the_interpreter_is_staged_before_the_installer_is_compiled` above is the one
+    that makes it.
+
+    Asked in both spellings, with and without a trailing slash, and that is not belt and
+    braces: ``build/.gitignore`` writes ``windows/python/`` with a slash, which matches
+    directories only — and ``git check-ignore`` cannot see that a path it is asked about *is*
+    a directory when nothing is there. Without the slash the staged interpreter reads as not
+    ignored, which is precisely the case this function exists to recognise.
+    """
+    for candidate in (f"{path}/", str(path)):
+        completed = subprocess.run(
+            ["git", "check-ignore", "-q", candidate],
+            cwd=STREAMLIT_APP,
+            capture_output=True,
+        )
+        if completed.returncode not in (0, 1):
+            raise AssertionError(
+                f"git check-ignore could not answer for {candidate}: {completed.stderr!r}. "
+                "Failing rather than assuming, since assuming *not ignored* turns a build "
+                "product into a false red and assuming *ignored* turns a missing file into a "
+                "silent pass."
+            )
+        if completed.returncode == 0:
+            return True
+    return False
+
+
+@needs_build_scripts
+class TestEveryPathTheCompilerReadsExists(unittest.TestCase):
+    """The class of bug that only a compiler had ever been able to find.
+
+    ``mafigate-v1.0.0-rc2`` — the second rehearsal of the release workflow, and the first
+    Windows compile in this project's history to get past parsing — died on
+    ``LicenseFile=..\\..\\LICENSE``. Two levels up from ``build/windows/`` is
+    ``streamlit_app/``; the licence is at the repository root, one further. The path had been
+    wrong since it was written and no test could see it, because every test here read the
+    script as *text*.
+
+    ``SetupIconFile=icon.ico`` was the same shape and would have failed on the next line: no
+    ``icon.ico`` is tracked, and while the ``[Files]`` and ``[Icons]`` entries for it were
+    written with ``skipifsourcedoesntexist``, a ``[Setup]`` directive has no such flag. It is
+    now wrapped in ``#ifexist``, which this parser understands as the tolerance it is.
+
+    Resolving a path against the filesystem is cheap, needs no Windows, and would have caught
+    both. It does not replace compiling — ``[Icons]``, ``[Run]`` and the wizard are still only
+    exercised by a real build — but it retires the two ways this file can be wrong about the
+    tree it sits in.
+    """
+
+    def setUp(self):
+        self.paths = _iss_source_paths(ISS_SCRIPT.read_text(encoding="utf-8"))
+
+    def test_the_parse_found_the_directives_it_claims_to(self):
+        """A parser that returned nothing would make every assertion below vacuously true."""
+        directives = {name for name, _ in self.paths}
+        self.assertIn(
+            "LicenseFile",
+            directives,
+            f"no LicenseFile directive was parsed out of installer.iss; found {directives}",
+        )
+        self.assertIn(
+            "Source",
+            directives,
+            "no [Files] Source: entries were parsed, so this guard is reading nothing",
+        )
+
+    def test_every_unguarded_path_resolves_to_something_in_the_tree(self):
+        missing = []
+        for name, value in self.paths:
+            if "{#" in value or value.startswith("{"):
+                # Preprocessor output or an install-time constant; not a path in this tree.
+                continue
+            # A wildcard names a directory that must exist; the compiler is content with an
+            # empty one, so the directory is what is checked.
+            target = WINDOWS_DIR / value
+            if "*" in value:
+                target = WINDOWS_DIR / value.rsplit("\\", 1)[0]
+            resolved = Path(str(target).replace("\\", "/"))
+            if resolved.exists() or _is_a_build_product(resolved):
+                continue
+            missing.append(f"{name}={value} → {resolved}")
+        self.assertFalse(
+            missing,
+            "installer.iss asks the compiler to read paths that are not in this tree, and "
+            "Inno Setup aborts on each rather than skipping it:\n  " + "\n  ".join(missing),
+        )
+
+    def test_a_guarded_directive_is_not_held_to_existing(self):
+        """The tolerance has to be expressible, or the fix for a missing icon is a red test."""
+        guarded = "#ifexist \"nonesuch.ico\"\nSetupIconFile=nonesuch.ico\n#endif\n"
+        self.assertEqual(_iss_source_paths("[Setup]\n" + guarded), [])
+        self.assertEqual(
+            _iss_source_paths("[Setup]\nSetupIconFile=nonesuch.ico\n"),
+            [("SetupIconFile", "nonesuch.ico")],
+        )
 
 
 if __name__ == "__main__":

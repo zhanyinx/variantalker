@@ -55,13 +55,25 @@ OutputDir=output
 OutputBaseFilename=MAFigate-{#AppVersion}-Windows-Setup
 Compression=lzma2
 SolidCompression=yes
+; No icon.ico is tracked in this repository, and the [Files] and [Icons] entries below were
+; already written to tolerate that — but this directive is read by the *compiler*, so an
+; absent icon aborted the build rather than falling back to Inno's own (issue #265, tag
+; mafigate-v1.0.0-rc2, the first Windows compile that ever got this far). #ifexist keeps the
+; intent and makes the tolerance uniform: drop an icon.ico beside this file and all three
+; start using it. UninstallDisplayIcon points into {app} rather than at a source file, so it
+; is resolved at install time and needs no guard.
+#ifexist "icon.ico"
 SetupIconFile=icon.ico
+#endif
 UninstallDisplayIcon={app}\icon.ico
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
 PrivilegesRequired=lowest
-LicenseFile=..\..\LICENSE
+; Three levels up, not two: this file is build/windows/, so ..\..\ is streamlit_app/ and the
+; LICENSE is at the repository root beside it. Wrong since it was written, and invisible until
+; a compiler read it (issue #265).
+LicenseFile=..\..\..\LICENSE
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
