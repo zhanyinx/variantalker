@@ -59,8 +59,9 @@ not, this is the point at which to stop: read on only if you expect to have pipe
   number to check before you open a large one: a 100 MB MAF needs about 1.1 GB free, and the
   largest we have measured — 118 MB — peaks near 1.4 GB. A typical file is a few megabytes and
   costs a few hundred.
-- **Roughly half a gigabyte of disk**, all told: the download, the Python it brings with it, and
-  about 375 MB of libraries fetched on that first launch.
+- **Roughly half a gigabyte of disk** once it has finished. Most of that is the Python libraries
+  fetched on the first launch, about 375 MB; the application itself accounts for about 110 MB on
+  macOS, where it carries both Intel and Apple Silicon builds, and less on Windows.
 
 ## Downloads
 
