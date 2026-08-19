@@ -17,10 +17,10 @@
   },
   "germline_reference.maf": {
    "arm": "germline",
-   "bytes": 380016,
+   "bytes": 380020,
    "columns": 380,
    "provenance": "generator-constructed",
-   "sha256": "f6474de2ad89762e9f4135352d0fa1a0e9b63e29f003b5e85701209364d9016f",
+   "sha256": "60dba87e1e9bdf7d7a1635d26ec7167533eb1559a4c47687e6ca0079639d8bce",
    "rows": 94,
    "kind": "constructed reference replacement",
    "rows_named": [
@@ -309,10 +309,10 @@
   },
   "somatic_reference.maf": {
    "arm": "somatic",
-   "bytes": 379537,
+   "bytes": 379525,
    "columns": 427,
    "provenance": "generator-constructed",
-   "sha256": "e720ae5f5ec331e0dda7bb5dea0951edf0c4ab99cb3ed633bd7dd14374488b9b",
+   "sha256": "72c5da3d771d7fed1436dee62bb5506329339d721c94fad355d03491c862e131",
    "rows": 82,
    "kind": "constructed reference replacement",
    "rows_named": [

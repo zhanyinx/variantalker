@@ -21,9 +21,10 @@ what the user asked for. Measured on ``somatic_reference.maf``: the parity value
 rows on the criteria path, the twice-migrated value passes 2.
 
 Hence :data:`PARAM_SCHEMA_VERSION`, and hence the second decision — the *cache* is
-discarded rather than migrated. Every cache ever written carries the literal
-``"app_version": "2.0.0"``, which the app has never bumped, so an existing cache and an
-unstamped one are the same state and the stamp has no power over either. A parameter file
+discarded rather than migrated. A pre-stamp cache carries an ``app_version`` and nothing
+else that dates it, and that number has only ever moved for a packaging decision (issue
+#260) rather than for a format change, so an existing cache and an unstamped one are the
+same state and the stamp has no power over either. A parameter file
 the user can re-upload is a different matter: they still have it, and migrating it is
 their explicit act.
 
@@ -59,6 +60,7 @@ from config.param_migration import (  # noqa: E402
     LEGACY_VARIANT_CLASSIFICATIONS,
     PARAM_SCHEMA_VERSION,
     SCHEMA_VERSION_KEY,
+    complete_params,
     migrate_params,
     param_document,
     unwrap_document,
@@ -159,10 +161,11 @@ def test_the_schema_version_is_not_the_app_version():
     """A constant of its own, so the format can move without a release and vice versa.
 
     They were the same field once — the cache's ``app_version`` — and that is precisely
-    why the cache cannot be migrated: the literal ``"2.0.0"`` has never been bumped in any
-    commit that touched it, so it never distinguished one format from another. A schema
-    version is bumped by the change that alters the format, which is a different event
-    from a release.
+    why the cache cannot be migrated: for the whole life of that cache the app version had
+    not been bumped in any commit that touched it, so it never distinguished one format
+    from another; and when issue #260 did move it, it moved because a public release needed
+    a number, with no format change that day. A schema version is bumped by the change that
+    alters the format, which is a different event from a release.
     """
     assert isinstance(PARAM_SCHEMA_VERSION, int)
     assert PARAM_SCHEMA_VERSION >= 1
@@ -1321,3 +1324,102 @@ def test_no_deprecated_parameter_list_remains():
     """It had one member, ``skip_civic``, which is a live parameter on both arms."""
     source = (STREAMLIT_APP / "page_modules" / "parameter_config.py").read_text()
     assert "deprecated_params" not in source
+
+
+# ---------------------------------------------------------------------------
+# complete_params: the boundary that stops the page inventing a value (issue #280)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("arm", ARMS)
+def test_completion_fills_every_key_the_arm_contract_names(arm):
+    """A dict holding nothing but its arm comes back complete, and only for that arm.
+
+    The other arm's keys are *not* added: the two arms share almost no guideline sources, so
+    a completion that filled both would put three somatic keys in every germline cache and
+    two germline keys in every somatic one — the same defect the old ``[]`` back-fill had.
+    """
+    completed = complete_params({"sample_type": arm})
+
+    assert set(PIPELINE_PARAMS[arm]) <= set(completed)
+    other = "germline" if arm == "somatic" else "somatic"
+    foreign = (set(PIPELINE_PARAMS[other]) - set(PIPELINE_PARAMS[arm])) & set(completed)
+    assert not foreign, f"{arm} completion invented the {other} keys {sorted(foreign)}"
+    for key, value in PIPELINE_PARAMS[arm].items():
+        assert completed[key] == value
+
+
+@pytest.mark.parametrize("key", ["filter_clinvar", "filter_variant_classification"])
+def test_completion_leaves_a_present_but_empty_list_alone(key):
+    """The distinction the whole fix turns on, at the seam rather than through a render.
+
+    An empty keep-list is a legal, expressible choice — ``--filter_cancervar ""`` on the
+    pipeline's own command line — so it is not a key to be completed. Only an *absent* one is.
+    """
+    completed = complete_params({"sample_type": "somatic", key: []})
+    assert completed[key] == []
+
+
+def test_completion_does_not_deepen_into_the_contracts_own_lists():
+    """A filled keep-list must not be the contract's list under another name.
+
+    ``pipeline_params`` deep-copies for exactly this reason: the page edits its dict in
+    place, so a shared list would let one session's widget append to the app's default for
+    the rest of the process.
+    """
+    completed = complete_params({"sample_type": "somatic"})
+    completed["filter_clinvar"].append("Benign")
+    assert "Benign" not in PIPELINE_PARAMS["somatic"]["filter_clinvar"]
+    assert "Benign" not in pipeline_params("somatic")["filter_clinvar"]
+
+
+@pytest.mark.parametrize("retained", [True, False])
+def test_completion_reads_the_apps_pathogenic_polarity_rather_than_overruling_it(retained):
+    """``keep_pathogenic`` is a statement, so the contract does not get to answer over it.
+
+    All four presets still carry only the app's spelling, and the filter prefers
+    ``skip_pathogenic`` whenever a dict has it — so filling that key from the contract would
+    silently overrule a preset whose retention setting disagreed with it.
+    """
+    completed = complete_params({"sample_type": "somatic", "keep_pathogenic": retained})
+    assert completed["skip_pathogenic"] is (not retained)
+
+
+def test_completion_gives_germline_both_vaf_spellings_from_one_number():
+    """The germline arm carries two keys for one threshold, as ``_migrate_vaf`` arranges.
+
+    The contract spells the parameter ``vaf_threshold``; the germline widget and the filter
+    both read ``vaf_threshold_germline``. Completing only the contract's spelling would leave
+    the widget's own literal deciding the number on screen — which is how that literal came
+    to be the only germline VAF value the app ever used.
+    """
+    completed = complete_params({"sample_type": "germline"})
+    expected = PIPELINE_PARAMS["germline"]["vaf_threshold"]
+    assert completed["vaf_threshold_germline"] == expected
+    assert completed["vaf_threshold"] == expected
+
+    stated = complete_params({"sample_type": "germline", "vaf_threshold_germline": 0.35})
+    assert stated["vaf_threshold"] == 0.35, "the dict's own threshold must win, under both keys"
+
+
+def test_completion_does_not_add_the_germline_vaf_spelling_to_a_somatic_dict():
+    """One arm's key on the other arm reads like a setting and reaches nothing."""
+    assert "vaf_threshold_germline" not in complete_params({"sample_type": "somatic"})
+
+
+def test_completion_is_idempotent():
+    """It runs on every render of the parameters page, so a second pass must change nothing.
+
+    This is also the line between this function and :func:`migrate_params`, whose legacy
+    transform is an involution on ``filter_variant_classification`` and would invert that
+    list on the second pass.
+    """
+    once = complete_params({"sample_type": "germline"})
+    twice = complete_params(dict(once))
+    assert twice == once
+
+
+def test_completion_treats_an_unknown_arm_the_way_every_other_reader_does():
+    """A dict stating something that is not an arm is somatic to this app."""
+    completed = complete_params({"sample_type": "not-an-arm"})
+    assert completed["filter_cancervar"] == PIPELINE_PARAMS["somatic"]["filter_cancervar"]

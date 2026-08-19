@@ -13,7 +13,7 @@
 # options, with its skip_* polarity; streamlit_app/config/pipeline_params.py says what
 # each one means and which nextflow.config default it comes from.
 schema_version: 1
-app_version: 2.0.0
+app_version: 1.0.0
 timestamp: '2026-08-13T00:00:00'
 parameters:
   sample_type: germline

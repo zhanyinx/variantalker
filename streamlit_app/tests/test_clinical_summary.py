@@ -25,7 +25,11 @@ guard that says the app agrees with it.
 **This is a net, not a harness.** It has a pipeline counterpart and must hold where ``bin/`` is
 absent — the fixture carries the pipeline's output, so nothing here runs the pipeline.
 
-Three things this module deliberately does *not* do.
+Five things this module deliberately does *not* do. (It said three while listing four: the
+count was not updated when issue #109 added the CIViC divergence. The fifth entry arrived
+with #285's third divergence, and stays now that issue #296 has closed that divergence —
+what it records is no longer a disagreement but a limit of this fixture, and the limit is
+what the test below leans on.)
 
 It does not compare the two columns on the non-pathogenicity classes. Since issue #98 the app
 classifies ClinVar's non-standard terms by the institute's term table, giving them **six classes
@@ -41,6 +45,24 @@ choice: issue #109 reads CIViC's ``E`` as ``Uncertain_Significance`` where the p
 witness it either way. It is recorded in the module docstring under test instead. A MAF with
 CIViC annotation would make the two columns disagree on rows whose strongest CIViC level is
 ``E``, and that disagreement is correct.
+
+And it cannot witness ``Pathogenic/Pathogenic,_low_penetrance|other`` either way, which was
+the **third** divergence until issue #296 closed it. Both reference MAFs carry that cell —
+germline row 56 and somatic row 46 — and issue #285 taught the app to read it as
+``Pathogenic`` where ``bin/generate_clinical_summary.py`` split on the first separator only,
+mapped the cell to tier 7 (``Unknown``, its *worst* tier) and let ``min()`` defer to whatever
+else the row carried: ``Benign`` on these two rows, ``Uncertain_Significance`` on all 8 rows
+of the real corpus that hold the cell. **#296 ported the app's rule into ``bin/``**, so the
+two now agree here and the fixture's stored ``Pathogenic`` is what both would produce.
+
+What has not changed is that this fixture cannot *hold* the two to it. The constructed set's
+verdict column is written by *calling the app*
+(``build_parity_fixtures.fill_pipeline_verdict``), so on this row it tracks the app rather
+than witnessing it — it read ``Pathogenic`` before ``bin/`` did, and would go on reading it
+if ``bin/`` regressed. That is why the agreement is recorded here, and measured against the
+real corpus on issue #295, rather than waited for below. MAFs annotated before #296 keep the
+old reading; per issue #117 the app's column is the current one and a file's own is an
+earlier vintage.
 
 It does not read ``bin/`` to derive the expected tiers. ``test_vendor_drift.py`` owns
 app-versus-pipeline *code* equality for the filter, and this function is not vendored — it is a
@@ -204,6 +226,12 @@ def test_the_summary_matches_the_pipelines_own_column(germline):
     The exact check issue #108 was resolved by. Before it, 71 of these 94 rows agreed; after
     it, all 94 do — and on the wider corpus, 99,210 of 99,210 comparable rows across the 52
     real germline MAFs whose ``variantalker_naive`` was written by a RENOVO-aware pipeline.
+
+    **"All 94" is 94 of 94 on this fixture and not a claim about real files.** Row 56 carries
+    the ClinVar cell the app and ``bin/`` differed on between issues #285 and #296; they agree
+    on it now, but this test would have stayed green either way, because the constructed set's
+    verdict column is written by calling the app. The module docstring's last entry says so —
+    read it before treating a pass here as agreement with the pipeline.
     """
     verdicts = germline[PIPELINE_VERDICT].astype(str).str.strip()
 

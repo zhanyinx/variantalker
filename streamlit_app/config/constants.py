@@ -41,7 +41,23 @@ junk drawer again.
 
 # Application metadata
 APP_NAME = "MAFigate"
-APP_VERSION = "2.0.0"
+
+#: The version, and the **only** place it is written (issue #260). Everything that has to
+#: stamp a version on something reads it from here through ``build/version.py``: the
+#: Windows installer's version and output filename, the macOS bundle's two ``Info.plist``
+#: keys, the DMG's filename, and the ``mafigate-v<version>`` tag a release is cut from.
+#: ``tests/test_installer_version.py`` fails if any of them grows a literal again.
+#:
+#: **It says 1.0.0 and it used to say 2.0.0.** That is not a typo and not a downgrade of
+#: anything released: no MAFigate has ever been released. The 2.0.0 was an internal literal
+#: that, by this repo's own account of it in ``config/param_migration.py``, "never moved at
+#: all" — a number with no lineage behind it. The number that *has* been published is
+#: 1.0.0: the public README tells readers the desktop installers are "coming with the first
+#: `mafigate-v1.0.0` release", and #229's delivery matrix, this ticket's parent (#240) and
+#: the release ticket (#265) all name that tag. Between an unreleased internal literal and
+#: a promise already on a public page, the promise wins — a first public release numbered
+#: 2.0.0 would also owe its readers a 1.x history that does not exist.
+APP_VERSION = "1.0.0"
 
 #: The app's one self-description, written for the clinician who opens it rather than for
 #: the developer who built it: it says what the app *does* to a file. Read by

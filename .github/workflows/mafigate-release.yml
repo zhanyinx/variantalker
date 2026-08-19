@@ -1,0 +1,469 @@
+# What cuts a MAFigate release: one tag, two runners, one commit.
+#
+# Issue #264. Before this, the build instructions said outright that cross-compiling the
+# Windows installer from a Mac is not supported, so one release needed a Mac *and* a physical
+# Windows machine, both driven by hand. The failure mode was asymmetric and silent: with the
+# Windows box not to hand, Mac users got the new version and Windows users kept the old one
+# without being told. A macos-latest + windows-latest matrix removes both machines, makes the
+# two artifacts provably the same commit, and is free for public repositories.
+#
+# The version is not typed anywhere here. `build/version.py` reads config/constants.py's
+# APP_VERSION — the one route from that constant to any build (#260) — and this workflow
+# refuses a tag that names any other version. Both installers name their own files from it, so
+# the artifact names are derived twice over and never spelled out.
+#
+# THIS WORKFLOW NEVER PUBLISHES. It attaches both artifacts to a *draft* release and stops.
+# Issue #265 authors the release page and a human presses Publish, which is what keeps
+# `streamlit_app/build/RELEASES.md` — the record the README's installer copy is held against —
+# a statement about a human act rather than about a run nobody was reading.
+#
+# Rehearsing it. Push `<derived tag>-rc1`, or any suffix: the version check accepts the same
+# version with a suffix and marks the result a pre-release, so a rehearsal cannot be mistaken
+# for a release. Delete the draft afterwards. Rehearse in the **public** repository, where
+# these runners are free — macOS bills at a multiplier on private ones, and the only trigger
+# here is a tag push precisely so that no ordinary commit spends a macOS minute.
+#
+# `streamlit_app/tests/test_release_workflow.py` extracts the two steps that decide anything —
+# the version check and the one-commit check — and runs them, including against the cases they
+# have to refuse. Both are therefore written as self-contained scripts over environment
+# variables rather than as `${{ }}` interpolation.
+
+name: mafigate release
+
+on:
+  push:
+    tags:
+      - "mafigate-v*"
+
+permissions:
+  contents: read
+
+# One release per tag, and never cancelled half-built: a cancelled run leaves a draft holding
+# one of the two artifacts, which is the state this workflow exists to make impossible.
+concurrency:
+  group: mafigate-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: the tag agrees with APP_VERSION
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.derive.outputs.version }}
+      tag: ${{ steps.derive.outputs.tag }}
+      prerelease: ${{ steps.derive.outputs.prerelease }}
+      commit: ${{ steps.derive.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # The *build machine's* Python, which reads a version and runs a stdlib guard. It is not
+      # the interpreter either installer bundles — that one is pinned in
+      # build/python_release.env and downloaded by the build scripts — so this series is not a
+      # copy of that pin and must not be reconciled with it. Same version the two existing
+      # workflows ask for.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The gate the two build jobs would otherwise each need. `make build-mac` runs it on
+      # macOS but `build_installer.bat` cannot, so it runs once here instead: a release built
+      # from drifted vendor copies is an app that disagrees with the pipeline about PASS.
+      # Stdlib only, so it needs nothing installed.
+      - name: The vendored filter code still matches the pipeline's
+        run: python3 streamlit_app/vendor/_sync.py --check
+
+      - name: Note what this run costs
+        if: ${{ github.event.repository.private }}
+        run: |
+          echo "::warning::macOS runners bill at a multiplier on a private repository. Rehearsal tags belong in the public repo, where they are free."
+
+      # Written over $PUSHED_TAG rather than ${{ github.ref_name }} so the test suite can run
+      # this exact script against the tags it has to refuse.
+      - name: Derive the version and check the tag against it
+        id: derive
+        working-directory: streamlit_app
+        env:
+          PUSHED_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          version="$(python3 build/version.py)"
+          tag="$(python3 build/version.py --tag)"
+
+          # Three states, and the third is fatal on purpose. A tag is a human typing a
+          # version, and a tag naming a version this tree does not hold would build an
+          # artifact whose filename, About dialog and release page disagree.
+          if [ "${PUSHED_TAG}" = "${tag}" ]; then
+            prerelease=false
+          elif [ "${PUSHED_TAG#"${tag}"-}" != "${PUSHED_TAG}" ]; then
+            prerelease=true
+          else
+            echo "::error::${PUSHED_TAG} does not name this tree's version. APP_VERSION is ${version}, so the release tag is ${tag} — or ${tag}-<suffix> to rehearse."
+            exit 1
+          fi
+
+          commit="$(git rev-parse HEAD)"
+
+          {
+            echo "version=${version}"
+            echo "tag=${PUSHED_TAG}"
+            echo "prerelease=${prerelease}"
+            echo "commit=${commit}"
+          } >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "### MAFigate ${version}"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| tag | \`${PUSHED_TAG}\` |"
+            echo "| commit | \`${commit}\` |"
+            echo "| pre-release | ${prerelease} |"
+          } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+  macos:
+    name: build the DMG
+    needs: version
+    runs-on: macos-latest
+    outputs:
+      commit: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Recorded rather than assumed: the release job refuses to draft anything unless this
+      # and the Windows job report the same commit as the tag.
+      - name: Record the commit this artifact is built from
+        id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Run exactly as BUILD_INSTRUCTIONS.md tells a human to run it, with no arguments — the
+      # script takes no version and defaults to a universal build. create-dmg is not on the
+      # runner, so it falls back to hdiutil; swiftc is, so the native launcher is built.
+      - name: Build the DMG
+        working-directory: streamlit_app
+        run: build/mac/build_dmg.sh
+
+      # The name is read off what the build produced and *checked* for the derived version,
+      # rather than spelled out here and looked up. Spelling it out would put the naming
+      # convention — the arch suffix, the word Setup — in a second place, so a rename in the
+      # build script would fail the release instead of following it. What must not vary is the
+      # version in the name, and that is what this asserts.
+      - name: The DMG carries the version APP_VERSION names
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          built=(streamlit_app/build/mac/*.dmg)
+          if [ "${#built[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one .dmg, found: ${built[*]:-none}"
+            ls -l streamlit_app/build/mac
+            exit 1
+          fi
+          name="$(basename "${built[0]}")"
+          case "${name}" in
+            *"${VERSION}"*) echo "the DMG is ${name}" ;;
+            *) echo "::error::${name} does not carry ${VERSION}, which is what APP_VERSION derives — the artifact and the app disagree about what this is"; exit 1 ;;
+          esac
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: streamlit_app/build/mac/*.dmg
+          if-no-files-found: error
+
+  windows:
+    name: build the installer
+    needs: version
+    runs-on: windows-latest
+    outputs:
+      commit: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Record the commit this artifact is built from
+        id: commit
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # The runner image ships Inno Setup 6 at the path build_installer.bat looks in first.
+      # Installed here only if that stops being true, so an image change is a slower build
+      # rather than a failed release.
+      - name: Inno Setup is present
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Host "Inno Setup is not in the image any more; installing it."
+            choco install innosetup --no-progress -y
+          }
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup is still not at $iscc, which is the path build_installer.bat looks in first"
+          }
+
+      # The assertion streamlit_app/tests/test_installer_version.py says it cannot make:
+      # installer.iss must stop with an #error when nothing generated version.iss, because
+      # Inno Setup expands an undefined symbol to nothing and would otherwise produce an
+      # unversioned installer in silence. Asserted on the *reason*, not merely on a non-zero
+      # exit, which the missing python\ tree would also give. Runs before the build, which
+      # regenerates the include.
+      - name: A compile with no version supplied still refuses
+        shell: pwsh
+        working-directory: streamlit_app\build\windows
+        run: |
+          # Continue, and both streams into a file rather than `2>&1` into the pipeline: under
+          # the default `Stop` preference a native command's stderr becomes a terminating
+          # NativeCommandError, which would fail this step before it could read *why* ISCC
+          # stopped — turning the one check that has to observe a failure into a false red.
+          $ErrorActionPreference = "Continue"
+          Remove-Item version.iss -ErrorAction SilentlyContinue
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss > iscc.log 2>&1
+          $code = $LASTEXITCODE
+          $output = Get-Content iscc.log -Raw
+          Remove-Item iscc.log -ErrorAction SilentlyContinue
+          Write-Host $output
+          if ($code -eq 0) {
+            throw "installer.iss compiled with no version supplied — an unversioned installer is what the #error exists to prevent"
+          }
+          if ($output -notmatch "No AppVersion") {
+            throw "ISCC stopped for some reason other than the missing version include (exit $code)"
+          }
+          Write-Host "ISCC refused for the stated reason."
+
+      # < NUL because build_installer.bat ends in `pause` on both its paths. On a runner with
+      # no keyboard that is a six-hour job and no diagnosis; the pause is right for the humans
+      # the file was written for, so the redirect belongs here rather than in the batch file.
+      - name: Build the installer
+        shell: cmd
+        working-directory: streamlit_app\build\windows
+        run: build_installer.bat < NUL
+
+      # Read off the build, checked for the version — see the macOS job's twin for why.
+      - name: The installer carries the version APP_VERSION names
+        shell: bash
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          built=(streamlit_app/build/windows/output/*.exe)
+          if [ "${#built[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one .exe, found: ${built[*]:-none}"
+            ls -l streamlit_app/build/windows/output || true
+            exit 1
+          fi
+          name="$(basename "${built[0]}")"
+          case "${name}" in
+            *"${VERSION}"*) echo "the installer is ${name}" ;;
+            *) echo "::error::${name} does not carry ${VERSION}, which is what APP_VERSION derives — installer.iss names it from the generated include, so the two have parted"; exit 1 ;;
+          esac
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: streamlit_app/build/windows/output/*.exe
+          if-no-files-found: error
+
+  release:
+    name: draft the release
+    needs: [version, macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # "Both artifacts are built from one commit" is a claim the release page makes, so it is
+      # checked rather than inferred from the two jobs having run. The empty case is checked
+      # first and separately: a build job that stopped publishing its output would hand this
+      # three empty strings, and equality alone would call that agreement.
+      - name: Check both artifacts came from one commit
+        env:
+          TAG_COMMIT: ${{ needs.version.outputs.commit }}
+          MAC_COMMIT: ${{ needs.macos.outputs.commit }}
+          WINDOWS_COMMIT: ${{ needs.windows.outputs.commit }}
+        run: |
+          set -euo pipefail
+
+          for name in TAG_COMMIT MAC_COMMIT WINDOWS_COMMIT; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::${name} is empty, so nothing here is comparing anything. The job that reports it has stopped publishing its commit output."
+              exit 1
+            fi
+          done
+
+          if [ "${MAC_COMMIT}" != "${TAG_COMMIT}" ] || [ "${WINDOWS_COMMIT}" != "${TAG_COMMIT}" ]; then
+            echo "::error::the two installers were not built from one commit — tag ${TAG_COMMIT}, macOS ${MAC_COMMIT}, Windows ${WINDOWS_COMMIT}"
+            exit 1
+          fi
+
+          echo "both artifacts built from ${TAG_COMMIT}"
+
+      # The release page, assembled rather than written here. Its copy is
+      # streamlit_app/build/RELEASE_PAGE.md (issue #265) — a tracked file, so the page a
+      # clinician reads is reviewed and guarded like the rest of the tree instead of being typed
+      # into a web form once per release. This step fills that file's two placeholders: what was
+      # built, and build/OPENING_MAFIGATE.md quoted whole from the single home it has.
+      #
+      # Nothing about what the page *says* belongs here. A sentence written in this file would be
+      # a sentence no reviewer of the copy ever sees.
+      # No VERSION here, deliberately. The release's *title* names the version and so do both
+      # filenames, which are read off the build — a third copy written into the body would be one
+      # this step composes rather than observes.
+      - name: Write the release notes
+        id: notes
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+          COMMIT: ${{ needs.version.outputs.commit }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          page="streamlit_app/build/RELEASE_PAGE.md"
+          note="streamlit_app/build/OPENING_MAFIGATE.md"
+          for required in "${page}" "${note}"; do
+            if [ ! -f "${required}" ]; then
+              echo "::error::${required} is missing. It is the release page's copy, and there is deliberately no fallback wording in this workflow to write the page without it."
+              exit 1
+            fi
+          done
+
+          dmg="$(find artifacts -name '*.dmg' -type f)"
+          exe="$(find artifacts -name '*.exe' -type f)"
+          for found in "${dmg}" "${exe}"; do
+            if [ "$(printf '%s\n' "${found}" | wc -l)" -ne 1 ] || [ -z "${found}" ]; then
+              echo "::error::expected exactly one .dmg and one .exe, found: ${dmg} ${exe}"
+              exit 1
+            fi
+          done
+          # Hashed into variables before the notes are written, not inside them. A command
+          # substitution that fails inside a `printf` argument leaves an empty cell and exits
+          # 0 — `set -e` never sees it — so a missing or renamed sha256sum would publish a
+          # release page offering two blank checksums. Measured, not imagined: it is what a
+          # rehearsal of this step did on a machine where the tool was not on PATH.
+          dmg_sha="$(sha256sum "${dmg}" | cut -d' ' -f1)"
+          exe_sha="$(sha256sum "${exe}" | cut -d' ' -f1)"
+          for digest in "${dmg_sha}" "${exe_sha}"; do
+            if ! printf '%s' "${digest}" | grep -Eq '^[0-9a-f]{64}$'; then
+              echo "::error::sha256sum did not produce a digest (${dmg_sha:-empty} / ${exe_sha:-empty}). A release page with blank checksums is worse than a failed run."
+              exit 1
+            fi
+          done
+
+          # The only block of the page this workflow writes, and it is all facts about this run:
+          # what was built, what it hashes to, and from where. The filenames are read off the
+          # artifacts rather than composed, so the naming convention stays in the build scripts.
+          {
+            echo "| file | platform | sha256 |"
+            echo "| --- | --- | --- |"
+            printf '| `%s` | macOS (Intel and Apple Silicon) | `%s` |\n' \
+              "$(basename "${dmg}")" "${dmg_sha}"
+            printf '| `%s` | Windows x64 | `%s` |\n' \
+              "$(basename "${exe}")" "${exe_sha}"
+            echo ""
+            echo "Both files were built by \`.github/workflows/mafigate-release.yml\` from commit"
+            echo "\`${COMMIT}\` — the one commit \`${TAG}\` names — on GitHub-hosted runners, in"
+            echo "[this run](${RUN_URL})."
+          } > downloads.md
+
+          # Comments are stripped, so the page's file can address whoever edits it. Each
+          # placeholder must be met exactly once: awk exits 2 on any other count, which catches a
+          # renamed placeholder — the failure that would otherwise publish a page with no
+          # downloads on it and no sign that anything was missing.
+          awk -v downloads=downloads.md -v note="${note}" '
+            /^<!--/ { comment = 1 }
+            comment { if (/-->/) { comment = 0 } ; next }
+            /^\{\{ downloads \}\}$/ {
+              while ((getline line < downloads) > 0) print line
+              filled_downloads++
+              next
+            }
+            /^\{\{ opening_the_app \}\}$/ {
+              while ((getline line < note) > 0) print line
+              filled_note++
+              next
+            }
+            { print }
+            END {
+              if (filled_downloads != 1 || filled_note != 1) {
+                printf "::error::%s fills the downloads placeholder %d time(s) and the first-open placeholder %d time(s); each must appear exactly once, on a line of its own\n", ARGV[1], filled_downloads, filled_note > "/dev/stderr"
+                exit 2
+              }
+            }
+          ' "${page}" > release-notes.md
+
+          # Belt and braces, and cheap: a placeholder this step does not know about would have
+          # been printed through untouched by the rule above, and braces on a release page are
+          # the sort of thing a reader reports rather than a reviewer catches.
+          if grep -n '{{' release-notes.md; then
+            echo "::error::the assembled release page still holds a placeholder, listed above"
+            exit 1
+          fi
+
+          # Published last, so a step that refused anything above hands the upload nothing.
+          # Outputs rather than $GITHUB_ENV, so the step that uploads them declares them under
+          # its own `env:` like every other step here: values that arrive invisibly are how a
+          # step ends up with an input no test can supply.
+          {
+            echo "dmg=${dmg}"
+            echo "exe=${exe}"
+          } >> "$GITHUB_OUTPUT"
+
+      # Drafted, never published — see the header. `gh release edit` rather than a second
+      # `create` when the tag already has a release, so a rehearsal can be re-run after a fix
+      # instead of failing on a name that exists.
+      #
+      # But only while that release is still a draft. `gh release edit --draft` on a *published*
+      # release un-publishes it, so a re-run of an already-shipped tag would retract the release
+      # a clinician is downloading from and break every link on it — quietly, as a success. That
+      # is the one thing this job must refuse outright: a rebuild of a shipped tag is either a
+      # mistake or a decision to withdraw it, and the second one is nobody's to take by re-running
+      # a workflow.
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.version.outputs.tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+          DMG: ${{ steps.notes.outputs.dmg }}
+          EXE: ${{ steps.notes.outputs.exe }}
+        run: |
+          set -euo pipefail
+
+          for name in TAG DMG EXE; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::${name} is empty — the step before this one stopped reporting what it found."
+              exit 1
+            fi
+          done
+
+          flags=(--draft --notes-file release-notes.md)
+          if [ "${PRERELEASE}" = "true" ]; then
+            flags+=(--prerelease)
+          fi
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            if [ "$(gh release view "${TAG}" --json isDraft --jq .isDraft)" != "true" ]; then
+              echo "::error::${TAG} is already published. Re-running this workflow would retract it to a draft and break every link on that page. Delete the release first if you really mean to rebuild it."
+              exit 1
+            fi
+            gh release upload "${TAG}" "${DMG}" "${EXE}" --clobber
+            gh release edit "${TAG}" "${flags[@]}"
+          else
+            gh release create "${TAG}" "${DMG}" "${EXE}" \
+              --title "MAFigate ${VERSION}" "${flags[@]}"
+          fi
+
+          echo "Drafted ${TAG}. Nothing is downloadable until someone publishes it, and until then streamlit_app/build/RELEASES.md must still say so." >> "${GITHUB_STEP_SUMMARY:-/dev/null}"

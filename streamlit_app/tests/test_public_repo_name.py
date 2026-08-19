@@ -27,14 +27,17 @@ exemption, though 30 of the 51 provenance links sat in test and fixture READMEs 
 A guard that can be argued into narrowing is a guard that will be, and this repo has watched
 that happen (``tests/README.md``'s note on issue #24).
 
-**What this guard cannot see, and no guard does.**
-``build/windows/installer.iss``'s ``AppPublisherURL`` is a placeholder — ``your-org`` where the
-account name belongs — so it is broken today, it renders in Windows' Add/Remove Programs, and it
-is permanently invisible to a sweep for the *private* name. Widening this file to every GitHub
-URL was considered and declined in issue #234: that guard needs exemptions for genuine
-third-party links, and an exemption list is the thing this file exists without. So the
-placeholder is a copy fact owned by issue #240, and the exclusion named above is the only one
-this sweep takes, not the only wrong URL in the tree.
+**What this guard cannot see, and what now covers it.**
+``build/windows/installer.iss``'s ``AppPublisherURL`` named a scaffolding placeholder where the
+account name belongs, so it was broken from the day it was written, it renders in Windows'
+Add/Remove Programs, and it is permanently invisible to a sweep for the *private* name — it
+named neither repository correctly. Widening this file to every GitHub URL was considered and
+declined in issue #234: that guard needs exemptions for genuine third-party links, and an
+exemption list is the thing this file exists without. Issue #262 fixed the URL and found a
+covering rule that needs no exemptions either — the *placeholder token itself* may not appear
+in the tree, there being no legitimate use of it to exempt — and that rule lives in
+``test_unsigned_artifact_copy.py``. The exclusion named above remains the only one this sweep
+takes.
 
 **Why this file does not contain the string it forbids.** It composes the literal from two
 halves at import. Spelled out, this module would be its own first violation and the guard

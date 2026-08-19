@@ -1,0 +1,30 @@
+# MAFigate's Streamlit configuration.
+#
+# One setting, and it is a promise rather than a preference. `browser.gatherUsageStats`
+# defaults to **on**, so a stock Streamlit reports anonymous usage to a service outside
+# this machine every time the app starts. MAFigate's input is patient data, and the
+# channel table in streamlit_app/README.md is where it promises that nothing leaves your
+# machine — this file is what makes that sentence true (issue #259).
+#
+# WHERE THIS FILE SITS, AND WHY THAT IS THE WHOLE POINT. Streamlit reads config from
+# ~/.streamlit, from $PWD/.streamlit, and — overriding both — from a `.streamlit` beside
+# the main script (`streamlit.config.get_config_files`). The five ways MAFigate is
+# launched do not agree about the working directory: `run_mafigate.sh` and `make run` run
+# here in the app directory, the Windows launcher runs from the installation root one
+# level above it, and the macOS .app inherits whatever Finder hands it. Beside MAFigate.py
+# is therefore the one placement that covers all five, and requirements.txt's
+# `streamlit>=1.47.0` floor is what makes that a guarantee rather than a hope.
+#
+# It covers them only if it is *shipped*, and neither installer globs the tree: both name
+# this directory in their copy lists by hand (`build/mac/build_dmg.sh`,
+# `build/windows/installer.iss`). The three packaged launchers also export
+# STREAMLIT_BROWSER_GATHER_USAGE_STATS=false; that is a belt-and-braces fallback, not the
+# tracked statement, and tests/test_telemetry_config.py deliberately ignores it when it
+# asks Streamlit itself — from each route's own working directory — what it resolved.
+#
+# Read that test before adding anything here. Server settings in particular arrive on the
+# command line, from launchers that agree about binding loopback (issue #182), and this
+# file is the first place since where an address could quietly disagree with them.
+
+[browser]
+gatherUsageStats = false

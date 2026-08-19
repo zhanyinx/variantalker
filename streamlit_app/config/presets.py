@@ -124,7 +124,10 @@ _CLINICAL_EXCLUDED_CLASSIFICATIONS = [
 #:
 #: **Broad keeps all three anyway, and that is not the column being overruled.** The column
 #: says what to do with a term in a *report*; Broad is the cut a reviewer makes *before* there
-#: is a report, and Stringent is the report. The proof that this mapping was never a lookup is
+#: is a report, and Stringent is the report — which since issue #284 no longer means Stringent
+#: keeps no Disease Risk term at all, only that it keeps one of the five and by a different
+#: argument. See ``_CLINICAL_CLINVAR_TERMS`` below; the distinction drawn in this sentence is
+#: still the reason the other four stay out. The proof that this mapping was never a lookup is
 #: already in the list above: Broad has kept ❓ No Classification whole since #103, and that
 #: class is the column's **exclude** end. So a rule of the form *keep/review-only means Broad
 #: selects it* would have contradicted the preset as it already stood, which is exactly why
@@ -221,9 +224,10 @@ _CLINICAL_EXCLUDED_CLASSIFICATIONS = [
 #: ``tests/test_app_defaults.py`` is deleted rather than left standing empty, so there is no
 #: set for the next inconsistency to be added to quietly.
 #:
-#: Stringent keeps ``Pathogenic``/``Likely_pathogenic`` and is untouched by all of it: nothing
-#: here argues a report you would act on should carry a non-pathogenicity assertion, and #103
-#: left it alone on the same ground.
+#: Stringent was untouched by all of it — nothing here argued a report you would act on should
+#: carry a non-pathogenicity assertion, and #103 left it alone on the same ground. Issue #284
+#: has since added exactly one such term to it, on an argument this list does not make; that
+#: argument is at ``_CLINICAL_CLINVAR_TERMS``, and none of the measurements above moves.
 _SOFT_CLINVAR_TERMS = [
     "Pathogenic",
     "Likely_pathogenic",
@@ -319,6 +323,93 @@ SOFT_GERMLINE_PARAMS = {
     "keep_pathogenic": True,  # Auto-retain pathogenic variants by default
 }
 
+#: The ClinVar terms both Stringent presets keep — one definition, read by each arm.
+#:
+#: Two pathogenicity calls, which is what Stringent has always been, **and
+#: ``Established_risk_allele``, which issue #284 added on the dev's own decision** (#278 took
+#: it; this is its implementation). It is written down here at length because it is the one
+#: place in this module where the argument runs *against* the standing one above, and a reader
+#: who meets it without the reason will read it as an inconsistency and revert it.
+#:
+#: **What the standing argument said.** ``_SOFT_CLINVAR_TERMS`` above records that ⚠️ Disease
+#: Risk is **review-only** on the institute term table's own *clinical relevance for filtering*
+#: column, and that Broad is the cut a reviewer makes before there is a report while Stringent
+#: *is* the report. On that ground #103 and #114 both left Stringent alone, deliberately. This
+#: term is now in it anyway. That is a judgement call the dev made after being shown the
+#: argument and the measurement, **not an oversight and not a term that arrived with a class**
+#: — so it stays until they say otherwise.
+#:
+#: **Why one term and not the class.** Keeping ⚠️ Disease Risk whole would put
+#: ``Uncertain_risk_allele`` into the preset a clinician acts on, which contradicts the scoping
+#: the same decision came with — *only pathogenic and likely pathogenic*. So the class is split,
+#: and the split is on a different axis from every earlier one: #88, #99 and #103 each found a
+#: class split by **spelling**, where whether a variant reached the report depended on which
+#: synonym its file happened to carry. This one is split by **evidence grade** — the institute's
+#: table separates *Established* from *Likely* and *Uncertain* risk alleles, and those are three
+#: strengths of the same assertion rather than three ways of writing it. So
+#: ``Established_risk_allele`` is to the Disease Risk class what ``Pathogenic`` is to the
+#: pathogenicity calls, and Stringent is making the cut it already makes rather than a new kind
+#: of cut. That exception is argued again, at the guard that now covers it:
+#: ``test_a_preset_keeps_each_clinvar_class_whole_or_not_at_all``.
+#:
+#: **No vocabulary change, and none needed.** The term is already offered
+#: (``CLINVAR_OTHER_ASSERTION_TERMS`` in ``config/vocabularies.py``) and already classed
+#: ``Disease_Risk`` (``components.clinical_summary.CLINICAL_VALUE_MAPPING``), so the report
+#: already has a name and a glyph for it. ``_low_penetrance`` is **not** part of this: #278
+#: measured it and chose to leave it out of the vocabulary, out of that mapping and out of every
+#: preset — see the paragraph on it in ``config/vocabularies.py``.
+#:
+#: **Row cost: +0 on both arms, and forced twice over rather than merely observed.** #278
+#: measured +0 through ``filters.variant_filters.apply_filters``; #284 re-measured *why*, and
+#: there turn out to be two independent reasons.
+#:
+#: First, reach. Over **198 byte-distinct real MAFs, 183 with a populated**
+#: ``ClinVar_VCF_CLNSIG`` **and 159,819 annotated rows**, ``Established_risk_allele`` occurs in
+#: **zero** of them; its only two occurrences anywhere are the two committed parity fixtures,
+#: which #246 constructed. A term no cell carries can admit no row.
+#:
+#: Second, and this is the one that would survive a corpus that *did* carry it: **the pathogenic
+#: rescue already keeps those rows.** ``Established_risk_allele`` is an entry of the pipeline's
+#: own ``vendor.pipeline_utils.CLINVAR_PATHO``, and every preset here sets
+#: ``keep_pathogenic: True``, so a row whose cell reads it passes on the rescue whatever
+#: ``filter_clinvar`` says. Measured on the two fixtures that carry it — the only files where
+#: this change is reachable at all — the Stringent report is **45 → 45** somatic and **23 → 23**
+#: germline, and the carrier row's ``MAFigate_reason`` reads ``pathogenic_rescue`` both with the
+#: term and without it.
+#:
+#: So this changes what Stringent *says* it keeps and, while the rescue is on, cannot change what
+#: it emits at all — the same trade #88 and #99 each recorded. **It bites only for a user who
+#: turns Keep pathogenic off**, which is the honest description of the change and is worth
+#: knowing before anyone measures it again and reads +0 as evidence the edit did not land.
+#:
+#: That rescue list is also independent support for the evidence-grade argument above, and it is
+#: not this app's opinion: the pipeline files ``Established_risk_allele`` among the calls it
+#: rescues as pathogenic. It files ``Likely_risk_allele`` there too, which is a wider line than
+#: the one drawn here — recorded rather than followed, since what the rescue admits and what a
+#: report preset selects are two different questions and only the second was the dev's to decide.
+#:
+#: The corpus above is the one ``_SOFT_CLINVAR_TERMS`` uses, re-swept, and it is stated because
+#: the definition is easy to get wrong in a way that quietly loses more than half of it. The
+#: cloud-synced share these files live on is mirrored twice on a reviewer's machine: one copy is
+#: **unhydrated placeholders, whose bytes read as runs of spaces while their metadata reports the
+#: real size**, and the other is the hydrated original. A sweep that excludes the sync client by
+#: name drops 100 real MAFs and reaches 83 files and 48,969 rows; one that excludes neither reads
+#: the placeholders as files with no ClinVar column at all. Neither is this corpus, and neither
+#: is comparable to any number in this module — so a re-measurement that disagrees should be
+#: checked against the file count and the row count above before anything here is edited.
+#:
+#: Shared between the arms rather than written out twice for ``_SOFT_CLINVAR_TERMS``'s reason,
+#: which applies here unchanged: both copies would be edited identically and the second is where
+#: the drift would live. The reason this term is on both arms is not a spelling — it is that an
+#: evidence-graded risk allele is as reportable in a germline finding as in a somatic one, which
+#: is a fact about the assertion and not about the arm. Should an arm ever need a different
+#: ClinVar list, inline this back into both rather than parameterising it.
+_CLINICAL_CLINVAR_TERMS = [
+    "Pathogenic",
+    "Likely_pathogenic",
+    "Established_risk_allele",
+]
+
 # Clinical somatic parameters
 CLINICAL_SOMATIC_PARAMS = {
     "sample_type": "somatic",
@@ -331,7 +422,7 @@ CLINICAL_SOMATIC_PARAMS = {
     "filter_variant_classification": list(_CLINICAL_EXCLUDED_CLASSIFICATIONS),
     "filter_cancervar": ["Tier_I_strong", "Tier_II_potential"],
     "filter_civic": ["A", "B"],
-    "filter_clinvar": ["Pathogenic", "Likely_pathogenic"],
+    "filter_clinvar": list(_CLINICAL_CLINVAR_TERMS),
     "filter_escat": ["IA", "IB", "IC"],
     "max_freq_population": 0.005,
     "keep_pathogenic": True,  # Auto-retain pathogenic variants by default
@@ -349,7 +440,7 @@ CLINICAL_GERMLINE_PARAMS = {
     "filter_variant_classification": list(_CLINICAL_EXCLUDED_CLASSIFICATIONS),
     "filter_intervar": ["Pathogenic", "Likely pathogenic"],
     "filter_renovo": ["HP Pathogenic"],
-    "filter_clinvar": ["Pathogenic", "Likely_pathogenic"],
+    "filter_clinvar": list(_CLINICAL_CLINVAR_TERMS),
     "filter_escat": ["IA", "IB", "IC"],
     "max_freq_population": 0.005,
     "keep_pathogenic": True,  # Auto-retain pathogenic variants by default

@@ -188,8 +188,9 @@ def test_every_navigating_sidebar_button_goes_through_the_sanctioned_route():
     assert not offenders, (
         f"These branch on a button and then set {CURRENT_PAGE} themselves: "
         f"{', '.join(offenders)}. Route them through {SANCTIONED_ROUTE}, which is where the "
-        "rerun the nav radio needs lives, and where a destination can be checked against the "
-        "pages the radio already lists."
+        "rerun a button drawn after the page needs is *requested* — it is taken later, once "
+        "the file chooser below it has been drawn (issue #283) — and where a destination can "
+        "be checked against the pages the radio already lists."
     )
 
 

@@ -1,17 +1,55 @@
 # MAFigate runtime dependencies
-streamlit>=1.47.0          # web app framework; the data page's section switch is an
-                           # st.segmented_control (1.40) sized with width= (1.46), and
-                           # 1.47 is the version this app is developed and checked against
-pandas>=1.5.0              # data handling
-numpy>=1.20.0              # numeric helpers
-streamlit-aggrid>=0.3.4    # interactive data grid (st_aggrid)
-plotly>=5.15.0             # interactive charts
-PyYAML>=6.0                # YAML parameter files
+#
+# Every line pins one exact version, and that is the point of this file (issue #256). Both
+# installers and the clone route build their environment from it at install time, so a floor
+# would leave the venv as whatever PyPI served that day: two people installing the same
+# MAFigate release a month apart would run different software under one version number, in a
+# tool that filters clinical variants. `tests/test_launcher_dependencies.py` fails if any
+# line below stops pinning.
+#
+# The pins are the set the app is developed and checked against. They install cleanly into a
+# fresh venv on the Python 3.11 the DMG bundles (3.11.15 there, 3.11.6 where this was
+# measured). Each comment says what the dependency is for, and where a version is
+# load-bearing rather than merely current, which feature or failure fixes it — so whoever
+# bumps a pin has something to check the new number against instead of taking it on faith.
+#
+# PYTHON 3.11 OR NEWER, and this file is where that floor now lives. `numpy==2.3.1` declares
+# Requires-Python >=3.11 and `streamlit-aggrid==1.1.6` >=3.10, so pip refuses the whole file
+# on 3.9 or 3.10 rather than installing something older — which is the honest outcome, since
+# 3.11 is the only minor the app is checked on and the one both installers bundle. The
+# README's prerequisite says 3.11 for this reason; a pin that lowers a Requires-Python has to
+# move that sentence with it.
+#
+# The floors these lines used to carry (pandas>=1.5.0, numpy>=1.20.0, streamlit-aggrid>=0.3.4,
+# plotly>=5.15.0) are not preserved: none had ever been checked against what the app needs,
+# which is why a floor was the wrong thing to declare in the first place. Only the Streamlit
+# feature floors below were real, and they survive as the pin's justification.
+streamlit==1.47.0          # web app framework; the data page's section switch is an
+                           # st.segmented_control (1.40) sized with width= (1.46), so no pin
+                           # below 1.46 can render that page, and 1.47 is the version this
+                           # app is developed and checked against
+pandas==2.3.1              # data handling; the pin is also the upper bound the app was
+                           # missing. pandas 3.0 defaults strings to the new `str` dtype,
+                           # and MAFigate reads a MAF's `.` missing marker by dtype — an
+                           # assertion spelling `object` went red on a fresh install for
+                           # exactly that reason (see tests/test_utils.py)
+numpy==2.3.1               # numeric helpers
+streamlit-aggrid==1.1.6    # interactive data grid (st_aggrid); 1.x rather than the >=0.3.4
+                           # floor, which nothing had ever checked — this is the version the
+                           # table and both dialog routes are exercised against, and the
+                           # route taken when the package is absent altogether has its own
+                           # tests (tests/test_fallback_dialog.py)
+plotly==6.9.0              # interactive charts; the six Summary charts are checked under
+                           # this version (issue #162), a major version above the >=5.15.0
+                           # floor they were first written against
+PyYAML==6.0.2              # YAML parameter files
 # `openpyxl` stood here for "Excel (.xlsx) export". Removed with the export (issue #83):
 # its only importer was `create_export_buttons`, which nothing called, so the app has
 # never written an .xlsx a user could reach. Nothing in the repo reads one either.
 
-# Development / tests (optional):
+# Development / tests (optional). Deliberately still comments and deliberately unpinned:
+# this file pins what ships, not what a contributor chooses to install, and the app runs
+# without every one of them.
 #   pip install pytest              # `make test`, including the vendored-code drift guard
 #   pip install pytest-cov          # additionally needed by `make test-cov`
 #   pip install black isort         # `make format` (config in pyproject.toml)

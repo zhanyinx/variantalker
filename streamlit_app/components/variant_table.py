@@ -30,9 +30,13 @@ beside it: the resolver's output has to open with the pipeline's list as an exac
 prefix, so a module that could reorder it is a module that could break the export.
 """
 
-# For `_variant_key`'s `str | None`, which `requirements.txt`'s Python floor of 3.9 would
-# otherwise evaluate at definition time and reject. The same import for the same reason as
+# For `_variant_key`'s `str | None`, which a Python below 3.10 would otherwise evaluate at
+# definition time and reject. The same import for the same reason as
 # `filters/absent_columns.py` and `filters/numeric_columns.py`.
+#
+# The floor this once cited — `requirements.txt`'s 3.9 — is gone: the pins now require 3.11
+# (issue #256), which supports the syntax outright. The import stays because it costs nothing
+# and these three modules should not each depend on that floor never dropping again.
 from __future__ import annotations
 
 import warnings
@@ -688,9 +692,12 @@ def _visible_columns(data: pd.DataFrame) -> list:
     ``InterVar``/``RENOVO_*`` and the somatic arm ``CancerVar`` and ``cosmic``, rather
     than the old list's union of both, which showed empty columns on either arm.
 
-    ``skip_civic`` is read for completeness but is currently always ``False`` on this
-    path: ``parameter_config.py`` strips it from loaded parameter files as a deprecated
-    name, and nothing else writes it. That changes no output — ``compute_keep`` drops
+    ``skip_civic`` is read for completeness and is ``False`` on this path for every set the
+    app itself writes: it is a contract key, so the completion both parameter-carrying pages
+    now do fills it from the contract, where it is ``False`` (issues #280, #289 — the older
+    claim here, that ``parameter_config.py`` strips it as a deprecated name and nothing else
+    writes it, stopped being true when it became a completed key). That changes no output —
+    ``compute_keep`` drops
     the CIViC columns by their absence from the frame anyway — so this is passing the
     flag the resolver's contract asks for, not relying on it.
 
@@ -714,6 +721,13 @@ def _visible_columns(data: pd.DataFrame) -> list:
     silence the old clause forbade. There is no such caller, and
     ``tests/test_missing_column_warning.py`` holds the page to draining it.
     """
+    # These two stay *defaulting* reads, deliberately, where the page's own equivalents now
+    # index (issue #289). What they decide is which columns are shown, not what is kept, and
+    # the page completes the parameters against their arm's contract before any grid draws —
+    # so on every live path the fallbacks are unreachable. What is not unreachable is a
+    # caller with no parameters at all: `create_data_table` is reached directly by the grid
+    # and download seams' own tests, and making a column list raise for want of a
+    # `sample_type` would ask each of those to state an arm it is not about.
     params = st.session_state.get("filter_params") or {}
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always", MissingColumnsWarning)

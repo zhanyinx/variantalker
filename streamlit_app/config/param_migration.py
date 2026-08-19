@@ -25,9 +25,15 @@ every file this app writes carries it from now on.
 Why the ``~/.mafigate`` cache is discarded rather than migrated
 --------------------------------------------------------------
 The stamp is powerless over files that already exist, and the cache is nothing but files
-that already exist. Every cache ever written carries ``"app_version": "2.0.0"`` — one
-literal, never bumped in any commit that touched it — so "an old cache" and "a cache
-written by an app that stamps its output" are the same state to any reader.
+that already exist. Every pre-stamp cache carries an ``app_version`` and nothing else that
+dates it, and the literal it carries had never been bumped in any commit that touched it —
+so "an old cache" and "a cache written by an app that stamps its output" are the same state
+to any reader.
+
+Issue #260 has since given that number a reason to move: it is ``APP_VERSION``, and it is
+now the one source both desktop installers and the release tag cut from. That does not make
+it able to date a cache — it moved for a packaging decision, which is precisely the kind of
+event a format version must not follow, and the argument below for keeping the two apart.
 
 For an uploaded file that does not matter: the *user* supplies the file, and the act of
 uploading is the missing information ("this one is old"). For the cache there is no such
@@ -59,9 +65,12 @@ from filters.gene_lists import parse_gene_list
 #:
 #: Deliberately **not** ``APP_VERSION``. They were the same field once — the cache's
 #: ``app_version`` — and that is exactly why the cache cannot be migrated: a release
-#: number moves for reasons that have nothing to do with the format, and this one never
-#: moved at all. Tying them together would mean a patch release renumbering every saved
-#: file and a format change waiting on a release.
+#: number moves for reasons that have nothing to do with the format, and for the whole life
+#: of that cache it had not moved at all. Issue #260 then moved it, for a packaging
+#: decision: the first public release is numbered from what the public README already
+#: promised. No format changed that day, which is the argument in one event. Tying them
+#: together would mean a patch release renumbering every saved file and a format change
+#: waiting on a release.
 PARAM_SCHEMA_VERSION = 1
 
 #: Where the stamp lives in an exported document, and in the cache.
@@ -235,6 +244,106 @@ def unwrap_document(document) -> tuple:
         version = document.get(SCHEMA_VERSION_KEY)
         return document[PARAMETERS_KEY], version if isinstance(version, int) else None
     return document, None
+
+
+def complete_params(params) -> dict:
+    """One parameter dict, with every key its arm's contract names but it does not carry.
+
+    Why this exists, and why it is **at the boundary** rather than in each control
+    ---------------------------------------------------------------------------------
+    A dict reaching the parameters page with a key missing used to have that key *invented*
+    by whichever widget drew it: a list control read ``.get(key)`` with no fallback, so
+    ``filter_terms(None, options)`` was ``[]`` — *keep nothing* — and a number control read
+    ``.get(key, <literal>)`` and produced something that looked chosen. The page then wrote
+    the invention back as the user's own selection and the auto-save persisted it, and since
+    the page's written key set is a fixed point the file re-wrote itself identically for ever
+    (issue #276).
+
+    The repair completes the dict **once, where it enters**, instead of giving each ``.get``
+    a better fallback, for a reason the code itself already demonstrated: the per-control
+    shape is the one that drifted. Three of those literals had come to contradict the
+    contract — ``max_freq_population`` invented ``0.01`` where both arms say ``1.0``, the
+    somatic VAF widget invented ``0.05`` where the contract says ``0.01``, and the germline
+    VAF widget invented its own ``0.2`` under a key the contract does not even spell. A
+    single completion also covers keys *no* control draws (``skip_civic``) and any control
+    added later, which no amount of per-widget care can promise.
+
+    What it does **not** do: overrule a value the dict states
+    --------------------------------------------------------
+    **An absent key and a present-but-empty key are different states, and only the first is
+    a defect.** An empty keep-list is a legal, expressible choice — the pipeline's own
+    ``--filter_cancervar ""`` — which is why issue #36 deleted the empty→``["All"]``
+    backfill and why the page *warns* about an all-empty guideline block instead of
+    preventing it. So this fills what is **missing** and never touches what is **empty on
+    purpose**; a cache already holding empty clinical filters is untouched here, and what to
+    do about one is issue #279's question, not this function's.
+
+    A key can also be stated under a second spelling, and that counts as stated. Two pairs
+    exist and both are read exactly as :func:`migrate_params` reads them — deliberately, so
+    that a dict arriving by upload and one arriving any other way cannot end up meaning
+    different things by the same key:
+
+    * ``keep_pathogenic`` is the app's polarity for the contract's ``skip_pathogenic`` — all
+      four presets still carry only the former, so taking the contract's value would let
+      this function silently overrule a preset's own retention setting;
+    * on germline the widget and the filter both prefer ``vaf_threshold_germline`` while the
+      contract spells the parameter ``vaf_threshold``, so the germline arm carries both keys
+      set to one number, as ``_migrate_vaf`` already arranges.
+
+    Why it is not :func:`migrate_params`
+    ------------------------------------
+    Because that function's legacy transform is **not idempotent** and this one is run on
+    every render. ``_migrate_classification`` takes a set complement, so handing a
+    current dict to the legacy path returns a ``filter_variant_classification`` of the same
+    shape meaning the opposite — the module header's own argument, and the reason completion
+    is a separate, additive function that never rewrites a value.
+
+    Args:
+        params: a parameter dict, complete or not. Filled **in place** — the app's pages
+            edit ``st.session_state.filter_params`` in place and callers hold references to
+            it — and returned for the convenience of a caller that wants an expression.
+
+    Returns:
+        The same dict, now carrying every key its own arm's contract names. Values taken
+        from the contract are fresh deep copies (:func:`pipeline_params`), so a widget
+        appending to a keep-list cannot redefine the contract for the rest of the process.
+    """
+    if not isinstance(params, dict):
+        params = {}
+
+    stated = params.get("sample_type")
+    # The arm is read the way every other reader reads it: a dict that states no arm is
+    # somatic to this app, and so is one that states something that is not an arm.
+    arm = stated if stated in ARMS else "somatic"
+    contract = pipeline_params(arm)
+
+    # The pathogenic flag before the plain fill, so a dict carrying only the app's polarity
+    # keeps its own answer rather than taking the contract's.
+    if "skip_pathogenic" not in params and "keep_pathogenic" in params:
+        params["skip_pathogenic"] = not bool(params["keep_pathogenic"])
+
+    # The germline VAF threshold under both spellings, from whichever one the dict has.
+    if arm == "germline":
+        germline_vaf = params.get(
+            "vaf_threshold_germline",
+            params.get("vaf_threshold", contract["vaf_threshold"]),
+        )
+        params.setdefault("vaf_threshold_germline", germline_vaf)
+        params.setdefault("vaf_threshold", germline_vaf)
+
+    for key, value in contract.items():
+        # `sample_type` is arm *identity*, not a filter setting — it selects which filter
+        # runs rather than tuning one, which is why `pipeline_params` gives it no
+        # `ParamOrigin`. This function reads the arm to know which contract to complete
+        # against and has no business deciding it: a dict that states no arm goes on stating
+        # none, and is read as somatic by every reader in the app exactly as before. Writing
+        # it here would make completion a path that can move a user between arms without
+        # saying so, which is the one thing `adopt_parameters` exists to prevent.
+        if key == "sample_type":
+            continue
+        params.setdefault(key, value)
+
+    return params
 
 
 def migrate_params(document) -> Migration:

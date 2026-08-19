@@ -25,6 +25,7 @@ from config.param_labels import label_of
 from config.param_migration import (
     PARAM_SCHEMA_VERSION,
     SCHEMA_VERSION_KEY,
+    complete_params,
     migrate_params,
 )
 from config.pipeline_params import pipeline_params
@@ -339,6 +340,18 @@ def show_parameter_config_page():
         )
     else:
         st.session_state.filter_params["sample_type"] = sample_type
+
+    # Every control below reads its parameter without a fallback, and this is the line that
+    # earns them the right to: whatever the parameters are and however they arrived — a
+    # cache, a preset, an uploaded file, a re-seed one branch up — they carry every key this
+    # arm's contract names before a single widget draws. A key that is *absent* is completed
+    # from the contract; a key that is present and empty is left exactly as it is, because an
+    # empty keep-list is a choice the pipeline's own command line can express (issue #280).
+    #
+    # After the arm block rather than before it, because switching arms re-seeds from
+    # `pipeline_params(sample_type)` — which does not carry `vaf_threshold_germline`, the
+    # spelling the germline widget and the filter both read.
+    st.session_state.filter_params = complete_params(st.session_state.filter_params)
 
     # Create tabs for different parameter categories
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
@@ -698,7 +711,11 @@ def show_basic_filters_tab(sample_type):
             label_of("min_depth"),
             min_value=0,
             max_value=1000,
-            value=st.session_state.filter_params.get("min_depth", 50),
+            # Indexed, not `.get(key, 50)`. The literal was this widget's own answer to a
+            # question the contract already answers, and `complete_params` at the top of the
+            # page is what makes the key certain to be here — so a fallback could only ever
+            # be a second, drifting opinion. See `complete_params` (issue #280).
+            value=st.session_state.filter_params["min_depth"],
             help=(
                 "Minimum reads at the variant in the tumour — its alt and ref counts added "
                 "together — for it to be kept. This is not the MAF's `DP` column, which "
@@ -714,12 +731,15 @@ def show_basic_filters_tab(sample_type):
         # carries. 211 reference rows hold five classifications the list below has never
         # heard of, two of them minted by the pipeline itself; excluding keeps them.
         #
-        # Empty is a real value here, and it means exclude nothing. No back-fill.
+        # Empty is a real value here, and it means exclude nothing. No back-fill — and note
+        # that indexing rather than `.get` is what keeps that true both ways: an empty list
+        # is passed through untouched, while an *absent* key can no longer arrive here to be
+        # read as one (`complete_params`, issue #280).
         st.session_state.filter_params["filter_variant_classification"] = st.multiselect(
             label_of("exclude_classifications"),
             VARIANT_CLASSIFICATIONS,
             default=filter_terms(
-                st.session_state.filter_params.get("filter_variant_classification"),
+                st.session_state.filter_params["filter_variant_classification"],
                 VARIANT_CLASSIFICATIONS,
             ),
             help=(
@@ -735,7 +755,11 @@ def show_basic_filters_tab(sample_type):
                 label_of("vaf_threshold"),
                 min_value=0.0,
                 max_value=1.0,
-                value=st.session_state.filter_params.get("vaf_threshold", 0.05),
+                # 0.05 stood here as the fallback, against a contract that says 0.01 — the
+                # second of the three literals that had drifted away from what they stand in
+                # for. There is nothing to stand in for now: `complete_params` fills this key
+                # from the contract before any tab draws.
+                value=st.session_state.filter_params["vaf_threshold"],
                 step=0.0001,
                 format="%.4f",
                 help="Minimum variant allele frequency for somatic variants",
@@ -745,10 +769,13 @@ def show_basic_filters_tab(sample_type):
                 label_of("vaf_threshold_germline"),
                 min_value=0.0,
                 max_value=1.0,
-                # 0.2, not 0.3: this fallback was the third value in a three-way
-                # disagreement — nextflow.config and both germline presets say 0.2.
-                # Pinned to the contract by tests/test_param_contract.py.
-                value=st.session_state.filter_params.get("vaf_threshold_germline", 0.2),
+                # `vaf_threshold_germline` is not a contract key — the contract spells this
+                # parameter `vaf_threshold` and gives it the arm's value — so a literal here
+                # meant the contract's own 0.2 was never read on this arm, and the two agreed
+                # only by coincidence. `complete_params` sets *both* spellings from one
+                # number, exactly as `_migrate_vaf` already does for an uploaded file; this
+                # widget and the filter go on reading the germline one.
+                value=st.session_state.filter_params["vaf_threshold_germline"],
                 step=0.0001,
                 format="%.4f",
                 help="Minimum variant allele frequency for germline variants",
@@ -1150,7 +1177,12 @@ def show_clinical_filters_tab(sample_type):
             chosen = st.multiselect(
                 label,
                 options,
-                default=filter_terms(st.session_state.filter_params.get(key), options),
+                # Indexed. `.get(key)` here was the whole of the reported loss: for a key the
+                # parameters did not carry it handed `filter_terms` a `None`, which is `[]` —
+                # *keep nothing* — and the write below then recorded that as the user's own
+                # selection. `complete_params` is what guarantees the key (issue #280); a key
+                # that is present and empty still seeds an empty widget, as it must.
+                default=filter_terms(st.session_state.filter_params[key], options),
                 help=help_text,
             )
         selected.setdefault(key, []).extend(chosen)
@@ -1201,7 +1233,11 @@ def show_population_frequency_tab(sample_type):
         label_of("max_freq_population"),
         min_value=0.0,
         max_value=1.0,
-        value=st.session_state.filter_params.get("max_freq_population", 0.01),
+        # The literal here was `0.01` while both arms' contract says `1.0` — the widest of
+        # the three drifts, and the one that pinned the poisoned cache's provenance in #276:
+        # a saved `0.01` could not have come from either arm's contract, so the threshold on
+        # screen was never a setting anybody chose. `complete_params` fills it.
+        value=st.session_state.filter_params["max_freq_population"],
         step=0.001,
         format="%.4f",
         help=(

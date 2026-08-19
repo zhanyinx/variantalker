@@ -10,9 +10,22 @@ Both failures are invisible to every other guard in this suite, because both are
 So the guards here tie the prose to a **checkable fact about the tree**, and each one is
 a two-state switch rather than a fixed assertion:
 
-* *Installers* — the release workflow that builds them either exists in ``.github/
-  workflows`` or does not. While it does not, the README may not link to a release
-  artifact, and the table must say the installers are not available yet.
+* *Installers* — a release either has been published or has not, and ``build/RELEASES.md``
+  is where the tree records that. While none has, the README may not link to a release
+  artifact and the table must say the installers are not available yet; once one is
+  recorded, the table may no longer say they are unavailable and the README must point at
+  the release.
+
+  **Re-keyed by issue #264, and the re-key is the point.** This switch used to key on
+  whether a workflow building the installers existed in ``.github/workflows``. That is a
+  *capability*, and it answered the wrong question by exactly the window between the
+  workflow landing (#264) and the first release being cut (#265). Worse than answering
+  wrongly: both tests below *skipped* once the workflow appeared, so the arrival of a file
+  that produced no artifact would have retired the guard rather than flipped it — in the one
+  window where the README could link to a 404. A published release is the fact the workflow's
+  presence was standing in for, so the switch now reads the record of that event, and the
+  other direction — copy still apologising for installers that shipped — is asserted rather
+  than skipped.
 * *The data-posture claim* — a Streamlit config turning usage statistics off either is
   tracked in this repo or is not. While it is not, Streamlit reports usage by default,
   the unqualified *"nothing leaves your machine"* is false, and the table must carry the
@@ -54,6 +67,9 @@ REPO_ROOT = STREAMLIT_APP.parent
 
 APP_README = STREAMLIT_APP / "README.md"
 CONTRIBUTING = REPO_ROOT / "CONTRIBUTING.md"
+
+#: The tree's record of what has been published. See :func:`published_releases`.
+RELEASE_LEDGER = STREAMLIT_APP / "build" / "RELEASES.md"
 
 #: The exact data-posture sentence the delivery matrix settled on. It becomes true — and
 #: therefore sayable — only once the telemetry config lands; see the module docstring.
@@ -139,13 +155,23 @@ TELEMETRY_OFF_PATTERNS = (
     r"STREAMLIT_BROWSER_GATHER_USAGE_STATS[= ]+[\"']?(?:false|0)",
 )
 
-#: Where a launch route could carry that setting: the two shell entry points, the
-#: Makefile, and the bundled launcher.
+#: Where a launch route could carry that setting: the two shell entry points and the
+#: Makefile — the clone channel, which is the one the README's caveat is about.
+#:
+#: A fourth entry, ``streamlit_app/build/launcher.py``, was removed with the file itself in
+#: issue #257. The two *installer* launchers are deliberately **not** put in its place, and
+#: the reason is that this tuple feeds a switch rather than an inventory:
+#: ``build/mac/…/launch.sh`` and ``build/windows/launch.bat`` both already export
+#: ``STREAMLIT_BROWSER_GATHER_USAGE_STATS=false``, so listing either one would flip
+#: :func:`telemetry_is_turned_off_in_the_tree` to ``True`` today and demand the README drop
+#: its caveat — a change to what the app promises every channel, decided by #229 and owned
+#: by moment two (#259/#264), not smuggled in by a file deletion. What is true and not yet
+#: said anywhere: on the installer channels that variable is already set, so the caveat the
+#: README carries is, for those two, stricter than it needs to be.
 LAUNCH_ROUTES = (
     "streamlit_app/setup.sh",
     "streamlit_app/run_mafigate.sh",
     "streamlit_app/Makefile",
-    "streamlit_app/build/launcher.py",
 )
 
 
@@ -171,20 +197,61 @@ def telemetry_is_turned_off_in_the_tree():
     return False
 
 
-def a_release_workflow_exists():
-    """Does a workflow build the installers on a ``mafigate-v*`` tag?
+#: One published release, as ``build/RELEASES.md`` writes it: a list item opening with the
+#: tag. Digits are required, so the form written out in that file's own instructions —
+#: ``- mafigate-v<version> — published <date>`` — is not read as an entry.
+LEDGER_ENTRY = re.compile(r"(?m)^[ \t]*[-*][ \t]*(mafigate-v\d+\.\d+(?:\.\d+)?[0-9A-Za-z.\-]*)")
 
-    This is the tree's own answer to "do the installers exist yet". Moment two adds the
-    workflow (#229 decision 5); until then no tag has ever produced an artifact, so any
-    README linking to one is linking to a 404.
+#: What the ledger has to say while it holds no entries. Demanded rather than inferred from
+#: emptiness: a ledger that lost its entries, or a file created empty by a bad merge, would
+#: otherwise read as *nothing published yet* and quietly re-arm the wrong half of the switch.
+NO_RELEASE_YET = "no release has been published yet"
+
+
+def published_releases_in(text):
+    """Every release tag *text* records as published, in file order.
+
+    HTML comments are removed first, and that is not tidiness: the ledger's instructions to
+    whoever writes the next entry live in a comment, worked example included, and an example
+    filled in with real digits would otherwise flip this switch from inside a comment nobody
+    reads as content. Caught in review, before the first entry existed to trip over it.
     """
-    workflows = REPO_ROOT / ".github" / "workflows"
-    if not workflows.is_dir():
-        return False
-    return any(
-        "mafigate-v" in path.read_text(encoding="utf-8")
-        for path in workflows.glob("*.yml")
-    )
+    return LEDGER_ENTRY.findall(re.sub(r"(?s)<!--.*?-->", "", text))
+
+
+def published_releases():
+    """Every release tag ``build/RELEASES.md`` records as published, in file order.
+
+    This is the tree's answer to "can anyone download an installer yet". It is a record of
+    an event rather than a capability — see the module docstring for why #264 moved it off
+    the presence of the release workflow, which is the capability it was standing in for.
+
+    Fails rather than returning ``[]`` when the ledger is missing, or when it holds neither an
+    entry nor :data:`NO_RELEASE_YET`. Both are states in which this function cannot tell which
+    half of the switch applies, and returning the empty list would pick one — the half that
+    demands the README call the installers unavailable, which is a green test on a tree that
+    has published them.
+    """
+    if not RELEASE_LEDGER.is_file():
+        raise AssertionError(
+            f"{RELEASE_LEDGER.relative_to(REPO_ROOT).as_posix()} is missing — it is where "
+            "this tree records which releases have been published, and the README's "
+            "installer copy is held against it"
+        )
+    text = RELEASE_LEDGER.read_text(encoding="utf-8")
+    entries = published_releases_in(text)
+    if not entries and NO_RELEASE_YET not in text.lower():
+        raise AssertionError(
+            f"{RELEASE_LEDGER.name} lists no published release and does not say "
+            f"{NO_RELEASE_YET!r} either, so it states neither of the two states this switch "
+            "reads. Record the release, or say there is not one yet."
+        )
+    return entries
+
+
+def a_published_release_exists():
+    """Is there a download to link to? See :func:`published_releases`."""
+    return bool(published_releases())
 
 
 def _plain(text):
@@ -297,6 +364,23 @@ def _prerequisites_block(markdown):
     )
 
 
+def stale_unavailable_markers(markdown):
+    """Which *not available yet* phrases the installers' status cell carries.
+
+    A predicate rather than an assertion, because both halves of the installer switch need it:
+    one requires the list to be non-empty, the other requires it to be empty. Sharing it is
+    also what lets :class:`TheSwitchItselfFlipsBothWays` drive both rules over seeded copy on a
+    day when only one of them is live.
+    """
+    status = _plain(_row(channel_table(markdown), "status", "available")["installers"])
+    return [marker for marker in NOT_AVAILABLE_YET if marker in status]
+
+
+def release_artifact_links(markdown):
+    """Which release-artifact links the page carries. Forbidden, then required."""
+    return [link for link in RELEASE_ARTIFACT_LINKS if link in markdown]
+
+
 def _row(table, *keywords):
     """The one row whose label carries any of ``keywords``, or a failure naming what is there."""
     for label, cells in table.items():
@@ -307,6 +391,40 @@ def _row(table, *keywords):
     )
 
 
+class TheLedgerIsReadableAtAll(unittest.TestCase):
+    """The switch's own parse, proved before anything is asserted through it.
+
+    :func:`published_releases` raises on a ledger it cannot read, which is what stops the
+    switch defaulting to a state. These two hold the file to being a thing that *can* say
+    both, so the guard below cannot be retired by mangling one markdown file.
+    """
+
+    def test_the_ledger_states_one_of_its_two_states(self):
+        published_releases()  # raises with the reason when it states neither
+
+    def test_no_recorded_release_names_a_version_the_tree_has_not_reached(self):
+        """A ledger entry is history, so it is not pinned to today's ``APP_VERSION`` —
+        `test_installer_version` exempts this one file from that pinning for exactly that
+        reason. What replaces the pinning is this: you cannot have published a version the
+        constant has never held, so an entry ahead of ``APP_VERSION`` is a typo or a fiction.
+        """
+        from config.constants import APP_VERSION
+
+        def numbers(version):
+            return tuple(int(part) for part in re.findall(r"\d+", version)[:3])
+
+        ceiling = numbers(APP_VERSION)
+        ahead = [
+            tag for tag in published_releases() if numbers(tag[len("mafigate-v") :]) > ceiling
+        ]
+        self.assertFalse(
+            ahead,
+            f"{RELEASE_LEDGER.name} records {ahead} as published, which is ahead of "
+            f"APP_VERSION ({APP_VERSION}). No release can precede the constant it was cut "
+            "from.",
+        )
+
+
 class TheInstallerChannelIsNotPromisedEarly(unittest.TestCase):
     """Nothing may offer a download that no release has produced."""
 
@@ -314,23 +432,134 @@ class TheInstallerChannelIsNotPromisedEarly(unittest.TestCase):
         self.readme = APP_README.read_text(encoding="utf-8")
 
     def test_the_table_says_the_installers_are_not_available_yet(self):
-        if a_release_workflow_exists():
-            pytest.skip("a release workflow exists — the installers are moment two's to describe")
-        status = _plain(_row(channel_table(self.readme), "status", "available")["installers"])
+        if a_published_release_exists():
+            pytest.skip("a release is published — see TheInstallerChannelIsDescribedOnceItShips")
         self.assertTrue(
-            any(marker in status for marker in NOT_AVAILABLE_YET),
-            f"the installers' status cell must say they are not ready yet, got: {status!r}",
+            stale_unavailable_markers(self.readme),
+            "the installers' status cell must say they are not ready yet. If you have just "
+            f"published a release, the fix is a line in {RELEASE_LEDGER.name} — that is what "
+            "flips this — not a README that promises a download this tree cannot see.",
         )
 
     def test_the_readme_links_to_no_release_artifact(self):
-        if a_release_workflow_exists():
-            pytest.skip("a release workflow exists — release links are legitimate from here on")
-        for link in RELEASE_ARTIFACT_LINKS:
-            self.assertNotIn(
-                link,
-                self.readme,
-                f"the README links to {link!r}, which no release has produced yet",
-            )
+        if a_published_release_exists():
+            pytest.skip("a release is published — release links are legitimate from here on")
+        self.assertFalse(
+            release_artifact_links(self.readme),
+            f"the README links to {release_artifact_links(self.readme)}, which no release "
+            f"recorded in {RELEASE_LEDGER.name} has produced. Record the release there first.",
+        )
+
+
+class TheInstallerChannelIsDescribedOnceItShips(unittest.TestCase):
+    """The other direction, which the workflow-keyed switch never had.
+
+    Without these, publishing a release leaves the README's *coming soon* copy true-when-
+    written and rotting — the same failure the data-posture switch below already refuses, and
+    the one this module's docstring calls the point of a two-state switch.
+
+    Scoped to the table's status cell and to *a* release link anywhere on the page. The
+    README's introductory sentence above the table also describes the installers as still
+    being built, and #265 has to rewrite it, but it is not asserted here: ``coming`` and
+    ``not yet`` are ordinary English that appears all over a page like this one, and a sweep
+    broad enough to catch that sentence would fire on prose about something else entirely.
+    """
+
+    def setUp(self):
+        self.readme = APP_README.read_text(encoding="utf-8")
+        if not a_published_release_exists():
+            pytest.skip("no release is published yet — see TheInstallerChannelIsNotPromisedEarly")
+
+    def test_the_table_no_longer_says_they_are_unavailable(self):
+        stale = stale_unavailable_markers(self.readme)
+        self.assertFalse(
+            stale,
+            f"a release is published, so the installers' status cell may not still say {stale}",
+        )
+
+    def test_the_readme_points_at_the_release(self):
+        self.assertTrue(
+            release_artifact_links(self.readme),
+            "a release is published, so the README must link to it — one of "
+            f"{list(RELEASE_ARTIFACT_LINKS)} — rather than describing a download with no "
+            "way to reach it",
+        )
+
+
+#: A channel table in the shape :func:`channel_table` parses, with the installers' status cell
+#: left open. Synthetic rather than the real README edited by string replacement, so seeding a
+#: state does not break the next time someone rewords a cell.
+SEEDED_README = """# Seeded
+
+|  | **Clone + `setup.sh`** | **Desktop installers** |
+| --- | --- | --- |
+| **Status** | **Works today.** | {installers} |
+| **Who it is for** | Linux, and anyone extending the code. | Everyone else. |
+| **What you need** | `git`, a `python3`, a POSIX shell. | Nothing. |
+"""
+
+#: The two states of the installers' status cell, and the link that goes with the second.
+CELL_WHILE_UNRELEASED = "**Not built yet** — coming with the first release."
+CELL_ONCE_RELEASED = "**Download it** from the [latest release](https://example/releases/latest)."
+
+
+class TheSwitchItselfFlipsBothWays(unittest.TestCase):
+    """The flip, driven rather than waited for.
+
+    Both classes above skip in one of the two states, so on any given day half of those
+    assertions are dormant — and a dormant assertion is one nobody notices has stopped working.
+    A reviewer's point, and a fair one: this ticket's burden is that the guard *still refuses
+    both wrong states*, and a skip proves nothing about the state it is not in.
+
+    So these drive the two rules over seeded copy: each is evaluated against the state it must
+    accept and the state it must refuse, whichever half is live in the tree today.
+    """
+
+    def test_the_unreleased_state_is_recognised_and_the_released_one_is_not(self):
+        unreleased = SEEDED_README.format(installers=CELL_WHILE_UNRELEASED)
+        released = SEEDED_README.format(installers=CELL_ONCE_RELEASED)
+
+        # State A accepts the first and refuses the second …
+        self.assertTrue(stale_unavailable_markers(unreleased))
+        self.assertFalse(stale_unavailable_markers(released))
+        # … and state B is the same two facts read the other way round.
+        self.assertFalse(release_artifact_links(unreleased))
+        self.assertTrue(release_artifact_links(released))
+
+    def test_an_entry_is_what_flips_the_ledger(self):
+        self.assertEqual(
+            published_releases_in("Nothing here.\n\n- mafigate-v1.2.3 — published 2026-01-01"),
+            ["mafigate-v1.2.3"],
+        )
+        self.assertEqual(published_releases_in(f"**{NO_RELEASE_YET.capitalize()}.**"), [])
+
+    def test_a_worked_example_in_a_comment_does_not_flip_the_ledger(self):
+        """The ledger's instructions carry the entry form; an example is not an event.
+
+        Filled in with real digits — which is what a copy-paste of the template looks like
+        halfway through being edited — it would otherwise read as a published release from
+        inside an HTML comment.
+        """
+        commented = (
+            f"**{NO_RELEASE_YET.capitalize()}.**\n\n"
+            "<!--\n- mafigate-v9.9.9 — published 2026-01-01 — commit abc1234\n-->\n"
+        )
+        self.assertEqual(published_releases_in(commented), [])
+
+    def test_the_real_ledger_and_readme_agree_with_each_other(self):
+        """The two halves read together, which is the state the tree is actually in.
+
+        Not a third rule: it is the conjunction the two classes above assert one at a time, and
+        it fails on the one combination neither can — a ledger and a README that were changed in
+        opposite directions in the same commit.
+        """
+        readme = APP_README.read_text(encoding="utf-8")
+        if a_published_release_exists():
+            self.assertFalse(stale_unavailable_markers(readme))
+            self.assertTrue(release_artifact_links(readme))
+        else:
+            self.assertTrue(stale_unavailable_markers(readme))
+            self.assertFalse(release_artifact_links(readme))
 
 
 class TheDataPostureClaimMatchesTheSoftware(unittest.TestCase):

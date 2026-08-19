@@ -23,11 +23,19 @@ reader was an x-axis reading ``{"left": 0.0982, "right": 0.14}``.
 That is why this check names the interpreter it is reporting on, out loud, rather than
 just saying yes or no. The interpreter *is* the answer.
 
-**Presence, deliberately not versions.** Every line in ``requirements.txt`` carries a
-floor (``plotly>=5.15.0``), and those floors have never been checked against what the
-app actually needs. Adopting them is a separate question with its own blast radius, and
-issue #157's map rules it out of scope. So this reports only whether a distribution is
-installed at all, which is the gap that was costing the reader a chart.
+**Presence, deliberately not versions.** Every line in ``requirements.txt`` now pins one
+exact version (``plotly==6.9.0``, issue #256) — a far stronger claim than the floors the
+file used to carry. This check still reports only whether a distribution is installed at
+all, which is the gap that was costing the reader a chart, and it stays that way for two
+reasons. It runs *before* anything is installed, on a bare machine, where the interesting
+answer is "nothing is here" rather than "the wrong thing is here". And comparing versions
+means parsing specifiers and ordering releases, which is a packaging library's job and not
+something to hand-roll in a stdlib-only script that has to run everywhere this one does.
+
+The trade, said out loud: an interpreter holding some version other than the pinned one
+reads as satisfied here. What narrows that is the pin itself — every channel installs from
+this file, so a mismatch means either a hand-installed package or a venv older than the
+last pin change. Absence is the failure that actually happened (#162); a mismatch has not.
 
 **Distributions, not imports.** The check asks ``importlib.metadata`` what is installed
 rather than importing anything, so it needs no table mapping ``PyYAML`` to ``yaml`` and

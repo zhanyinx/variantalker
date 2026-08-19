@@ -1,5 +1,5 @@
 """
-MAFigate v2.0.0: Advanced MAF File Analysis and Variant Filtering
+MAFigate: Advanced MAF File Analysis and Variant Filtering
 
 MAFigate is a comprehensive Streamlit application designed for clinical researchers
 and bioinformatics specialists to analyze Mutation Annotation Format (MAF) files.
@@ -36,8 +36,15 @@ Architecture:
 - Performance optimization for large datasets
 
 Author: Development Team
-Version: 2.0.0
 License: See repository LICENSE file
+
+The version is deliberately not written here. It was, twice — in the opening line and in a
+``Version:`` field at the end — and because a docstring renders nowhere, issue #71's sweep
+over the app's *surfaces* could not see either copy while both went stale by a major number.
+Neither is quoted back here on purpose: a note explaining a stale literal by reprinting it
+leaves the literal in the file. ``config/constants.py``'s ``APP_VERSION`` is the one place
+the number lives, the About dialog is the one place it renders, and ``build/version.py`` is
+how it reaches an installer (issue #260).
 """
 
 import streamlit as st
@@ -49,6 +56,7 @@ import traceback
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import application components
+from config.build_identity import build_identity
 from config.constants import APP_NAME, APP_TAGLINE, APP_VERSION
 from config.pipeline_params import pipeline_params
 from components.sidebar import (
@@ -177,6 +185,15 @@ def setup_page_config() -> None:
     a worked citation example in the Help page's FAQ, where it was written out by hand
     rather than read from the constant. A release number is a fact a bug report needs and a
     clinician does not, and the About menu is where a bug reporter already looks for it.
+
+    Since issue #263 it names the **channel** and the **build** as well, on the same line and
+    for the same reader. A version alone cannot identify a build: the same ``APP_VERSION``
+    reaches a user as a .dmg, as a Windows .exe or as a clone, and with no update check ever
+    (#229) this dialog is the only thing that tells the maintainer which. The two extra facts
+    are added *here*, in the one surface already justified, rather than to a second one —
+    ``tests/test_app_identity.py`` runs the tab, the header, the sidebar and the Help page to
+    prove all three of them render nowhere else, and that sweep now covers these two strings
+    as well as the version. See ``config/build_identity.py`` for where they come from.
     """
     st.set_page_config(
         page_title=APP_NAME,
@@ -194,8 +211,13 @@ def setup_page_config() -> None:
             # named four of the six gene panels. Home's expanders say all of this
             # accurately already, so a corrected list here would be a fourth copy to keep
             # true. About points at them instead.
+            #
+            # One line, three facts, in the order a bug report needs them: what the app is,
+            # which release, and which build of that release. `build_identity()` is called
+            # here rather than read at import so that a stamp written between two runs is
+            # picked up by the next launch rather than by the next reinstall.
             "About": f"""
-            {APP_NAME} v{APP_VERSION}
+            {APP_NAME} v{APP_VERSION} · {build_identity()}
 
             {APP_TAGLINE}
 

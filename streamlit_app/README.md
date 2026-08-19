@@ -10,7 +10,7 @@ decided it. You can inspect a variant, note what you think of it, and download t
 It will open any MAF-format file, not only this pipeline's output — and when a column a
 filter needs is missing, it tells you instead of filtering as though the column were there.
 
-![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat-square&logo=python)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python)
 ![Streamlit](https://img.shields.io/badge/Interface-Streamlit-FF6B6B?style=flat-square)
 
 ---
@@ -73,13 +73,13 @@ page, and elsewhere in the repo, points here rather than repeating it.
 | **Status** | **Works today.** The route described below, and the only one there is at the moment. | **Not built yet** — coming with the first `mafigate-v1.0.0` release. There is nothing to download until then, and no release page to send you to. |
 | **Who it is for** | Collaborators on **Linux**, and anyone extending the code. Linux is not a fallback here: neither installer will target it, so this is the Linux route for good. | Everyone else — clinicians and the molecular tumour board, readers of the paper, and collaborators on macOS or Windows who would rather not open a terminal. Either way you will need an annotated MAF from the pipeline before there is anything to look at. |
 | **What you get** | The full app, with no reduction — and the source, which is the other reason to choose this route. | The full app, with no reduction. The same code, packaged. |
-| **What you need** | `git`, a `python3`, and a POSIX shell. Linux and macOS have all three; Windows only through a bash (Git Bash or WSL). | Nothing, once they ship: each will bring its own Python. Internet once, on first launch, while it builds its environment. (Today's unreleased Windows build still asks for a Python of your own; that is part of what is not finished.) |
-| **Where your file goes** | **Your MAF: nowhere.** It is read from your own disk, and MAFigate makes no network request of its own — the ClinVar and gnomAD links in the variant view open in your browser, they are not lookups the app performs. One qualification, and it is Streamlit's rather than MAFigate's: Streamlit reports anonymous usage statistics by default, and this repo does not yet ship a config that turns them off. Until it does, turn them off yourself — `browser.gatherUsageStats = false` in a `.streamlit/config.toml`. | Will be identical to the clone route: the same code, reading your file on your own machine. |
-| **When it goes wrong** | `pip` and `streamlit` resolving to different interpreters — the app then starts with pieces missing rather than failing outright. Both scripts below go through one interpreter so that it cannot happen. | Unsigned artifacts will be blocked on first open until you allow them, and no internet on first launch means the install completes but the app does not start. |
+| **What you need** | `git`, a `python3`, and a POSIX shell. Linux and macOS have all three; Windows only through a bash (Git Bash or WSL). Internet once, while `setup.sh` fills the virtual environment it builds inside the checkout — your own Python is used to build it and is not otherwise touched. | Nothing, once they ship: each brings its own Python — both the same pinned release. Internet once, on first launch, while it builds its environment. |
+| **Where your file goes** | **Your MAF: nowhere — nothing leaves your machine.** It is read from your own disk, and MAFigate makes no network request of its own — the ClinVar and gnomAD links in the variant view open in your browser, they are not lookups the app performs. Streamlit's own anonymous usage reporting is off as well: the `.streamlit/config.toml` this repo ships sits beside the app, where every launch route resolves it. | Will be identical to the clone route: the same code, reading your file on your own machine, with the same config carried into the bundle. |
+| **When it goes wrong** | A `python3` that cannot build a virtual environment: Debian and Ubuntu ship that separately, as `python3-venv`, and `setup.sh` stops and names it. Little else — both scripts install into and launch from that one environment, so `pip` and `streamlit` resolving to different interpreters, which used to start the app with pieces missing rather than failing outright, cannot happen. | Unsigned artifacts will be blocked on first open until you allow them, and no internet on first launch means the install completes but the app does not start. |
 
 ### Clone and run it
 
-> **Prerequisites.** `git`, a **`python3` (3.9 or newer, 3.11 recommended) with `pip`**, and
+> **Prerequisites.** `git`, a **`python3` (3.11 or newer) with `pip`**, and
 > a POSIX shell — the scripts below install MAFigate's dependencies, not Python itself. On
 > Windows, run them from a bash: Git Bash or WSL.
 
@@ -87,24 +87,37 @@ page, and elsewhere in the repo, points here rather than repeating it.
 git clone https://github.com/zhanyinx/variantalker.git
 cd variantalker/streamlit_app
 
-./setup.sh            # installs the dependencies (equivalently: make install)
+./setup.sh            # builds .venv/ and installs into it
 ./run_mafigate.sh     # opens the app at http://127.0.0.1:8501, on this machine only
 ```
 
-Both scripts work on **one interpreter**, `python3` unless you say otherwise, and both name
-it as they start. `setup.sh` installs with `python3 -m pip` and then checks that what
-`requirements.txt` asked for actually arrived; `run_mafigate.sh` launches with
-`python3 -m streamlit` and refuses to start if anything is missing.
+`setup.sh` builds a **virtual environment at `.venv/` inside the checkout** with your
+`python3`, installs `requirements.txt` into it, and then checks that what it asked for
+actually arrived. `run_mafigate.sh` launches out of that same environment and refuses to
+start if anything is missing. Both name the interpreter they are using as they start, and
+neither **installs** anything outside the checkout — installing MAFigate cannot disturb the
+Python your other work depends on. (`pip` still caches the downloads it makes in your home
+directory, as it does for any install; nothing there belongs to an interpreter.) Re-run
+`setup.sh` any time: it reuses the environment, and repairs it if the Python that built it
+has moved on. Delete `.venv/` to start over.
 
-That is deliberate, and the reason is worth a line. `pip` and `streamlit` are separate
-entries on your `PATH` and need not belong to the same Python — on a machine with both
-Homebrew and conda they usually do not. When they disagree, `pip install` succeeds into an
-interpreter the app never runs in, nothing fails, and MAFigate starts up missing pieces of
-itself: the symptom that prompted this was six Summary charts quietly drawing the wrong
-thing (issue #162).
+Two details are deliberate, and each has a reason worth a line.
 
-To use a different interpreter — a virtual environment, a conda environment, a specific
-version — point both scripts at it:
+**One interpreter, reached as `-m` modules.** `pip` and `streamlit` are separate entries on
+your `PATH` and need not belong to the same Python — on a machine with both Homebrew and
+conda they usually do not. When they disagree, `pip install` succeeds into an interpreter the
+app never runs in, nothing fails, and MAFigate starts up missing pieces of itself: the
+symptom that prompted this was six Summary charts quietly drawing the wrong thing
+(issue #162). `python -m pip` and `python -m streamlit` cannot disagree that way, and both
+scripts read where the environment is from the same file, so they cannot end up in different
+ones.
+
+**In the checkout, not in your home directory.** The desktop installers keep their
+environment in a shared `~/.mafigate`; two clones sharing one environment would fight over
+it, so the clone route keeps its own beside the code. It is git-ignored.
+
+To use an interpreter of your own instead — a conda environment, a specific version, a venv
+you keep elsewhere — name it, and no environment is built or consulted here:
 
 ```bash
 MAFIGATE_PYTHON=/path/to/python ./setup.sh
@@ -117,15 +130,23 @@ To check an interpreter without installing or launching anything:
 make check-deps                                    # or: python3 check_dependencies.py
 ```
 
-### In an isolated environment
+### In an environment you manage yourself
+
+The two commands above already give you an isolated environment. If you would rather it be
+one of yours — conda, pyenv, uv, a venv somewhere else — build it, and hand it to both
+scripts:
 
 ```bash
-git clone https://github.com/zhanyinx/variantalker.git
-cd variantalker/streamlit_app
+conda create -n mafigate python=3.11 -y && conda activate mafigate
+# ... or any other environment you keep, activated or not
 
-python3 -m venv .venv && source .venv/bin/activate
-# ... or: conda create -n mafigate python=3.11 -y && conda activate mafigate
+MAFIGATE_PYTHON=$(command -v python) ./setup.sh
+MAFIGATE_PYTHON=$(command -v python) ./run_mafigate.sh
+```
 
+Or without the scripts at all:
+
+```bash
 python -m pip install -r requirements.txt
 python -m streamlit run MAFigate.py
 ```
@@ -228,7 +249,7 @@ Restrict the analysis to a panel or database gene set, or supply your own list:
 `make help` lists everything; the ones you will want:
 
 ```bash
-make install          # pip install -r requirements.txt
+make install          # install into .venv/ if ./setup.sh built one — it does not build it
 make run              # start the app — binds every interface, unlike ./run_mafigate.sh
 make test             # the test suite (pytest)
 make app-load-check   # boot the app and load a MAF through both load paths

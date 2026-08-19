@@ -157,7 +157,8 @@ def test_the_page_never_promises_a_500mb_upload(page_text, forbidden):
     """
     assert forbidden not in page_text, (
         f"the Help page says {forbidden!r} again. Nothing in this repo raises Streamlit's "
-        "200 MB default — no .streamlit/config.toml, no flag in run_mafigate.sh or the "
+        "200 MB default — the .streamlit/config.toml it ships sets only "
+        "browser.gatherUsageStats, and there is no flag in run_mafigate.sh or the "
         "Makefile — so a file above it is refused by the server (issue #79)."
     )
 

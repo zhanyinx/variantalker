@@ -566,7 +566,9 @@ class TestChartLayout(unittest.TestCase):
     into the interpreter that runs the app and made ``setup.sh`` verify the
     install rather than assume it, and all six passed first time under plotly
     6.9.0 — a major version above the ``>=5.15.0`` floor they were written
-    against. So this class is now a live guard wherever the app itself can run,
+    against, and the version ``requirements.txt`` has pinned since issue #256, so
+    what they run under is now a decision rather than a coincidence. So this class
+    is now a live guard wherever the app itself can run,
     and still not a gate anything crosses on the way to merge.
     """
 
@@ -1832,6 +1834,14 @@ def test_a_low_penetrance_call_is_not_reported_as_a_fully_penetrant_one():
     it, asserting the equivalence the table says must not be asserted. Caught by running the
     mapping rather than reading it: the entries for these two terms were unreachable, and a
     test that only asserted the dict would have passed over that.
+
+    **This feeds each term as a whole cell, and no real file spells either one that way** —
+    zero rows of 159,573 across the corpus. Running the mapping was the right instinct and it
+    ran on a value the corpus does not contain, so it passed for three tickets while the only
+    real spelling reported Uncertain Significance (issue #285). Kept, because the claim is
+    still one the mapping must honour, but it is not the guard for real data: that is
+    `test_the_cell_a_low_penetrance_call_really_arrives_in_is_read_at_all` and its two
+    neighbours, which use `_EMBEDDED_LOW_PENETRANCE_CELL`.
     """
     for term, plain in (
         ("Pathogenic,_low_penetrance", "Pathogenic"),
@@ -1859,6 +1869,99 @@ def test_a_genuine_composite_is_still_split():
     )
 
 
+#: The cell a low-penetrance call really arrives in, and the shape the guard above lacks.
+#:
+#: `Pathogenic,_low_penetrance` occurs as a whole cell **zero times in 159,573 annotated rows**
+#: across 187 byte-distinct real MAFs, and `Likely_pathogenic,_low_penetrance` does not occur at
+#: all. This is the only spelling the corpus has for either: 8 rows in 8 files, the term reached
+#: through a `|` and then a `/` (issue #285).
+_EMBEDDED_LOW_PENETRANCE_CELL = "Pathogenic/Pathogenic,_low_penetrance|other"
+
+
+def test_the_cell_a_low_penetrance_call_really_arrives_in_is_read_at_all():
+    """The guard above on the shape that exists, which is where it was passing over a defect.
+
+    `test_a_low_penetrance_call_is_not_reported_as_a_fully_penetrant_one` feeds each term as a
+    whole cell and its docstring says it catches this by "running the mapping rather than
+    reading it". It does — on a value no file contains. The split stopped at the *first*
+    separator in precedence order, so the real cell reached `CLINICAL_VALUE_MAPPING` as
+    `Pathogenic/Pathogenic,_low_penetrance`, matched nothing, and read as `Unknown`.
+
+    **What made it invisible is that nothing showed as unrecognised.** `Unknown` is the bottom
+    of `CLINICAL_HIERARCHY`, so RENOVO's or InterVar's `Uncertain_Significance` on the same row
+    outranked it and the row reported 🟡 — three steps below `Pathogenic`, with no marker that
+    a cell had failed to parse. So this asserts the parse directly rather than through the
+    summary of a fully annotated row, where another source can hide it.
+    """
+    summary = _summary_of(ClinVar_VCF_CLNSIG=_EMBEDDED_LOW_PENETRANCE_CELL)
+
+    assert summary != clinical_summary._SUMMARY_LABELS["Unknown"], (
+        f"{_EMBEDDED_LOW_PENETRANCE_CELL!r} is the only shape either low-penetrance term "
+        "occurs in, and this app cannot read it"
+    )
+
+
+def test_a_composite_naming_two_pathogenic_calls_reports_the_stronger_one():
+    """Issue #285's clinical call, and the reason the repair is not the atomic-term one.
+
+    This cell holds **two** pathogenic calls — one submitter's bare `Pathogenic` and another's
+    `Pathogenic,_low_penetrance`. Reporting the penetrance-qualified one would report the
+    weaker of two calls that are both present, understating the cell; `CLINICAL_HIERARCHY`
+    already ranks `Pathogenic` above `Pathogenic_Low_Penetrance`, and taking the strongest
+    piece is what this module does everywhere else.
+
+    That is why `_ATOMIC_TERMS_WITH_SEPARATOR` was **not** widened to match inside a piece.
+    Issue #98 created it to stop `Pathogenic,_low_penetrance` collapsing to `Pathogenic` where
+    low penetrance is the **only** call, which is a claim about a different cell — and it still
+    holds, asserted by the guard above and by
+    `test_a_low_penetrance_composite_the_first_separator_isolates_is_unchanged`.
+    """
+    assert _summary_of(ClinVar_VCF_CLNSIG=_EMBEDDED_LOW_PENETRANCE_CELL) == _summary_of(
+        ClinVar_VCF_CLNSIG="Pathogenic"
+    )
+
+
+def test_a_composite_that_is_itself_a_known_call_is_not_re_read():
+    """The 68 rows #285's first attempt moved, and the test that would not have caught it.
+
+    Splitting `Benign/Likely_benign|other` on `|` leaves `Benign/Likely_benign`, which has a
+    `CLINICAL_VALUE_MAPPING` entry of its own reading `Likely_Benign`. Re-reading every piece
+    unconditionally splits it again and takes `Benign` — measured over the real corpus, **66
+    rows in 64 files** here plus 2 more in `Benign/Likely_benign|_other`, moved from Likely
+    Benign to Benign. That is the reclassification #98 declined to make in passing, arrived at
+    from the opposite direction, and #285 is not the ticket that decides it either.
+
+    `test_a_genuine_composite_is_still_split` does not cover this: it pins the **bare** cell,
+    whose reading never changed. The modifier is what routes the value through a different
+    branch, so the modifier has to be in the fixture. Both spellings the corpus has are pinned
+    — `|other` and `|_other` — because they reach the mapping as the same piece and a fix that
+    special-cased one would look correct against the other.
+    """
+    for cell in ("Benign/Likely_benign|other", "Benign/Likely_benign|_other"):
+        assert _summary_of(ClinVar_VCF_CLNSIG=cell) == _summary_of(
+            ClinVar_VCF_CLNSIG="Likely_benign"
+        ), (
+            f"{cell!r} now reports what its first piece alone would, so the "
+            "`Benign/Likely_benign` entry it used to resolve through is bypassed"
+        )
+
+
+def test_a_low_penetrance_composite_the_first_separator_isolates_is_unchanged():
+    """The class stays reachable from a real cell, so #285 decides nothing about its surface.
+
+    `Pathogenic_Low_Penetrance` has a hierarchy entry, a glyph and words, and the cell above no
+    longer reaches it. This one does and always did: `;` precedes the comma, so the first split
+    isolates the atomic term whole. Pinned because a fix that read the *strongest* piece across
+    a fully flattened cell would have taken `Benign` here and left the class unreachable from
+    anything — which would have turned a parser repair into a decision about which surfaces the
+    key may show, and that is out of #285's scope.
+    """
+    summary = _summary_of(ClinVar_VCF_CLNSIG="Benign;Pathogenic,_low_penetrance")
+
+    assert summary == clinical_summary._SUMMARY_LABELS["Pathogenic_Low_Penetrance"]
+    assert "low penetrance" in summary
+
+
 def test_every_class_has_a_label_a_rank_and_a_colour():
     """Three lists that must agree, and did not: the else-branch classes were in none of them.
 
@@ -1883,6 +1986,12 @@ def test_every_class_has_a_label_a_rank_and_a_colour():
 #: A composite is where the two columns could still part company after #104: they agree about
 #: a glyph by construction now, but each has to pick the *same piece* first, and until this
 #: ticket they looked for a different substring while doing it.
+#:
+#: **This list claims to hold cells measured in real MAFs, and it was missing the only measured
+#: cell the reading got wrong** — which is the second reason #285 survived as long as it did.
+#: The last entry is the one that was absent; see :data:`_EMBEDDED_LOW_PENETRANCE_CELL`. A cell
+#: whose pieces do not all carry the same call belongs here whether or not the app reads it
+#: today, because being unreadable is exactly when the two columns can part.
 _MEASURED_COMPOSITES = [
     "Benign/Likely_benign",
     "Uncertain_significance|_drug_response",
@@ -1890,6 +1999,12 @@ _MEASURED_COMPOSITES = [
     "Benign|_other",
     "Pathogenic/Likely_pathogenic|other",
     "Benign;Pathogenic,_low_penetrance",
+    _EMBEDDED_LOW_PENETRANCE_CELL,
+    # Both spellings of the cell whose first piece is itself a known call — the shape #285's
+    # first attempt reclassified 68 rows of. See
+    # `test_a_composite_that_is_itself_a_known_call_is_not_re_read`.
+    "Benign/Likely_benign|other",
+    "Benign/Likely_benign|_other",
 ]
 
 

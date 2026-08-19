@@ -390,8 +390,10 @@ def show_required_columns_tab():
     #
     # **"Keep files under 500MB for optimal performance"** — the third of three copies of a
     # number nothing in this repo sets. Streamlit's default `server.maxUploadSize` is 200 MB
-    # and there is no `.streamlit/config.toml`, no flag in `run_mafigate.sh` and none in the
-    # `Makefile`, so the app *refused* a 300 MB MAF on a screen that had just invited it. The
+    # and nothing raises it: the `.streamlit/config.toml` this repo now ships sets only
+    # `browser.gatherUsageStats` (issue #259, and `tests/test_telemetry_config.py` holds it to
+    # that), there is no flag in `run_mafigate.sh` and none in the `Makefile`. So the app
+    # *refused* a 300 MB MAF on a screen that had just invited it. The
     # copy is corrected rather than the cap raised: a 500 MB upload has a memory cost this app
     # has never paid — the session holds several copies of the frame — and `README.md` already
     # documents both the real limit and `--server.maxUploadSize` for whoever runs the app. The
@@ -1178,6 +1180,12 @@ def show_faq_tab():
     # a colleague serving it from a shared machine, and the answer below is written for that
     # reader. The true half of the old answer is the half worth keeping: nothing is sent to any
     # outside service, because the app queries nothing.
+    #
+    # "queries no external service" is true of the whole process rather than only of
+    # MAFigate's own code since issue #259: Streamlit reported anonymous usage from this
+    # process on every launch until `.streamlit/config.toml` turned that off, and
+    # `tests/test_telemetry_config.py` is what ties this sentence to that file — it may not
+    # be said here while nothing in the tree turns the reporting off.
     with st.expander("🔧 Technical Questions"):
         st.markdown(
             """

@@ -505,39 +505,75 @@ def test_one_vaf_threshold_key(config_params):
     )
 
 
-#: The germline VAF widget in `page_modules/parameter_config.py`. Matched as source
-#: text rather than by importing the module, because importing it pulls in streamlit;
-#: this guard is meant to run on a bare pytest.
-_GERMLINE_VAF_FALLBACK = re.compile(
-    r"""filter_params\.get\(\s*["']vaf_threshold_germline["']\s*,\s*([0-9.]+)\s*\)"""
-)
-
 PARAMETER_CONFIG = STREAMLIT_APP / "page_modules" / "parameter_config.py"
 
+#: The one parameter name a control may still resolve with a literal of its own, and why.
+#:
+#: ``sample_type`` is arm identity rather than a filter setting — it selects which filter
+#: runs — and *every* reader in this app spells that reading the same way,
+#: ``.get("sample_type", "somatic")``: a dict that states no arm is somatic. That is a
+#: documented convention about which filter to run, not a filter value being invented, and
+#: ``complete_params`` deliberately leaves the key alone for the same reason.
+_MAY_CARRY_ITS_OWN_DEFAULT = frozenset({"sample_type"})
 
-def test_the_germline_vaf_widget_fallback_agrees_with_the_contract():
-    """No third value for the germline VAF threshold.
 
-    Before issue #31 there were three: ``nextflow.config`` and both germline presets
-    said 0.2, and this widget's own fallback said 0.3. The widget still writes the
-    app's ``vaf_threshold_germline`` key — the contract's single ``vaf_threshold`` only
-    takes over when the filter is routed through the pipeline's code — so the fallback
-    is pinned here rather than derived, and a fourth value cannot appear quietly.
+def _literal_parameter_defaults(path):
+    """Every ``…get("<contract key>", <literal>)`` in one module, as (key, literal, line).
+
+    Read from the AST rather than by grep: black wraps these calls across lines, and the
+    regex this replaced could only see them on one. Any receiver counts, because the page
+    reads its parameters both as ``st.session_state.filter_params`` and through a local
+    ``params`` alias, and a rule that only watched one spelling would be half a rule.
     """
     from config.pipeline_params import PIPELINE_PARAMS
 
-    matches = _GERMLINE_VAF_FALLBACK.findall(PARAMETER_CONFIG.read_text())
-    assert matches, (
-        f"could not find the germline VAF fallback in "
-        f"{PARAMETER_CONFIG.relative_to(STREAMLIT_APP)}. If the widget was rewritten to "
-        "read the contract directly, delete this test with it."
+    contract_keys = set().union(*(set(params) for params in PIPELINE_PARAMS.values()))
+    found = []
+    for node in ast.walk(ast.parse(path.read_text())):
+        if not isinstance(node, ast.Call):
+            continue
+        if not (isinstance(node.func, ast.Attribute) and node.func.attr == "get"):
+            continue
+        if len(node.args) != 2:
+            continue
+        key = node.args[0]
+        if not (isinstance(key, ast.Constant) and key.value in contract_keys):
+            continue
+        if key.value in _MAY_CARRY_ITS_OWN_DEFAULT:
+            continue
+        found.append((key.value, ast.unparse(node.args[1]), node.lineno))
+    return found
+
+
+def test_no_control_resolves_a_parameter_from_a_literal_of_its_own():
+    """The wider rule the germline VAF fallback was one instance of (issue #280).
+
+    That guard pinned one widget's literal to the contract, and its own message said to
+    delete it if the widget was ever rewritten to read the contract directly. It has been:
+    the parameters page now completes its dict against the arm's contract **once, at the
+    boundary**, before any tab draws, so a control has nothing left to fall back to.
+
+    Pinning the literals was never going to hold, and the reason is that all three of them
+    had already drifted by the time anyone looked. ``max_freq_population`` invented ``0.01``
+    where both arms say ``1.0``; the somatic VAF widget invented ``0.05`` where the contract
+    says ``0.01``; the germline one invented ``0.2`` under ``vaf_threshold_germline``, a key
+    the contract does not spell, so the contract's own value was never read on that arm at
+    all. A guard that checks each literal against the contract has to be *written* for each
+    literal, and the two nobody wrote were the two that were wrong.
+
+    So this forbids the shape instead of auditing its values. The contract is the only place
+    a parameter's default is stated, ``complete_params`` is the only thing that applies it,
+    and a control that wants a value indexes for it — which raises loudly if the completion
+    is ever bypassed, rather than quietly minting a plausible number.
+    """
+    offenders = _literal_parameter_defaults(PARAMETER_CONFIG)
+    assert not offenders, (
+        "these controls resolve a filter parameter from a literal of their own rather than "
+        f"from the contract: {offenders}. Delete the fallback and index the key — "
+        "`complete_params` at the top of `show_parameter_config_page` guarantees it is "
+        "there. A literal here is a second opinion about a default, and every literal this "
+        "guard replaced had drifted away from the contract it stood in for (issue #280)."
     )
-    expected = PIPELINE_PARAMS["germline"]["vaf_threshold"]
-    for found in matches:
-        assert float(found) == expected, (
-            f"the germline VAF widget falls back to {found}, but the contract — and "
-            f"nextflow.config's filter_vaf_threshold_germline — says {expected}"
-        )
 
 
 def test_max_freq_population_is_neutral():

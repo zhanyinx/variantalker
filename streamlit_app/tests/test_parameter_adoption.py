@@ -518,16 +518,22 @@ def test_only_the_sanctioned_places_replace_the_parameters_wholesale():
             "the shared route: this is what announces the arm",
         ),
         ("parameter_config.py", "show_parameter_config_page"): (
-            4,
+            5,
             "the cached seed and the contract seed (both before any arm exists to move "
             "away from), the Sample Type re-seed (which announces itself inline, having "
-            "no rerun to survive), and the `validate_multiselect_params` normalisation "
+            "no rerun to survive), the `validate_multiselect_params` normalisation "
             "(which repairs the shape of the dict it was given and cannot reach "
-            "`sample_type`)",
+            "`sample_type`), and the `complete_params` completion (which fills the keys "
+            "the arm's contract names and the dict does not carry, and deliberately skips "
+            "`sample_type` for this exact reason — see issue #280)",
         ),
         ("data_loading.py", "show_data_loading_page"): (
-            1,
-            "seed-if-absent, so there is no previous arm to move away from",
+            2,
+            "seed-if-absent, so there is no previous arm to move away from, and the "
+            "`complete_params` completion — sanctioned for the same reason it is on the "
+            "parameters page, that it fills the keys the arm's contract names and cannot "
+            "reach `sample_type`, so it is the one kind of wholesale write that provably "
+            "cannot move the user between arms (issue #289)",
         ),
         ("MAFigate.py", "initialize_session_state"): (
             2,

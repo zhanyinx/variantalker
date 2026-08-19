@@ -10,10 +10,15 @@
     <string>MAFigate</string>
     <key>CFBundleDisplayName</key>
     <string>MAFigate</string>
+    <!-- Both keys are placeholders, replaced by build_dmg.sh from config/constants.py's
+         APP_VERSION (issue #260). They held a hardcoded version a whole major number below
+         what the app itself reported, so Get Info and the About dialog disagreed about the
+         same build. The build fails if a placeholder survives into the shipped bundle, so
+         this template can never be the version anyone sees. -->
     <key>CFBundleVersion</key>
-    <string>1.0.0</string>
+    <string>__APP_VERSION__</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>__APP_VERSION__</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleSignature</key>

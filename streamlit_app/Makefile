@@ -29,6 +29,8 @@ help:
 	@echo "Build Commands (see build/BUILD_INSTRUCTIONS.md):"
 	@echo "  build-mac   Build macOS .dmg installer (macOS only)"
 	@echo "  build-win   Build Windows .exe installer (Windows only)"
+	@echo "  version     Print APP_VERSION, the one place the version is written"
+	@echo "  release-tag Print the tag a release is cut from (mafigate-v<version>)"
 	@echo ""
 	@echo "Maintenance Commands:"
 	@echo "  clean       Clean temporary files and caches"
@@ -43,8 +45,18 @@ help:
 # dependency installed, none of it where the app ran, and `plotly` therefore absent
 # wherever it looked. $(PYTHON) is defined below, beside check-vendor, and one variable
 # for installing and launching is the whole point: it cannot disagree with itself.
+# It is `./setup.sh` that *builds* the environment, not this target: make expands $(PYTHON)
+# before any recipe runs, so a target that created .venv could not then install into it. So
+# this fills whatever $(PYTHON) resolved to — the venv when there is one — and says out loud
+# when that is the ambient interpreter, which is the install issue #258 exists to stop being
+# the silent default. It warns rather than refuses: a contributor who has deliberately
+# arranged their own interpreter is not doing anything wrong.
 install:
-	@echo "📦 Installing dependencies..."
+	@echo "📦 Installing dependencies into: $(PYTHON)"
+	@if [ "$(PYTHON)" = "python3" ]; then \
+		echo "⚠️  That is whatever python3 is first on PATH, and this fills it directly."; \
+		echo "   ./setup.sh builds an isolated environment instead."; \
+	fi
 	@$(PYTHON) -m pip install -r requirements.txt
 	@echo "🔍 Checking that what requirements.txt asked for arrived..."
 	@$(PYTHON) check_dependencies.py
@@ -59,7 +71,27 @@ install:
 #
 # The check is deliberately stdlib-only — no pytest, no pandas — so it runs on a bare
 # build machine. tests/test_vendor_drift.py asserts it agrees with the pytest guard.
-PYTHON ?= python3
+
+# The one interpreter every recipe below goes through (issue #162), and since issue #258 it
+# prefers the virtual environment ./setup.sh builds in this directory — after MAFIGATE_PYTHON,
+# which still wins, and before a bare python3, which is what is left when neither exists.
+#
+# Following the scripts here is not a nicety. A developer who runs ./setup.sh and then
+# `make test` would otherwise install into one interpreter and test in another, which is
+# issue #162 rebuilt out of the two halves this repo just spent a ticket joining.
+#
+# Both facts are *asked of mafigate_python.sh* rather than restated here. That file is where
+# the two scripts read them from, and a third copy of `.venv/bin/python` in this Makefile
+# would be exactly the kind of duplicate that file exists to prevent: it would keep working
+# after the environment moved, and quietly point make at the wrong python. It is sourced
+# with `sh`, not bash, which is why nothing in it uses a bashism.
+#
+# Made absolute here because test-cov below runs pytest from a copy of this tree in /tmp,
+# where a relative path would silently mean *that* copy's environment.
+VENV_DIR := $(shell sh -c '. ./mafigate_python.sh && printf "%s" "$$MAFIGATE_VENV"' 2>/dev/null)
+VENV_PYTHON := $(shell sh -c '. ./mafigate_python.sh && mafigate_venv_python' 2>/dev/null)
+VENV_PYTHON := $(if $(VENV_PYTHON),$(CURDIR)/$(VENV_PYTHON))
+PYTHON ?= $(if $(MAFIGATE_PYTHON),$(MAFIGATE_PYTHON),$(if $(VENV_PYTHON),$(VENV_PYTHON),python3))
 
 check-vendor:
 	@echo "🔒 Checking vendored pipeline code against bin/..."
@@ -84,12 +116,31 @@ check-params:
 	@$(PYTHON) -m pytest tests/test_param_contract.py -q
 
 # Build commands (standalone installers; see build/BUILD_INSTRUCTIONS.md)
-VERSION ?= 1.0.0
+#
+# There is no VERSION variable here any more (issue #260). It was `VERSION ?= <a literal>` —
+# a fourth copy of a number, a whole major version behind what the app's own APP_VERSION
+# said — and, being an override, a way for anyone to build a DMG labelled with anything. The
+# version now has one home, config/constants.py, and one reader, build/version.py.
+#
+# The digits are not quoted here on purpose: a comment recording a stale copy by reprinting
+# it leaves a copy in the file, which is what the guard sweeps for.
+#
+# Read inside the recipes rather than as a `$(shell …)` variable at the top of the file, so
+# `make help` and `make clean` do not need a working python3 to expand something they never
+# print.
+.PHONY: version release-tag
+version:
+	@$(PYTHON) build/version.py
+
+# What `git tag` should be handed for a release. Its own namespace, because the public
+# repository's v1.x tags are the Nextflow pipeline's, on an independent cadence (#229).
+release-tag:
+	@$(PYTHON) build/version.py --tag
 
 build-mac: check-vendor
-	@echo "🍎 Building macOS .dmg installer (version $(VERSION))..."
+	@echo "🍎 Building macOS .dmg installer..."
 	@if [ "$$(uname)" = "Darwin" ]; then \
-		build/mac/build_dmg.sh $(VERSION); \
+		build/mac/build_dmg.sh; \
 	else \
 		echo "❌ macOS builds can only be created on macOS systems"; \
 	fi
@@ -107,9 +158,10 @@ build-win: check-vendor
 # what requirements.txt declares — because a declaration is not an installation, and
 # "installed" is a property of one interpreter rather than of the machine.
 #
-# Presence only, deliberately not versions: every requirement carries a floor, no floor
-# has been checked against what the app needs, and issue #157's map rules adopting them
-# out of scope. See check_dependencies.py.
+# Presence only, deliberately not versions: every requirement pins one exact version since
+# issue #256, but this check runs on bare machines before anything is installed, where
+# absence is the answer that matters and ordering releases is a packaging library's job.
+# See check_dependencies.py.
 .PHONY: check-deps
 check-deps:
 	@echo "🔍 Checking this interpreter has what MAFigate needs..."
@@ -164,6 +216,15 @@ test:
 # at all — the file's section header was wrong.)
 #
 # Needs pytest-cov, which requirements.txt still does not declare (issue #19).
+#
+# The copy drops the virtual environment along with the caches (issue #258). `--cov=.`
+# measures the whole tree, so a copied environment would put every installed package's source
+# into the denominator — streamlit and pandas included — and the floor below would stop
+# describing this app. $(PYTHON) is absolute, so the run still uses the real environment.
+#
+# Written as $(if $(VENV_DIR),…) rather than as a bare path: $(VENV_DIR) is empty when
+# mafigate_python.sh cannot be read, and an empty one inside the quotes would leave
+# `rm -rf "$$tree/streamlit_app/"` — the whole copied tree. The argument disappears instead.
 COV_MIN ?= 35
 
 # The premise of the whole measurement, checked rather than assumed: inside the copied
@@ -191,7 +252,8 @@ test-cov:
 	}
 	@parent=$$(mktemp -d) && tree="$$parent/pipeline-less" && mkdir -p "$$tree" && \
 	cp -R "$(CURDIR)" "$$tree/streamlit_app" && \
-	rm -rf "$$tree/streamlit_app/htmlcov" "$$tree/streamlit_app/.pytest_cache" && \
+	rm -rf "$$tree/streamlit_app/htmlcov" "$$tree/streamlit_app/.pytest_cache" \
+		$(if $(VENV_DIR),"$$tree/streamlit_app/$(VENV_DIR)") && \
 	if ! ( cd "$$tree/streamlit_app" && $(PYTHON) -c "$$PREMISE" ); then \
 		echo "❌ the harness still sees a pipeline in the coverage tree"; \
 		rm -rf "$$parent"; exit 1; \
@@ -297,6 +359,13 @@ clean:
 	find . -type f -name ".coverage" -delete 2>/dev/null || true
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	rm -rf dist/ .tox/ .coverage.*
+	@# The build stamp a local installer build left behind (issue #263). Removed because it
+	@# outlives the build that wrote it: run the app from this tree afterwards and About says
+	@# it is a .dmg, which is false of what is running. Its absence is the app's source-checkout
+	@# answer, so deleting it restores the truth rather than losing information. Nothing in a
+	@# build depends on this — `build-mac` and `build-win` write it themselves, and neither
+	@# runs `clean`.
+	rm -f config/build_stamp.py
 	@echo "✅ Cleanup complete"
 
 deps-check:

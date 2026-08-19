@@ -1,0 +1,13 @@
+# The build stamp: which channel built this artifact and from which commit, written by
+# build/build_stamp.py at build time and read by config/build_identity.py (issue #263).
+#
+# Never committed, for two reasons. A generated file in git is the copy nobody thinks to
+# update, which is the argument that already keeps build/windows/version.iss out — and here
+# there is a second, sharper one: the app reports a **source checkout** precisely when this
+# file is absent, so a tracked copy would make every clone and every CI run claim to be an
+# installer build, and would delete the default path the app takes on the way.
+#
+# Ignored here rather than in the repository root because this is where the file is written
+# and where its one reader lives, the same arrangement build/.gitignore uses for the build
+# products written beside it.
+build_stamp.py

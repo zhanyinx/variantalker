@@ -469,15 +469,38 @@ CLINICAL_VALUE_MAPPING = {
 #: ``Benign/Likely_benign`` reads as ``Benign`` alone and as ``Likely_Benign`` when a
 #: modifier follows it, because only then does the whole cell reach the lookup.
 #:
-#: **It matches whole cells only, and that is a real limit rather than an oversight.** A
-#: low-penetrance term buried inside a composite is still split away:
-#: ``Pathogenic/Pathogenic,_low_penetrance|other`` reaches the mapping as neither piece and
-#: is reported as unrecognised — honest, and less than the file says. Issue #98 measured it
-#: at 2 rows over 62 MAFs; issue #104's wider sweep puts it at **10 rows in 10 of 183**, and
-#: it is the largest non-CIViC contributor to the unreadable ⚪ (see :data:`_UNREADABLE_CIRCLE`).
-#: Closing it means the split becoming a parser that knows which separators join terms and
-#: which occur inside them, which is a larger change than repairing the bare-cell case and
-#: one no measurement yet asks for.
+#: **It still matches whole cells only, and since issue #285 that is enough.** The check
+#: cannot be reached for a *piece*, because both terms in this set are also
+#: :data:`CLINICAL_VALUE_MAPPING` keys, and :func:`main_classification` returns a piece that
+#: is a known call before it could re-read it. So this set does exactly one job, at the top:
+#: it stops a cell that is *nothing but* an atomic term being cut at its own comma. Without
+#: it, ``Pathogenic,_low_penetrance`` splits to ``Pathogenic`` — which is a mapping key, so
+#: the new check would return it, and the equivalence the term table warns against would be
+#: asserted after all. Load-bearing, and easy to mistake for redundant.
+#:
+#: **On real data it fires on nothing, which is how a defect hid behind it for three
+#: tickets.** A whole-cell atomic term occurs in **zero** of 159,573 annotated rows; the term
+#: this set exists to protect always arrives embedded. The guard that covered it was written
+#: against the whole-cell shape too, so both the protection and its test addressed a value
+#: the corpus does not contain (issue #285).
+#:
+#: **The docstring here used to say the buried case "is reported as unrecognised — honest, and
+#: less than the file says", and that was true of one surface and false of the other.**
+#: ClinVar's own circle was honestly ⚪; the row's `Clinical_Summary` was not, because `Unknown`
+#: is the bottom of :data:`CLINICAL_HIERARCHY` and any other source's `Uncertain_Significance`
+#: outranked it. The row read 🟡 with nothing to say a cell had failed to parse — and the
+#: *filter* kept the same row as pathogenic, since ``has_clinvar_term`` splits on ``[|/;,]`` in
+#: one pass and did see the bare ``Pathogenic``. Recording the shape rather than only the fix:
+#: a claim about what a value "is reported as" has to name which surface reports it.
+#:
+#: **The buried case does not resolve through this set, and that is the decision rather than a
+#: shortfall.** ``Pathogenic/Pathogenic,_low_penetrance|other`` names *two* pathogenic calls —
+#: one submitter's bare ``Pathogenic`` and another's qualified one — so the split takes the
+#: first flagged piece and reports ``Pathogenic``, the stronger of two calls that are both
+#: present. Widening this set to match inside a piece would have reported the weaker one.
+#: Issue #98's warning is untouched by that: it is about a cell where low penetrance is the
+#: **only** call, which is a different cell, and ``Benign;Pathogenic,_low_penetrance`` — where
+#: ``;`` isolates the term — still resolves through this set and keeps the entry reachable.
 _ATOMIC_TERMS_WITH_SEPARATOR = frozenset(
     {"Pathogenic,_low_penetrance", "Likely_pathogenic,_low_penetrance"}
 )
@@ -490,6 +513,34 @@ def main_classification(value):
     first that mentions pathogenicity, else the first piece. An atomic term that contains a
     separator in its own name is returned whole — see
     :data:`_ATOMIC_TERMS_WITH_SEPARATOR`.
+
+    **The piece it picks is read again when it cannot be named as it stands** (issue #285).
+    The separators are tried in a fixed order, so splitting on the first one present can leave
+    a piece that still holds another: ``Pathogenic/Pathogenic,_low_penetrance|other`` split on
+    ``|`` yields ``Pathogenic/Pathogenic,_low_penetrance``, which was then looked up whole and
+    matched nothing. Measured, that was 8 rows across 8 files reading as ``Unknown`` — and not
+    visibly so, since a second source's weaker call outranked it on the same row.
+
+    **The ``CLINICAL_VALUE_MAPPING`` check is what keeps that repair to the rows it is for,
+    and it is not the same check #98 declined to make.** #98 refused to route a *whole cell*
+    around the split, because ``Benign/Likely_benign`` would then resolve through its own entry
+    and move thousands of rows from Benign to Likely Benign. This asks only of a piece the
+    split has already produced, so a whole cell still splits exactly as it did. Recursing
+    unconditionally was tried first and is wrong for the same reason in mirror image: measured
+    over the corpus it also re-read the piece ``Benign/Likely_benign`` left by
+    ``Benign/Likely_benign|other``, moving **68 rows across 64 files** the other way, from
+    Likely Benign to Benign. Nine hand-picked cases and the pinned composites all missed it —
+    the corpus did not.
+
+    That leaves standing the inconsistency :data:`_ATOMIC_TERMS_WITH_SEPARATOR` records:
+    ``Benign/Likely_benign`` reads as ``Benign`` alone and as ``Likely_Benign`` when a modifier
+    follows it. Closing it is a clinical reclassification in one direction or the other, which
+    is a decision for whoever asks for it and not a thing to make in passing while repairing a
+    parse — the same call #98 made. ``test_a_composite_that_is_itself_a_known_call_is_not_re_read``
+    fails if a later change makes it silently.
+
+    The recursion cannot run away: a separator is removed at each step, so the value strictly
+    shortens.
 
     One definition, one reading. Both derived columns split a cell, and they had the split
     written out separately, which is how they came to disagree about the substring that
@@ -516,7 +567,11 @@ def main_classification(value):
         if sep in value:
             parts = value.split(sep)
             flagged = [p.strip() for p in parts if "pathogenic" in p.lower()]
-            return flagged[0] if flagged else parts[0].strip()
+            piece = flagged[0] if flagged else parts[0].strip()
+            # Read again only if the piece cannot be named as it stands — see below.
+            if piece in CLINICAL_VALUE_MAPPING:
+                return piece
+            return main_classification(piece)
     return value
 
 
@@ -845,12 +900,25 @@ _ABSENT_CIRCLE = ("⬜", "No data")
 #: parsing.
 #:
 #: **Issue #109 then proved that point by taking 103 of them away.** This branch is based on
-#: it, and re-measuring over the same corpus with its CIViC reading underneath leaves **18**:
+#: it, and re-measuring over the same corpus with its CIViC reading underneath left **18**:
 #: 10 rows of ``Pathogenic/Pathogenic,_low_penetrance|other`` (the composite limit
-#: :data:`_ATOMIC_TERMS_WITH_SEPARATOR` records), 7 ``CancerVar`` values of ``1``, and one
-#: ``ClinVar_VCF_CLNSIG`` of ``3``. Not one is a classification anybody issued. The share of
-#: ⚪ that means *unreadable* is now 18 in 1,005, and the key still may not call it "No
-#: classification", because the words have to be true of all 18 rather than of most rows.
+#: :data:`_ATOMIC_TERMS_WITH_SEPARATOR` recorded), 7 ``CancerVar`` values of ``1``, and one
+#: ``ClinVar_VCF_CLNSIG`` of ``3``. Not one is a classification anybody issued.
+#:
+#: **Issue #285 then took the first of those three away**, which was the largest contributor:
+#: that cell is read now, so what is left unreadable is the ``CancerVar`` ``1``\ s and the
+#: single ``3`` — annotation artefacts in both cases. The conclusion is unchanged and better
+#: supported: every remaining ⚪-as-unreadable is a value no source *issued*, so the key still
+#: may not call it "No classification", because the words have to be true of all of them
+#: rather than of most rows.
+#:
+#: **The totals above are left as the figures each ticket measured, and are not restated
+#: here, because this corpus is not byte-stable between runs.** #285 counted that cell at 8
+#: rows in 8 files where this paragraph records 10 in 10; two runs of one enumeration twenty
+#: minutes apart, over the canonical rule, saw 187 files and then 161, because the OneDrive
+#: mirror hydrates and dehydrates underneath it (the ``3`` is in a file that was present for
+#: one run and absent for the other). What is durable is the *composition* — which values are
+#: unreadable and why — so that is what the words beside the glyph are answerable to.
 #:
 #: **The two meanings have never shared a cell**: 0 rows of the corpus draw ⚪ from both
 #: causes at once, so the collision is between rows and files rather than inside one strip.

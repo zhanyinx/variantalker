@@ -1,22 +1,29 @@
 #!/bin/bash
 # Build MAFigate.dmg for macOS distribution
 #
-# Usage: ./build_dmg.sh [VERSION] [--arch ARCH]
+# Usage: ./build_dmg.sh [--arch ARCH]
 #
-#   VERSION   App version (default: 1.0.0)
 #   --arch    Target architecture: arm64, x86_64, or universal (default: universal)
 #
 # Examples:
-#   ./build_dmg.sh 1.0.0                  # Build universal (Intel + Apple Silicon)
-#   ./build_dmg.sh 1.0.0 --arch arm64     # Build for Apple Silicon only
-#   ./build_dmg.sh 1.0.0 --arch x86_64    # Build for Intel only
-#   ./build_dmg.sh 1.0.0 --arch universal # Build both (larger DMG)
+#   ./build_dmg.sh                  # Build universal (Intel + Apple Silicon)
+#   ./build_dmg.sh --arch arm64     # Build for Apple Silicon only
+#   ./build_dmg.sh --arch x86_64    # Build for Intel only
+#   ./build_dmg.sh --arch universal # Build both (larger DMG)
+#
+# THERE IS NO VERSION ARGUMENT (issue #260). The version comes from
+# config/constants.py's APP_VERSION, read by build/version.py, and it is the same number
+# the app's About dialog shows, the Windows installer stamps, and the release tag carries.
+# The argument used to default to a literal a whole major version below what the app
+# reported; a build could also be handed any number at all from the command line, which is
+# two ways to ship a DMG whose filename disagrees with the app inside it.
 #
 # The DMG bundles a portable Python 3.11 — users need ZERO prerequisites.
 #
 # Prerequisites (build machine only):
 #   - macOS with Xcode Command Line Tools
 #   - curl (pre-installed on macOS)
+#   - python3, to read the version (macOS ships it with the CLT)
 #   - Optional: create-dmg (brew install create-dmg) for prettier DMGs
 #
 # Output: MAFigate-<version>-macOS-<arch>.dmg
@@ -26,15 +33,40 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="${SCRIPT_DIR}"
 PROJECT_DIR="${SCRIPT_DIR}/../.."
-VERSION="${1:-1.0.0}"
+PYTHON="${PYTHON:-python3}"
 
-# --- Parse architecture argument ---
-shift 2>/dev/null || true
+# --- Read the version from the app (issue #260) ---
+#
+# Split from the assignment on purpose. `VERSION="$(...)"` on its own is checked by `set -e`
+# — a failing substitution aborts the script — which makes a following `[ -z "$VERSION" ]`
+# unreachable, and an unreachable check is decoration. This shape makes both cases real: a
+# non-zero exit, and the rc-0-but-silent case a future version.py could introduce.
+if ! VERSION="$("${PYTHON}" "${PROJECT_DIR}/build/version.py")" || [ -z "${VERSION}" ]; then
+    echo "❌ could not read APP_VERSION from config/constants.py." >&2
+    echo "   ${PYTHON} must be a Python 3 and build/version.py must be present." >&2
+    exit 1
+fi
+
+# --- Parse arguments, and refuse anything that is not one ---
+#
+# `./build_dmg.sh <version> --arch arm64` is how this script was called until #260, and it
+# is still written that way in older tickets and in anyone's shell history. The loop used to
+# end in `*) shift ;;` — silently dropping whatever it did not recognise — so a leftover
+# version produced a DMG labelled with a number the caller never chose and said nothing.
+#
+# Refusing every unrecognised token rather than only a leading one, because the version was
+# not always leading: with the flag first, the trailing version hit that same catch-all.
 TARGET_ARCH=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --arch) TARGET_ARCH="$2"; shift 2 ;;
-        *) shift ;;
+        --arch)
+            TARGET_ARCH="$2"; shift 2 ;;
+        *)
+            echo "❌ build_dmg.sh does not understand '$1'." >&2
+            echo "   It no longer takes a VERSION argument: the version comes from" >&2
+            echo "   config/constants.py's APP_VERSION (this build is ${VERSION})." >&2
+            echo "   Usage: ./build_dmg.sh [--arch arm64|x86_64|universal]" >&2
+            exit 1 ;;
     esac
 done
 
@@ -45,8 +77,16 @@ if [ -z "${TARGET_ARCH}" ]; then
 fi
 
 # --- Python build-standalone configuration ---
-PYTHON_VERSION="3.11.15"
-PYTHON_TAG="20260303"
+# The release itself is pinned in build/python_release.env, which the Windows build reads
+# too (issue #261). Typed here as well, the two could be edited apart and ship one version
+# number over two different interpreters.
+PYTHON_PIN="${SCRIPT_DIR}/../python_release.env"
+if [ ! -f "${PYTHON_PIN}" ]; then
+    echo "ERROR: ${PYTHON_PIN} is missing — it is where the bundled CPython is pinned." >&2
+    exit 1
+fi
+# shellcheck source=../python_release.env
+source "${PYTHON_PIN}"
 PYTHON_BASE_URL="https://github.com/astral-sh/python-build-standalone/releases/download/${PYTHON_TAG}"
 PYTHON_CACHE_DIR="${BUILD_DIR}/.python_cache"
 
@@ -123,6 +163,25 @@ mkdir -p "${APP_BUNDLE}/Contents/Resources/streamlit_app"
 cp "${BUILD_DIR}/MAFigate.app/Contents/Info.plist" "${APP_BUNDLE}/Contents/"
 cp "${BUILD_DIR}/MAFigate.app/Contents/MacOS/launch.sh" "${APP_BUNDLE}/Contents/MacOS/"
 chmod +x "${APP_BUNDLE}/Contents/MacOS/launch.sh"
+
+# --- Stamp the version into the bundle (issue #260) ---
+# The template carries a placeholder in both keys rather than a number, so the version the
+# Finder shows cannot drift from the one the app's About dialog shows. Both keys, because
+# they answer different questions: CFBundleShortVersionString is what a human reads in Get
+# Info, CFBundleVersion is what the OS compares between builds.
+#
+# Then checked, not assumed. `plutil -replace` on a key the template has stopped carrying
+# would fail, `set -e` would stop the build, and this grep would never run — but a template
+# that grew a *third* placeholder, or a key renamed rather than removed, would leave
+# `__APP_VERSION__` in a shipped bundle where it reads as the app's version.
+INFO_PLIST="${APP_BUNDLE}/Contents/Info.plist"
+plutil -replace CFBundleShortVersionString -string "${VERSION}" "${INFO_PLIST}"
+plutil -replace CFBundleVersion -string "${VERSION}" "${INFO_PLIST}"
+if grep -qF '__APP_VERSION__' "${INFO_PLIST}"; then
+    echo "❌ Info.plist still holds an unreplaced __APP_VERSION__ placeholder." >&2
+    grep -nF '__APP_VERSION__' "${INFO_PLIST}" >&2
+    exit 1
+fi
 
 # --- Build the native launcher ---
 # A tiny AppKit wrapper runs a real macOS event loop and supervises launch.sh,
@@ -207,6 +266,21 @@ find "${PYTHON_DEST}" -type d -name "turtledemo" -exec rm -rf {} + 2>/dev/null |
 find "${PYTHON_DEST}" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 find "${PYTHON_DEST}" -name "*.pyc" -delete 2>/dev/null || true
 
+# --- Stamp the build (issue #263) ---
+#
+# Writes the gitignored config/build_stamp.py, which the About dialog reports; see
+# config/build_identity.py for why the channel and the commit are there at all. Two things
+# about it are local to this script: it runs *before* the copy list below, which is what puts
+# the stamp inside the bundle (that list copies `config` whole, so nothing here names the
+# stamp file), and its failure is checked rather than trusted, because a .dmg whose About
+# dialog calls itself a source checkout is a silent loss of the only build record there is.
+# A build machine with no `git` is not a failure — build_stamp.py says what it did.
+if ! "${PYTHON}" "${PROJECT_DIR}/build/build_stamp.py" --channel macos-dmg; then
+    echo "❌ could not write the build stamp (build/build_stamp.py)." >&2
+    echo "   Without it this .dmg would report itself as a source checkout." >&2
+    exit 1
+fi
+
 # --- Copy the Streamlit app source ---
 echo "Copying application files..."
 DEST="${APP_BUNDLE}/Contents/Resources/streamlit_app"
@@ -214,7 +288,14 @@ DEST="${APP_BUNDLE}/Contents/Resources/streamlit_app"
 # `vendor` holds the copies of the pipeline's filter code (see vendor/README.md).
 # Without it the packaged app has no filter code at all. `make build-mac` gates on
 # `check-vendor`, so a drifted copy cannot reach this point.
-for item in MAFigate.py requirements.txt components config filters page_modules utils vendor; do
+#
+# `.streamlit` is the config that turns Streamlit's usage reporting off, and it has to
+# travel *beside MAFigate.py* — that is how Streamlit finds it, since this bundle's
+# launcher runs from whatever working directory Finder hands it rather than from the app
+# directory (issue #259). A copy list is a deny-by-default list, so a dotted directory
+# nobody named here is simply absent from the .dmg; tests/test_telemetry_config.py stands
+# this list up and asks Streamlit what it resolves from the result.
+for item in MAFigate.py requirements.txt .streamlit components config filters page_modules utils vendor; do
     if [ -e "${PROJECT_DIR}/${item}" ]; then
         cp -R "${PROJECT_DIR}/${item}" "${DEST}/"
     fi
@@ -236,10 +317,23 @@ rm -rf "${DEST}/build" 2>/dev/null || true
 # the shipped vendor package is nothing but the pipeline code it exists to hold.
 rm -f "${DEST}/vendor/_sync.py" 2>/dev/null || true
 
+# --- Stage the first-open note beside the app ---
+# Gatekeeper's alert fires when the app is *opened*, after this window is already on screen,
+# so the mounted DMG still reaches a macOS recipient in time. See build/BUILD_INSTRUCTIONS.md
+# for why Windows has no equivalent surface.
+#
+# Copied as .txt rather than kept as .md: a Mac with no developer tooling has no default
+# application for .md, and a note that will not open when double-clicked is not a note.
+#
+# One wording, one home — build/OPENING_MAFIGATE.md. Do not restate any of it in this
+# script; what that replaced was two contradictory `xattr` incantations in two files, and
+# tests/test_unsigned_artifact_copy.py now fails on a second copy.
+cp "${PROJECT_DIR}/build/OPENING_MAFIGATE.md" "${STAGING_DIR}/Opening MAFigate.txt"
+
 # --- Ad-hoc code signing ---
 # This is NOT a Developer ID signature and does NOT satisfy Gatekeeper for
-# distribution (recipients still need to bypass quarantine — see the note at the
-# end). It does give every nested binary a valid ad-hoc signature, which avoids
+# distribution (recipients still need to bypass quarantine — see the note staged
+# above). It does give every nested binary a valid ad-hoc signature, which avoids
 # some "killed on launch" failures after the app is copied to another machine.
 # For a truly shareable build, codesign with a Developer ID certificate and
 # notarize + staple the app and the DMG.
@@ -257,10 +351,11 @@ if command -v create-dmg &> /dev/null; then
         --volname "${DMG_NAME}" \
         --volicon "${APP_BUNDLE}/Contents/Resources/icon.icns" 2>/dev/null \
         --window-pos 200 120 \
-        --window-size 600 400 \
+        --window-size 600 440 \
         --icon-size 100 \
         --icon "MAFigate.app" 150 190 \
         --app-drop-link 450 190 \
+        --icon "Opening MAFigate.txt" 300 340 \
         --hide-extension "MAFigate.app" \
         "${BUILD_DIR}/${DMG_NAME}.dmg" \
         "${STAGING_DIR}/" \
@@ -293,14 +388,16 @@ echo "To install:"
 echo "  1. Open ${DMG_NAME}.dmg"
 echo "  2. Drag MAFigate.app to Applications"
 echo "  3. Double-click MAFigate — no Python installation required!"
+echo "     Blocked on first open? That is expected; the DMG carries the steps."
 echo ""
 echo "First launch will install pip dependencies (~1 min, needs internet)."
 echo "Subsequent launches start in seconds."
 echo ""
 echo "IMPORTANT — sharing this DMG:"
-echo "  This build is ad-hoc signed only (not Developer ID-signed / notarized),"
-echo "  so macOS Gatekeeper will quarantine it on other machines. Recipients must"
-echo "  either right-click MAFigate.app -> Open (then confirm) on first launch, or"
-echo "  run once after copying to Applications:"
-echo "      xattr -dr com.apple.quarantine /Applications/MAFigate.app"
+echo "  This build is ad-hoc signed only (not Developer ID-signed / notarized), so"
+echo "  macOS Gatekeeper will quarantine it on every other machine. What recipients"
+echo "  should do about that is written once, in build/OPENING_MAFIGATE.md, and rides"
+echo "  in this DMG as \"Opening MAFigate.txt\" beside the app. Send them to that,"
+echo "  and quote the same file on the release page for Windows recipients — do not"
+echo "  paste the steps into a third place."
 echo "  For frictionless sharing, sign with a Developer ID certificate and notarize."

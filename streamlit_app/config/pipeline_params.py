@@ -278,6 +278,33 @@ PIPELINE_PARAMS = {
 }
 
 
+def stated_arm(params) -> str | None:
+    """The arm a parameter dict states, or ``None`` if it does not state one.
+
+    The one place that answers "does this dict say which arm it is for". Two boundaries
+    ask it and they have to agree: :func:`page_modules.param_store.missing_contract_keys`
+    retires a cache that is not a complete set for its arm (issue #286), and the data page
+    refuses to filter with a dict whose arm it cannot resolve (issue #289).
+
+    ``None`` covers both ways of failing to state an arm, because neither boundary can act
+    on them differently: a dict with no ``sample_type`` and one saying ``"tumour"`` are
+    equally unfilterable, and there is no contract for either. The *message* a caller draws
+    can still name the offending value — it has the dict.
+
+    **Not a defaulting reader.** ``params.get("sample_type", "somatic")`` is what this
+    replaces, and the substitution is the defect issue #289 records: it turns a germline set
+    that lost its arm into a somatic run, silently, and a germline MAF then filters to 14
+    rows where its own contract keeps 59. ``sample_type`` is the one contract key
+    :func:`config.param_migration.complete_params` deliberately never writes — arm identity
+    is not a filter setting — so it is the one key an absent value cannot be completed for,
+    and refusing is the only honest answer left.
+    """
+    if not isinstance(params, dict):
+        return None
+    arm = params.get("sample_type")
+    return arm if arm in PIPELINE_PARAMS else None
+
+
 def pipeline_params(sample_type: str) -> dict:
     """A deep copy of the contract for ``sample_type``.
 

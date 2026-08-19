@@ -881,15 +881,28 @@ def test_the_penetrance_piece_is_deliberately_not_offered():
 
     It is not a classification. It is the tail of ``Pathogenic,_low_penetrance``, left behind
     by a split that cuts on the comma in that term's own name — so there is no honest class
-    for it and ``CLINICAL_VALUE_MAPPING`` does not name it. Refusing it costs nothing, and
-    that is measured rather than assumed: all 8 of its occurrences in the real corpus sit
-    beside a real call, so it never stands as a whole cell and no row anywhere is reachable
-    only through it.
+    for it and ``CLINICAL_VALUE_MAPPING`` does not name it.
+
+    **Refusing it costs nothing, and the measurement is sharper than this docstring used to
+    say** (issue #278 took the decision, #284 tightened the sentence, which claimed only that
+    its 8 occurrences "sit beside a real call"). Every one of them is the **same single cell
+    value**, ``Pathogenic/Pathogenic,_low_penetrance|other``, once each in 8 real MAFs, and on
+    all 8 it is one variant: ``SERPINA1`` chr14:94847262 T>A. There is therefore no cell in
+    which this piece is the whole value, the ``Pathogenic`` sharing every one of those cells is
+    offered and keeps them, and ``Likely_pathogenic,_low_penetrance`` occurs in **zero** rows —
+    its tail is unreachable, not merely unused. Measured over 198 byte-distinct real MAFs, 183
+    with a populated ``ClinVar_VCF_CLNSIG``, 159,819 annotated rows; the two committed parity
+    fixtures carry the value once each too, at constructed loci.
 
     The pipeline's own ``--filter_clinvar`` help does advertise it. That help is the
     vocabulary #103 declined to mirror — it also advertises an empty term — so its offering
     this is not an argument, and this test records that judgement where it can fail if
     someone adds the term without revisiting it.
+
+    **#278 examined it rather than inheriting it**: the dev first chose to give the piece a
+    class, then reversed once the measurement above was in, so it stays out of the vocabulary,
+    out of ``CLINICAL_VALUE_MAPPING`` and out of every preset — including the Stringent list
+    #284 widened by one *other* term. This is a decision, not a default nobody looked at.
     """
     pytest.importorskip("streamlit", reason="streamlit not installed")
 
@@ -946,7 +959,7 @@ def test_both_broad_presets_keep_the_no_classification_class_whole():
         )
 
 
-def test_a_broad_preset_keeps_each_clinvar_class_whole_or_not_at_all():
+def test_a_preset_keeps_each_clinvar_class_whole_or_not_at_all():
     """Half a class is the shape of every ClinVar defect this map has found.
 
     #88: a preset kept a call under one spelling. #99: a call was offered under one spelling.
@@ -959,18 +972,40 @@ def test_a_broad_preset_keeps_each_clinvar_class_whole_or_not_at_all():
     not at all.** Read off ``CLINICAL_VALUE_MAPPING`` rather than off a list of names, so a
     term joining a class later is covered without anyone remembering this test.
 
-    **There is no exception any more, and the set that held one is deleted rather than left
-    standing empty.** ``_PARTIALLY_KEPT_BY_DESIGN`` named ``Drug_Response``: both Broad presets
-    kept ``drug_response`` without ``confers_sensitivity``, because that term is the one
-    placement #98 made with no citable definition and #103 declined to guess at it. #114 keeps
-    the class whole, so the exception is gone — and gone as a *symbol*, since an empty set
-    beside its own test is one edit from being where inconsistencies go to stop failing, which
-    is what its own note said about it. Adding an exception now means arguing for it in this
-    docstring.
+    ``_PARTIALLY_KEPT_BY_DESIGN`` named the one exception Broad used to carry —
+    ``Drug_Response``: both Broad presets kept ``drug_response`` without
+    ``confers_sensitivity``, because that term is the one placement #98 made with no citable
+    definition and #103 declined to guess at it. #114 keeps the class whole, so that exception
+    is gone, and gone as a *symbol*: an empty set beside its own test is one edit from being
+    where inconsistencies go to stop failing, which is what its own note said about it. An
+    exception is argued in this docstring instead.
 
-    Stringent is excluded by design — it keeps two pathogenicity calls as its whole point, and
-    ``Likely_Pathogenic`` is a class of one, so it satisfies this trivially and asserting it
-    would suggest the test had checked something.
+    **All four presets are checked, and Stringent carries the one exception (issue #284).**
+    Until then this test named itself after Broad and skipped Stringent, on the reason that two
+    pathogenicity calls were its whole point and ``Likely_Pathogenic`` is a class of one, so it
+    satisfied the rule trivially. #284 made that reason false: Stringent now keeps
+    ``Established_risk_allele`` and so holds **1 of the 5** members of ⚠️ Disease Risk. Left
+    excluded, this test would have absorbed the exact half-a-class shape it exists to catch —
+    silently, since an excluded preset cannot fail. A guard that stops applying because its
+    stated reason expired is this repository's recorded failure mode, so the exclusion is gone
+    and the exception is stated.
+
+    **Why it is one.** #88, #99 and #103 each found a class split by *spelling* — whether a
+    variant reached the report depended on which synonym its file carried, which is the defect.
+    This one is split by *evidence grade*: the institute's term table separates **Established**
+    from **Likely** and **Uncertain** risk alleles, three strengths of one assertion rather than
+    three ways of writing it. Keeping the class whole would put ``Uncertain_risk_allele`` into
+    the preset a clinician acts on, contradicting the scoping the decision came with — *only
+    pathogenic and likely pathogenic*. So ``Established_risk_allele`` is to ⚠️ Disease Risk what
+    ``Pathogenic`` is to the pathogenicity calls, and the full argument, with the dev's decision
+    and the measured row cost, is at ``_CLINICAL_CLINVAR_TERMS`` in ``config/presets.py``.
+
+    **Asserted as an equality, not as a class to skip**, which is the difference from
+    ``_PARTIALLY_KEPT_BY_DESIGN``: the expected shortfall is derived from the mapping, so a term
+    joining ⚠️ Disease Risk later is covered without anyone editing this, while a Stringent that
+    keeps a *second* member, drops this one, or splits any other class all fail. Made to fail
+    before being trusted, on a Stringent additionally keeping ``Uncertain_risk_allele`` (caught,
+    both arms) and on one keeping the class whole (caught).
     """
     pytest.importorskip("streamlit", reason="streamlit not installed")
 
@@ -980,19 +1015,44 @@ def test_a_broad_preset_keeps_each_clinvar_class_whole_or_not_at_all():
     for term in CLINVAR_OPTIONS:
         members.setdefault(CLINICAL_VALUE_MAPPING[term], set()).add(term)
 
-    for name in ("SOFT_SOMATIC_PARAMS", "SOFT_GERMLINE_PARAMS"):
+    # The exception, spelled as the *one* term Stringent keeps out of the class rather than as a
+    # class to exempt -- so the expectation below is an equality and cannot quietly widen.
+    exception_class = "Disease_Risk"
+    exception_term = "Established_risk_allele"
+    assert exception_term in members.get(exception_class, set()), (
+        f"`{exception_term}` is no longer an offered ClinVar term classed "
+        f"{exception_class}, so this test's documented exception describes nothing and the "
+        "expected shortfall below would silently become 'the whole class'. Re-read the "
+        "exception against CLINICAL_VALUE_MAPPING rather than deleting this assertion"
+    )
+    stringent_exception = {
+        exception_class: sorted(members[exception_class] - {exception_term})
+    }
+
+    for name in (
+        "SOFT_SOMATIC_PARAMS",
+        "SOFT_GERMLINE_PARAMS",
+        "CLINICAL_SOMATIC_PARAMS",
+        "CLINICAL_GERMLINE_PARAMS",
+    ):
         kept = set(PRESETS[name]["filter_clinvar"])
         partial = {
             klass: sorted(terms - kept)
             for klass, terms in members.items()
             if (terms & kept) and (terms - kept)
         }
-        assert not partial, (
+        expected = stringent_exception if name.startswith("CLINICAL_") else {}
+        assert partial == expected, (
             f"{name} keeps these ClinVar classes only in part: "
-            f"{ {k: v for k, v in sorted(partial.items())} }. A class kept in part means "
-            "whether a variant reaches the report depends on which member of one class its "
-            "file spells — the shape of #88, #99 and #103. Keep the class whole, or add the "
-            "exception to this test's docstring with the reason it is one"
+            f"{ {k: v for k, v in sorted(partial.items())} }, against the "
+            f"{ {k: v for k, v in sorted(expected.items())} } this preset is documented to. A "
+            "class kept in part means whether a variant reaches the report depends on which "
+            "member of one class its file spells — the shape of #88, #99 and #103. Broad is "
+            "allowed none of it. Stringent's one exception is "
+            f"`{exception_term}` and is argued in this test's docstring and at "
+            "`_CLINICAL_CLINVAR_TERMS`; a second one means making that argument again, and a "
+            "Stringent that has stopped keeping it means #284's decision was reverted "
+            "without the reasoning being re-read"
         )
 
 
@@ -1001,7 +1061,7 @@ def test_a_broad_preset_keeps_each_clinvar_class_whole_or_not_at_all():
 #: **These are class names, not term names**, and the two are one capital letter apart here —
 #: the classes are ``Likely_Benign``/``Benign`` and the ClinVar terms are
 #: ``Likely_benign``/``Benign``. Spelled as classes because the class is the unit a preset keeps
-#: (``test_a_broad_preset_keeps_each_clinvar_class_whole_or_not_at_all``), so a new benign *term*
+#: (``test_a_preset_keeps_each_clinvar_class_whole_or_not_at_all``), so a new benign *term*
 #: — some future ``Benign_low_penetrance`` mapping into one of these classes — is held out
 #: without anyone editing this.
 #:

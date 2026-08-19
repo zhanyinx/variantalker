@@ -17,6 +17,11 @@
 # interpreter that runs. It is the same variable, with the same default, that setup.sh
 # installs into.
 #
+# Issue #258: by default that variable now names the virtual environment setup.sh builds in
+# this checkout. Which environment, and when it is used, is mafigate_python.sh's to say —
+# sourced by both scripts, so the one this launches into is by construction the one that was
+# filled, rather than two paths that happen to match today.
+#
 #     MAFIGATE_PYTHON=/path/to/python ./run_mafigate.sh
 #
 # The refusal has an escape hatch, because a launcher nobody can override is its own kind
@@ -32,7 +37,21 @@ cd "$(dirname "$0")"
 
 PYTHON="${MAFIGATE_PYTHON:-python3}"
 
+# One file decides where the virtual environment is and when it is used. Sourced, not run.
+. ./mafigate_python.sh
+
 echo "🚀 Starting MAFigate..."
+
+if mafigate_use_venv; then
+    echo "🧪 Using the virtual environment in $MAFIGATE_VENV/"
+elif [ -z "${MAFIGATE_PYTHON:-}" ]; then
+    # No environment yet, and none named: fall back to the bare default and let the
+    # dependency check below be the one that refuses. It has the better message — it can
+    # say what is missing — and a launcher that dies on an absent directory would be
+    # unhelpful to anyone who installed the requirements some other way.
+    echo "⚠️  No virtual environment in $MAFIGATE_VENV/ — falling back to '$PYTHON'."
+    echo "   ./setup.sh builds one."
+fi
 
 if ! command -v "$PYTHON" > /dev/null 2>&1; then
     echo "❌ '$PYTHON' not found."

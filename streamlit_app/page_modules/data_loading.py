@@ -57,8 +57,8 @@ from config.contaminated_columns import (
     SESSION_KEY as _CONTAMINATED_COLUMNS,
     contaminated_columns,
 )
-from config.file_history import record_open_file
-from config.pipeline_params import pipeline_params
+from config.param_migration import complete_params
+from config.pipeline_params import ARMS, pipeline_params, stated_arm
 
 #: Where :func:`_open_the_file_just_read` parks the fact that it re-spelled a chromosome
 #: column, for :func:`_show_stashed_banners` to draw. Stashed rather than drawn on the
@@ -121,7 +121,10 @@ def validate_required_columns(data):
     # silent about the one case it was true of. It no longer names charts, and it no longer
     # calls these the arm's columns either: `DP` is not arm-specific, and the pipeline emits
     # every one of them on both arms. What is per-arm is which of them this note asks about.
-    sample_type = st.session_state.filter_params.get("sample_type", "somatic")
+    # Indexed rather than defaulted, like every other contract key read below the page's
+    # completion (issue #289): this runs inside a load, which happens inside
+    # `show_data_loading_page`, which has already refused a set whose arm it cannot resolve.
+    sample_type = st.session_state.filter_params["sample_type"]
     filter_inputs = set(REQUIRED_INPUTS[sample_type])
     missing_display = [
         col
@@ -175,15 +178,21 @@ def validate_required_columns(data):
 
 
 def current_arm() -> str:
-    """The arm MAFigate is set to, read the way every other reader reads it.
+    """The arm MAFigate is set to, read the way the filter reads it.
 
-    ``.get("sample_type", "somatic")``, as in ``MAFigate.initialize_session_state``,
-    ``parameter_config.adopt_parameters`` and :func:`validate_required_columns` above: a
-    parameter set that states no arm *is* somatic to the app, and a second spelling here
-    would let the mismatch notice disagree with the filter about which arm the run was made
-    on.
+    Indexed. This used to be ``.get("sample_type", "somatic")``, and said so as a
+    consistency argument: that a parameter set stating no arm *is* somatic to the app, and a
+    second spelling here would let the mismatch notice disagree with the filter about which
+    arm the run was made on. The premise is what changed, not the argument. Since issue #289
+    the filter does **not** read an unstated arm as somatic — the page refuses such a set
+    before anything filters — so keeping the fallback here is what would make the notice
+    disagree with the filter, by naming an arm the filter declined to assume.
+
+    ``MAFigate.initialize_session_state`` and ``parameter_config.adopt_parameters`` keep
+    theirs, and that is not a drift: both are *upstream* of the page's completion, where a
+    default seeds a set rather than answering for one already in play.
     """
-    return (st.session_state.get("filter_params") or {}).get("sample_type", "somatic")
+    return st.session_state.filter_params["sample_type"]
 
 
 def arm_evidence():
@@ -398,17 +407,10 @@ def _open_the_file_just_read(data, name: str) -> bool:
         st.session_state.maf_data = None
         return False
 
-    # Here, and this is the same judgement the name above is recorded by, one step further on
-    # (issue #158). The sidebar's history means *files you have looked at*, so it is written
-    # once the file has been read **and** accepted: a MAF the app could not read never gets
-    # this far, and one refused for a missing column has just been unloaded on the line
-    # above. The account of either is the error on the page, which has room for the reason;
-    # a name in a recents list has none.
-    #
-    # Not moved below the filter run either. A file whose filters refuse is still open — the
-    # sidebar names it, and its middle state exists precisely for that — so it is a file the
-    # user has looked at.
-    record_open_file(name)
+    # A `record_open_file(name)` stood here, writing the file's name into the sidebar's
+    # *Recently opened* list (issue #158). Both the list and the store behind it are deleted,
+    # so the name the app keeps is the one in session state above — the file that is open,
+    # named by the sidebar for as long as it is.
 
     # After the refusal, not before it. The sentence ends "*and your download will spell
     # them that way too*", and a refused MAF produces no report and offers no download —
@@ -464,6 +466,52 @@ _JUMP_TO_RESULTS = "jump_to_results"
 _LAST_UPLOAD = "last_upload_token"
 
 
+def _refused_for_an_unresolvable_arm():
+    """Say why this page cannot filter when the parameters do not state an arm, and stop.
+
+    Whether the page refused. The one thing this page will not do is *pick* an arm: the arm
+    decides which guideline sources are read, which thresholds apply and which columns the
+    filter requires, so choosing one on the user's behalf does not produce a worse report —
+    it produces a confident report about the wrong arm. Issue #289 measured that:
+    ``filter_params.get("sample_type", "somatic")`` stood here and in three other places on
+    this path, and a germline set that had lost its arm filtered to 14 rows where the
+    germline contract keeps 59, with nothing said.
+
+    A refusal, then, and drawn in the refusal's own words rather than as
+    ``❌ Error applying filters`` — which is what the user saw before, from the engine's
+    ``ValueError`` being caught two hundred lines below, and which sends someone off to
+    change a filter when nothing about their filters is wrong. Same distinction, and the same
+    ``🛑``, that :class:`filters.numeric_columns.UnreadableNumericColumns` already earns.
+
+    Not reachable from anything the app itself writes today: the parameters page always has
+    an arm, ``migrate_params`` names a ``sample_type`` that is not one, and issue #286 retires
+    a cache that does not state an arm before it is ever restored. It is the state a
+    hand-edited session or a future writer can still produce, and the cost of getting it wrong
+    is a silent wrong-arm report, so the boundary states the rule rather than trusting the
+    three upstream paths to keep holding it.
+    """
+    params = st.session_state.filter_params
+    if stated_arm(params) is not None:
+        return False
+
+    said = params.get("sample_type") if isinstance(params, dict) else None
+    if said is None:
+        st.error(
+            "🛑 These filtering parameters do not say which **🧬 Sample Type** they are "
+            "for, so there is nothing this page can filter with: the arm decides which "
+            "guideline sources are read, which thresholds apply and which columns the "
+            "filter requires. Open **⚙️ Configure Parameters** and choose one."
+        )
+    else:
+        st.error(
+            f"🛑 These filtering parameters give the **🧬 Sample Type** as `{said}`, which "
+            f"is not one this app has a contract for ({' or '.join(ARMS)}), so there is "
+            "nothing this page can filter with. Open **⚙️ Configure Parameters** and "
+            "choose one."
+        )
+    return True
+
+
 def show_data_loading_page():
     """Display the data loading and analysis page."""
 
@@ -485,6 +533,18 @@ def show_data_loading_page():
         # Deep copy, for the reason MAFigate.py gives at the same assignment: a shallow
         # one shares the nested keep-lists with the module constant.
         st.session_state.filter_params = pipeline_params("somatic")
+
+    # The same completion the parameters page does at its own top (issue #280), because this
+    # page is the *other* way a parameter dict reaches the filter and it was not behind that
+    # boundary. Everything downstream of here — the filter run, the attribution, the report,
+    # the grids — then reads a complete set for its own arm, and the engine's own neutral
+    # literals stop being a second opinion about what an absent key means (issue #289).
+    #
+    # A refusal rather than a completion where the arm itself is unresolvable, because that
+    # is the one key completion cannot supply; `_refused_for_an_unresolvable_arm` says why.
+    if _refused_for_an_unresolvable_arm():
+        return
+    st.session_state.filter_params = complete_params(st.session_state.filter_params)
 
     # Auto-load file if opened via "Open With" (macOS / Windows). This runs before the
     # section control exists, so the jump it asks for is honoured in this very run — and
@@ -1008,10 +1068,15 @@ def apply_filters_to_data(show_messages=True) -> bool:
         # grid. Recomputing there would read the *current* arm, which a visit to the
         # parameter page can change without clearing this report, and the key would then
         # name a different set of sources from the one the circles were drawn for.
+        # Both keys are *indexed*, not defaulted. The completion at the top of this page
+        # guarantees them for the arm the parameters state, so a fallback here could only
+        # ever be a second opinion about an absent key — which is the whole of issue #289 —
+        # and a `KeyError` is the honest outcome if that boundary is ever bypassed. Same
+        # reasoning, same shape, as the parameter page's controls since issue #280.
         sources = circle_sources(
-            st.session_state.filter_params.get("sample_type", "somatic"),
+            st.session_state.filter_params["sample_type"],
             list(st.session_state.maf_data.columns),
-            skip_civic=bool(st.session_state.filter_params.get("skip_civic", False)),
+            skip_civic=bool(st.session_state.filter_params["skip_civic"]),
         )
         st.session_state.overview_sources = sources
 

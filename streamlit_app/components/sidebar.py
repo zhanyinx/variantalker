@@ -8,37 +8,37 @@ Called from ``MAFigate.py`` and from nowhere else. It holds no reference to the 
 the charts or the derived columns: opening a file and reading its results are separate
 jobs, and this module owns only the first.
 
-The file *history* is drawn here too, inside the chooser (issue #158). Every sentence the
-history shows is written in this module; :mod:`config.file_history` owns only the file it
-is stored in.
+A *Recently opened* list was drawn here too, inside the chooser (issue #158), with the
+sentences explaining what it kept and a button to clear it. All of it is deleted, along
+with the store behind it: the column's job is to say what is open, and a fold-out list of
+names that nothing could click cost more of it than it returned.
 """
 
 import streamlit as st
 
-from config.file_history import (
-    HISTORY_LIMIT,
-    NAME_KEY,
-    OPENED_KEY,
-    clear_history,
-    format_opened,
-    read_history,
-)
 from utils.main_utils import settings_have_moved
 
 
 LOAD_STATUS_SLOT = "_load_status_slot"
 
-#: Set by the clear button's callback, drained by the render that follows it.
+#: Set by a control drawn *inside* the status block, drained by `render_into_status_slot`.
 #:
-#: A callback rather than a branch on the button's return value, and the ordering is the
-#: reason: the list is drawn *above* its own clear control, so a clear handled after the
-#: button had returned would leave the just-cleared names on screen until the next
-#: interaction. Streamlit runs an ``on_click`` before the rerun, so the render that follows
-#: reads an already-empty history. The confirmation cannot be drawn from inside the callback
-#: either — nothing is rendering yet — so it is parked here and drawn below, which is the
-#: same shape as the parameter page's parked confirmations and for the same reason
-#: (issue #140).
-HISTORY_CLEARED = "_file_history_cleared"
+#: The block is the last thing the app renders and the file chooser is the last thing in the
+#: block, so a control above the chooser that called `st.rerun` itself would end the run with
+#: the chooser undrawn. That is not merely a discarded frame. `st.rerun` is not a premature
+#: stop (`scriptrunner/exec_code.py` sets `premature_stop = False` on `RerunException`), so
+#: Streamlit still runs `on_script_finished` and **prunes the state of every widget the run
+#: did not register** — the chooser included. The rerun that follows carries no widget states,
+#: so the chooser comes back holding `None` while the browser is still holding the file, and
+#: the next interaction *anywhere in the app* reports that file against `None`, reads as a
+#: fresh choice, and fires `_hand_the_chosen_file_to_the_data_page` — which navigates, before
+#: the page whose control the user actually touched has run (issue #277).
+#:
+#: So a rerun wanted from inside the block is parked here and taken one line later, with the
+#: whole column drawn. Same shape as the parameter page's parked confirmations (issue #140)
+#: and for a related reason: what a control needs to happen cannot always happen where the
+#: control is.
+NAV_RERUN_PENDING = "_sidebar_nav_rerun"
 
 #: Every page the app has, and the name the user knows it by.
 #:
@@ -59,10 +59,13 @@ PAGE_LABELS = {
 #:
 #: Two keys rather than one, and the second is not a convenience. The chooser is drawn into
 #: the status slot, which is filled *after* the page has run (see `render_into_status_slot`),
-#: so the run that loads a file is a later run than the one that chose it — and on the way
-#: there `create_sidebar_navigation` may call `st.rerun` to rebuild the nav radio. Widget
-#: state belongs to the widget and is only guaranteed while that widget keeps rendering; a
-#: plain session key is not, so the chosen file is copied into one that nothing prunes.
+#: while the page reads the file near the top of its own body — so the file has to reach the
+#: page by a route that does not run through the widget. Widget state belongs to the widget
+#: and is only guaranteed while that widget keeps rendering, too: Streamlit prunes the state
+#: of every widget a completed run did not register, so a run ending before the slot is
+#: filled takes the chosen file with it. The sidebar no longer ends a run that way (issue
+#: #283, `NAV_RERUN_PENDING`), which is the defect that made the point; the plain session key
+#: holds the file either way, because nothing prunes it.
 UPLOAD_CHOOSER_KEY = "sidebar_maf_upload"
 PENDING_UPLOAD_KEY = "pending_maf_upload"
 
@@ -92,89 +95,6 @@ def _hand_the_chosen_file_to_the_data_page() -> None:
     st.session_state.current_page = "data_loading"
 
 
-def _clear_the_file_history() -> None:
-    """Forget the names of the files opened, and park the sentence that says so."""
-    clear_history()
-    st.session_state[HISTORY_CLEARED] = True
-
-
-def _render_file_history(box) -> None:
-    """Draw the files opened before, under the chooser that opened them.
-
-    Placed here rather than in the sidebar column itself, and that is the decision issue
-    #158 turned on. The column then carried four things — the status block, this chooser, the
-    nav radio and a Help button — each put there for a good reason and none of them reviewed
-    as one column; a fifth *unfolded* item is the question that ticket declined to answer
-    here. The Help button has since gone (issue #161), so the count is three, and the reason
-    holds unchanged: it was the *unfolded* item this list would have added, not the button,
-    that #158 was avoiding. Inside the chooser it costs the column nothing when a file is
-    open, because
-    the chooser is already folded away in that state, and it sits beside the one control it
-    is about: *what have I opened* and *open another* are one question asked twice.
-
-    It follows that the list is on screen unfolded in exactly one state — no file open —
-    which is the state where it is most worth reading and where the column is at its
-    shortest anyway.
-
-    **Nothing here is clickable.** No entry re-opens a file, on either route. The chooser
-    hands the app an in-memory buffer and the app keeps only its name and size, so
-    re-opening an uploaded MAF would mean copying patient variant data to disk; the OS
-    "Open With" route does have a real path, and still gets no click, because a list that
-    behaved differently depending on how the file arrived would be two lists.
-    """
-    history = read_history()
-
-    # Before the empty check: clearing the list is exactly the act that empties it, so a
-    # confirmation drawn only when there is something left to show would never be drawn.
-    if st.session_state.pop(HISTORY_CLEARED, False):
-        box.caption("The list of files you have opened has been cleared.")
-
-    if not history:
-        # Nothing is said in the empty state. A first-time user has no history to explain,
-        # and a paragraph about what the app would keep, in a column whose job is to say
-        # what is open, would be the app introducing a feature to someone who has not used
-        # it yet.
-        return
-
-    box.markdown("---")
-    box.markdown("**Recently opened**")
-
-    lines = []
-    for entry in history:
-        when = format_opened(entry.get(OPENED_KEY, ""))
-        # A time the stored stamp cannot supply leaves the name standing alone rather than
-        # putting "Unknown" beside it: the name is the entry, and the time is what makes the
-        # list easy to read.
-        lines.append(f"📄 {entry[NAME_KEY]}" + (f" · {when}" if when else ""))
-    # One element rather than one per file: ten captions in a sidebar column read as ten
-    # separate statements, and this is a single list. Markdown hard breaks keep it tight.
-    box.caption("  \n".join(lines))
-
-    # What the app keeps, said once, here — beside the list rather than beside the button,
-    # because it is a fact about the list and the reader meets the list first. Two copies of
-    # it would be two places to keep true.
-    #
-    # The cap is named because a name silently dropping off the bottom is the app losing
-    # something the user could see; the outliving is named because it is the one thing about
-    # this list that is not obvious from looking at it — the file can be gone and the name
-    # is still here.
-    box.caption(
-        f"MAFigate keeps the last {HISTORY_LIMIT} file names on this computer so you can "
-        "see what you have looked at. A name stays in this list even after the file itself "
-        "is gone. Nothing else about those files is kept, and no name here re-opens one."
-    )
-    box.button(
-        "🗑️ Clear this list",
-        on_click=_clear_the_file_history,
-        # Named so it stays this button across reruns. The chooser is drawn once per render
-        # into a fresh slot, so an unkeyed button here would take its identity from its
-        # position in a column whose contents change with the state above it.
-        key="clear_file_history",
-        help="Forget these file names. Your saved filter settings are not affected.",
-        use_container_width=True,
-    )
-
-
 def _render_file_chooser(ui, a_file_is_open: bool) -> None:
     """Draw the app's one file chooser, sized to the state it is in.
 
@@ -184,6 +104,10 @@ def _render_file_chooser(ui, a_file_is_open: bool) -> None:
     every page.
     """
     box = ui.expander("📂 Open a different file") if a_file_is_open else ui
+    # The uploader is the whole of it. A *Recently opened* list was drawn under it (issue
+    # #158) and is deleted: nothing in it was clickable, so it named files without offering
+    # a way back to any of them, and it made the one state where this chooser is unfolded —
+    # no file open — the longest the column ever got.
     box.file_uploader(
         "Choose a MAF file",
         type=["txt", "tsv", "maf"],
@@ -192,15 +116,19 @@ def _render_file_chooser(ui, a_file_is_open: bool) -> None:
         help="MAF, TSV or TXT — the annotated output of the pipeline",
         label_visibility="collapsed" if a_file_is_open else "visible",
     )
-    _render_file_history(box)
 
 
 def _nav_button(ui, label: str, page: str, to_results: bool = False) -> None:
     """A sidebar button that goes to ``page``.
 
-    The rerun matters: `create_sidebar_navigation` rebuilds the nav radio from
-    `current_page` when it has been changed from outside the radio, so a button that set
-    the page without rerunning would leave the radio pointing at where you used to be.
+    A rerun matters, and *where it is taken* matters as much. This button is drawn after the
+    page has run, into the status slot, so setting `current_page` alone would leave the new
+    page unrendered until the next interaction — and it would leave the nav radio pointing at
+    where you used to be, since `create_sidebar_navigation` rebuilds the radio from
+    `current_page` only at the top of a run. But the chooser is drawn *below* this button, so
+    rerunning from here would end the run with the chooser unregistered and its state pruned
+    (issue #277 — see `NAV_RERUN_PENDING`). The request is parked instead, and
+    `render_into_status_slot` takes it once the column, chooser included, is complete.
 
     ``to_results`` asks the data page for its Results section as well as for the page.
     Naming the page is not enough since issue #59: the data page keeps a fixed section
@@ -223,7 +151,7 @@ def _nav_button(ui, label: str, page: str, to_results: bool = False) -> None:
             from page_modules.data_loading import request_results_view
 
             request_results_view()
-        st.rerun()
+        st.session_state[NAV_RERUN_PENDING] = True
 
 
 def render_load_status(target):
@@ -322,7 +250,22 @@ def render_into_status_slot():
     # `st.empty()` holds one element, so `.container()` fills it with the whole block —
     # and the status is drawn exactly once per run, which keeps its button's widget id
     # unique.
-    render_load_status(slot.container())
+    #
+    # Drained in a `finally`, and honoured outside it. A request parked by the button above
+    # is answered on the run that parked it or not at all: a status block that raises partway
+    # has already lost the frame the rerun was for, and a flag left set would fire on the
+    # *next* render instead — a page the user did not ask for, arriving one interaction late.
+    # So the key is cleared either way and the rerun is taken only on the way out.
+    try:
+        render_load_status(slot.container())
+    finally:
+        rerun_wanted = st.session_state.pop(NAV_RERUN_PENDING, False)
+
+    # The last line of the render, and the only place in this module a rerun is taken. Every
+    # widget the run draws — this column's chooser last of all — is registered by now, so
+    # nothing is pruned when the run ends (issue #277).
+    if rerun_wanted:
+        st.rerun()
 
 
 def create_sidebar_navigation():
@@ -353,15 +296,22 @@ def create_sidebar_navigation():
     # The radio uses a widget key, so Streamlit ignores `index` once that key
     # exists and keeps whatever the radio last held. If navigation was triggered
     # programmatically (e.g. a page button changed `current_page` since the last
-    # render), drop the stale widget state and re-render so the radio is rebuilt
-    # cleanly from `index` below. We only delete the key (never assign to it,
-    # which corrupts the radio's index-based state); genuine user radio clicks
-    # are handled by the reconcile step after the widget.
+    # render), drop the stale widget state so the radio is rebuilt cleanly from
+    # `index` below. We only delete the key (never assign to it, which corrupts
+    # the radio's index-based state); genuine user radio clicks are handled by
+    # the reconcile step after the widget.
+    #
+    # Deleting is enough, and it takes effect in *this* run: `SessionState.__delitem__`
+    # drops the key from `_new_widget_state` and `_old_state` alike, so the value the
+    # browser sent for the radio goes with it and the registration below has nothing left
+    # to prefer over `index`. An `st.rerun()` stood here to force that rebuild, and it was
+    # half of issue #277 — it ended the run before the sidebar's file chooser was drawn,
+    # which prunes the chooser's state and makes the *next* interaction anywhere in the app
+    # fire its `on_change` (see `NAV_RERUN_PENDING`). Nothing between here and the radio
+    # reads the key, so there was never a second run's worth of work to do.
     prev_page = st.session_state.get("_nav_prev_page")
     if prev_page is not None and prev_page != current_page:
         st.session_state.pop("navigation_radio", None)
-        st.session_state["_nav_prev_page"] = current_page
-        st.rerun()
     st.session_state["_nav_prev_page"] = current_page
 
     selected_page_key = st.sidebar.radio(
@@ -369,11 +319,17 @@ def create_sidebar_navigation():
     )
 
     # User selected a different page via the radio -> make it the current page.
+    #
+    # No rerun, and none is needed: `MAFigate.main` calls this function before
+    # `route_to_page`, which reads `current_page` from session state, so the page the user
+    # just picked is the page this same run renders. The `st.rerun()` that stood here was
+    # the other half of issue #277 — it ended the run before the file chooser below was
+    # drawn, pruning its state (see `NAV_RERUN_PENDING`) — and all it bought was rendering
+    # the same page a second time.
     selected_page = page_options[selected_page_key]
     if selected_page != current_page:
         st.session_state.current_page = selected_page
         st.session_state["_nav_prev_page"] = selected_page
-        st.rerun()
 
     # The `📊 Session Info` expander stood here. It is absorbed by `render_load_status`
     # above (issue #58): of the four things it reported, the variant counts and the

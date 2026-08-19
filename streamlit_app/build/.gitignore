@@ -1,7 +1,19 @@
-# Cached Python downloads (large binaries)
+# Cached Python downloads (large binaries). Both builds bundle the interpreter
+# pinned in python_release.env, which IS tracked; these are the copies of it.
 mac/.python_cache/
+windows/.python_cache/
+
+# The interpreter tree build_installer.bat extracts for Inno Setup to ship (issue #261)
+windows/python/
 
 # Build artifacts
 mac/staging/
 mac/*.dmg
 windows/output/
+
+# The version installer.iss compiles with, generated from config/constants.py's
+# APP_VERSION before every Windows build (issue #260). Committed, it would be a second
+# place the version is written - and, being generated, the one nobody would think to
+# update. Here rather than in the repo-root .gitignore because this file is already
+# where every other build product of these two scripts is ignored.
+windows/version.iss

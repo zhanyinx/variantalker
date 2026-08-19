@@ -109,8 +109,10 @@ PIK3CA	Frame_Shift_Del	5	0.02	.
         # Asserted as "not numeric" rather than "== object" on purpose: pandas 3.0
         # defaults strings to the new `str` dtype, and the assertion this replaced
         # (`test_app_loader_cannot_reach_parity`) went red on a fresh install for
-        # spelling `object` while its intent still held. requirements.txt has no upper
-        # pandas bound, so that is a live hazard, not a hypothetical one.
+        # spelling `object` while its intent still held. requirements.txt pins pandas
+        # exactly as of issue #256, so a fresh install no longer walks this test into
+        # 3.0 on its own — but a pin is a decision someone will revise, and the whole
+        # point of writing the assertion to its intent is that it survives the bump.
         self.assertFalse(pd.api.types.is_numeric_dtype(df["gnomAD_exome_AF"]))
         self.assertTrue(any(df["gnomAD_exome_AF"] == "."))
 

@@ -209,10 +209,27 @@ CIVIC_OPTIONS = ["A", "B", "C", "D", "E"]
 #: **``_low_penetrance`` is deliberately not offered**, and it is the one place #99's
 #: every-spelling rule is not applied. It is not a classification — it is the tail of
 #: ``Pathogenic,_low_penetrance``, left behind because that term's own name carries a comma —
-#: so there is no honest class for it and ``CLINICAL_VALUE_MAPPING`` does not name it. It
-#: costs nothing to refuse: all 8 of its occurrences sit beside a real call, so it never
-#: stands alone and no row anywhere is reachable only through it. The pipeline's help
-#: advertises it; that is the vocabulary nobody chose, not a reason.
+#: so there is no honest class for it and ``CLINICAL_VALUE_MAPPING`` does not name it.
+#:
+#: **It costs nothing to refuse, and the fact is sharper than "it sits beside a real call"**
+#: (issue #278 measured it; #284 re-measured and tightened this sentence, which used to claim
+#: only the weaker thing). Every occurrence in the corpus is the **same single cell value** —
+#: ``Pathogenic/Pathogenic,_low_penetrance|other`` — carried **once each by 8 real MAFs**, and
+#: on all 8 it is **one variant**: ``SERPINA1`` chr14:94847262 T>A, the same row
+#: :func:`filters.variant_filters.frequency_mask`'s pathogenic exemption is documented against.
+#: (The two committed parity fixtures carry the value once each as well, at constructed loci of
+#: their own — ``NOTCH3`` and ``PDS5B`` — which is why a sweep including them reports 10.) So
+#: there is no cell anywhere in which this piece is the whole value, and refusing it cannot lose
+#: a row: the ``Pathogenic`` that shares every one of those cells is offered and is what keeps
+#: them. ``Likely_pathogenic,_low_penetrance`` occurs in **zero** rows, so its tail is not even
+#: reachable. Measured over 198 byte-distinct real MAFs, 183 with a populated
+#: ``ClinVar_VCF_CLNSIG``, 159,819 annotated rows.
+#:
+#: The pipeline's help advertises it; that is the vocabulary nobody chose, not a reason. Issue
+#: #278 revisited the whole question — the dev first chose to give it a class, then reversed once
+#: the measurement above was in — and the outcome is that it stays out of this list, out of
+#: ``CLINICAL_VALUE_MAPPING``, and out of every preset. Its decision is not a default nobody
+#: examined.
 #:
 #: ``-`` is offered because the table names it as a term (*not submitted as a classification;
 #: the variant was submitted only as part of a haplotype*) and the matcher can match it. Worth
