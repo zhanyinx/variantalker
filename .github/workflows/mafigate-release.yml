@@ -237,6 +237,13 @@ jobs:
             throw "ISCC stopped for some reason other than the missing version include (exit $code)"
           }
           Write-Host "ISCC refused for the stated reason."
+          # And say so in the step's own exit status, which is not the same thing. GitHub ends a
+          # pwsh step with `exit $LASTEXITCODE`, and $LASTEXITCODE is still ISCC's 1 — no cmdlet
+          # after it resets it. So this step failed the release *while reporting that its check
+          # had passed*, on the first real run of this workflow (issue #265, tag
+          # mafigate-v1.0.0-rc1). It is the standing hazard of any step whose subject is a
+          # command that has to fail: success here means a non-zero exit code is lying around.
+          exit 0
 
       # < NUL because build_installer.bat ends in `pause` on both its paths. On a runner with
       # no keyboard that is a six-hour job and no diagnosis; the pause is right for the humans

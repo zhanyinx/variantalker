@@ -432,6 +432,58 @@ def test_the_windows_job_proves_the_unversioned_compile_refuses():
     ), "the unversioned compile must run before the build regenerates version.iss"
 
 
+def _pwsh_steps_reading_the_exit_code():
+    """Every ``pwsh`` step in the workflow that inspects ``$LASTEXITCODE``, as (job, step, run).
+
+    Reading that variable is the tell. A step only reads it because it ran a native command
+    that is *allowed*, or required, to fail — which is exactly the shape that leaves a
+    non-zero status lying around for GitHub to end the step on.
+    """
+    found = []
+    for job in _document()["jobs"]:
+        for step in _steps(job):
+            script = step.get("run", "")
+            if step.get("shell") == "pwsh" and "LASTEXITCODE" in script:
+                found.append((job, step.get("name", "<unnamed>"), script))
+    return found
+
+
+def test_a_pwsh_step_that_expects_a_failure_sets_its_own_exit_status():
+    """The bug the first real run of this workflow found, generalised to its class.
+
+    GitHub ends a ``pwsh`` step with ``exit $LASTEXITCODE``. PowerShell cmdlets do not reset
+    that variable, so a step whose *subject* is a native command that must fail — here, ISCC
+    refusing to compile an installer with no version — finishes holding that command's
+    non-zero status even when its own check passed. The step then fails the release while its
+    log says the check succeeded, which is the worst available combination: a red run with a
+    green reason printed in it.
+
+    Measured, not imagined: `mafigate-v1.0.0-rc1` (issue #265) died exactly this way, after
+    printing *ISCC refused for the stated reason*, before either installer was built.
+
+    The rule is therefore about the shape rather than about the one step: if you are reading
+    ``$LASTEXITCODE`` you owe the step an explicit status of its own.
+    """
+    steps = _pwsh_steps_reading_the_exit_code()
+    assert steps, (
+        "no pwsh step reads $LASTEXITCODE any more, so this guard is checking nothing. If the "
+        "unversioned-compile check has been rewritten, re-point this test at its replacement "
+        "rather than deleting it — the hazard belongs to the shape, not to that step."
+    )
+    for job, name, script in steps:
+        lines = [
+            line.strip()
+            for line in script.splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        assert lines[-1] == "exit 0", (
+            f"{job} / {name!r} reads $LASTEXITCODE but does not end by setting its own exit "
+            f"status; its last line is {lines[-1]!r}. Without an explicit `exit 0` the step "
+            "inherits the exit code of the native command it was checking — which, for a check "
+            "that a command *must* fail, is non-zero precisely when the check passes."
+        )
+
+
 def test_no_job_hands_iscc_a_version():
     """``installer.iss`` refuses ``/DAppVersion=`` by design: the include is the authority.
 
