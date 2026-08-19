@@ -1,0 +1,20 @@
+{
+ "fixtures": {
+  "somatic_cancervar_dotted_no_column.maf": {
+   "rows": 5,
+   "columns": 13,
+   "bytes": 881,
+   "provenance": "generator-constructed",
+   "sha256": "b9540f8d9126d01a625e45c3cb4da2630db90acfa74ae1ece542dd5f167d7786",
+   "kind": "cancervar evidence"
+  },
+  "somatic_cancervar_evidence.maf": {
+   "rows": 8,
+   "columns": 13,
+   "bytes": 1299,
+   "provenance": "generator-constructed",
+   "sha256": "c667baaa9b2311d75404188bd8a2b7c1d926c2c9e7405a035161db1191b5892d",
+   "kind": "cancervar evidence"
+  }
+ }
+}

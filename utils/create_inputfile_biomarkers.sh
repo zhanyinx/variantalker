@@ -85,7 +85,7 @@ echo "patient,sample_file,sample_type" > $output
 if [ -d $dragen_folder ]; then
     echo "Appending dragen msi, tmb, coverage, hrd"
     abspath=`realpath $dragen_folder`
-    for file in `ls $abspath/*/*.tmb.metrics.csv`; do
+    for file in `ls $abspath/*/*.tmb.metrics.csv | grep -v "_germline"`; do
         absfile=`realpath $file`
         foldername=`dirname $absfile`
         patient=`basename $foldername`
@@ -142,12 +142,42 @@ if [ -d $input/somatic ]; then
     echo "Appending somatic samples...."
     for file in `ls $input/somatic/*/*maf`; do
         absfile=`realpath $file`
+        vcffile=`echo $absfile | sed 's,\.maf,\.vcf,g'`
         foldername=`dirname $absfile`
         patient=`basename $foldername`
-        patient_normal=`awk -F '\t' '{if(!($0~/^#/) && ($1!="Hugo_Symbol")) print $17}' $absfile | sort | uniq`
+        
+        # The first column that does not start with # and is the header line
+        # Look for the column Matched_Norm_Sample_Barcode and get all the unique values in that column and assign to patient_normal
+        patient_normal=$(awk -F'\t' '
+            /^#/ { next }
+
+            !header_found {
+                header_found=1
+                for (i=1; i<=NF; i++) if ($i=="Matched_Norm_Sample_Barcode") col=i
+                if (!col) { print "ERROR: Matched_Norm_Sample_Barcode not found" > "/dev/stderr"; exit 1 }
+                next
+            }
+
+            {
+                v=$col
+                if (v!="" && !seen[v]++) {
+                    arr[++n]=v
+                }
+            }
+
+            END {
+                for (i=1; i<=n; i++) {
+                    printf "%s%s", arr[i], (i<n ? "," : "")
+                }
+                printf "\n"
+            }
+            ' "$absfile")
+
+        echo $patient_normal
         echo "$patient,$absfile,variant_somatic" >> $output
-        if ! [ -z $patient_normal ]; then
-            sed -i 's;'${patient_normal},';'${patient},';g' $output
+        echo "$patient,$vcffile,variant_somatic_vcf" >> $output
+        if [ -n "$patient_normal" ]; then
+            sed -i "s;${patient_normal},;${patient},;g" "$output"
         fi
     done
 fi

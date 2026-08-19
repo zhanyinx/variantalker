@@ -1,0 +1,6 @@
+Hugo_Symbol	Chromosome	Start_Position	End_Position	Reference_Allele	Tumor_Seq_Allele2	Variant_Classification	Variant_Type	Protein_Change	CancerVar..CancerVar.and.Evidence	ClinVar_VCF_CLNSIG	t_alt_count	t_ref_count
+TP53	17	7577120	7577120	C	T	Missense_Mutation	SNP	p.T304A	 CancerVar: 5#Tier_III_Uncertain EVS=[1, 0, 1, 1, 0, 0, 0, 0, 1, -1, 1, 1] 	Uncertain_significance	30	70
+PIK3CA	3	179000002	179000002	A	G	Missense_Mutation	SNP	p.E545G	 CancerVar: 13#Tier_I_strong EVS=[2, 0, 2, 1, 0, 0, 1, 1, 2, 1, 1, 2] 	Pathogenic	44	56
+KRAS	12	25398284	25398284	C	T	Missense_Mutation	SNP	p.G12D	 CancerVar: 1#Tier_IV_benign 	Uncertain_significance	25	75
+EGFR	7	55249071	55249071	C	T	Missense_Mutation	SNP	p.T790M	.	Uncertain_significance	18	82
+BRAF	7	140453136	140453136	A	T	Missense_Mutation	SNP	p.V600E	 CancerVar: 0#Tier_IV_benign EVS=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 	Benign	20	80

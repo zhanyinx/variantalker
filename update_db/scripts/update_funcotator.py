@@ -34,15 +34,17 @@ def _parse_args():
         "-ce",
         "--cosmic_email",
         type=str,
-        required=True,
-        help="Email of your cosmic account (cancer.sanger.ac.uk).",
+        required=False,
+        default=None,
+        help="Email of your cosmic account (cancer.sanger.ac.uk). If not provided, COSMIC update will be skipped.",
     )
     parser.add_argument(
         "-cp",
         "--cosmic_password",
         type=str,
-        required=True,
-        help="Password of your cosmic account (cancer.sanger.ac.uk).",
+        required=False,
+        default=None,
+        help="Password of your cosmic account (cancer.sanger.ac.uk). If not provided, COSMIC update will be skipped.",
     )
     parser.add_argument(
         "-gd",
@@ -66,6 +68,13 @@ def _parse_args():
         type=FolderType(),
         default=None,
         help="Directory containing all the scripts for updating databases. If None (default) it uses the one in the repo",
+    )
+    parser.add_argument(
+        "--build",
+        type=str,
+        choices=["hg19", "hg38", "both"],
+        default="both",
+        help="Genome build to update: hg19, hg38, or both (default: both)",
     )
     args = parser.parse_args()
     return args
@@ -94,35 +103,52 @@ def main():
     check_dna_repair_genes(outfile)
     #check_oreganno(outfile)
 
-    # Update cosmic
-    curr_version = get_version(f"{args.somatic_database}/cosmic/hg38/cosmic.config")
-    update_cosmic(
-        curr_version=curr_version,
-        db_dir=args.somatic_database,
-        backup_dir=backup_dir,
-        file=outfile,
-        scriptdir=scriptdir,
-        email=args.cosmic_email,
-        password=args.cosmic_password,
-    )
-
-    # Update gencode
-    curr_version = get_version(f"{args.somatic_database}/gencode/hg38/gencode.config")
-    try:
-        update_gencode(
-            curr_version=curr_version,
-            db_dir=args.somatic_database,
-            backup_dir=backup_dir,
-            file=outfile,
-            scriptdir=scriptdir,
-            db_germline_dir=args.germline_database,
+    # COSMIC update - DISABLED due to format changes in COSMIC database
+    # The COSMIC database has changed its download format and authentication method.
+    # Manual update required. Current version will be logged.
+    build_to_check = "hg38" if args.build in ["hg38", "both"] else "hg19"
+    if os.path.exists(f"{args.somatic_database}/cosmic/{build_to_check}/cosmic.config"):
+        curr_version = get_version(f"{args.somatic_database}/cosmic/{build_to_check}/cosmic.config")
+    else:
+        curr_version = "unknown"
+    with open(outfile, "a") as f:
+        f.write(
+            f"SKIPPED: COSMIC update disabled due to format changes in COSMIC database download. "
+            f"Manual update required. Current version: {curr_version}\n"
         )
-    except:
-        with open(outfile, "a") as f:
-            f.write(
-                f"FAILED: Gencode updated failed -- This is a reported problem with GATK IndexFeatureFile that does not support v42 yet. \n"
-            )
+    # Commented out - uncomment when COSMIC update script is fixed for new format
+    # update_cosmic(
+    #     curr_version=curr_version,
+    #     db_dir=args.somatic_database,
+    #     backup_dir=backup_dir,
+    #     file=outfile,
+    #     scriptdir=scriptdir,
+    #     email=args.cosmic_email,
+    #     password=args.cosmic_password,
+    #     build=args.build,
+    # )
 
+    # Update gencode - DISABLED (not working correctly). The database created seems correct but funcotator does not use it properly.
+    build_to_check = "hg38" if args.build in ["hg38", "both"] else "hg19"
+    if os.path.exists(f"{args.somatic_database}/gencode/{build_to_check}/gencode.config"):
+        curr_version = get_version(f"{args.somatic_database}/gencode/{build_to_check}/gencode.config")
+    else:
+        curr_version = None
+    with open(outfile, "a") as f:
+        f.write(
+            f"SKIPPED: GENCODE update disabled due to issues with funcotator using the updated database. "
+            f"Manual update required. Current version: {curr_version}\n"
+        )
+    # update_gencode(
+    #     curr_version=curr_version,
+    #     db_dir=args.somatic_database,
+    #     backup_dir=backup_dir,
+    #     file=outfile,
+    #     scriptdir=scriptdir,
+    #     db_germline_dir=args.germline_database,
+    #     build=args.build,
+    # )
+    
     # Update clinvar
     update_clinvar(
         db_dir=args.somatic_database,
@@ -130,6 +156,7 @@ def main():
         file=outfile,
         scriptdir=scriptdir,
         db_germline_dir=args.germline_database,
+        build=args.build,
     )
 
     # Update hgnc
@@ -139,6 +166,7 @@ def main():
             backup_dir=backup_dir,
             file=outfile,
             scriptdir=scriptdir,
+            build=args.build,
         )
     except:
         with open(outfile, "a") as f:
@@ -147,29 +175,28 @@ def main():
             )
 
     # Update dbsnp
-    try:
-        update_dbsnp(
-            file=outfile,
-            db_dir=args.somatic_database,
-            backup_dir=backup_dir,
-            scriptdir=scriptdir,
-            db_germline_dir=args.germline_database,
-        )
-    except:
-        with open(outfile, "a") as f:
-            f.write(
-                f"FAILED: dbsnp updated failed -- Very likely due to fail download. \n"
-            )
+    update_dbsnp(
+        file=outfile,
+        db_dir=args.somatic_database,
+        backup_dir=backup_dir,
+        scriptdir=scriptdir,
+        db_germline_dir=args.germline_database,
+        build=args.build,
+    )
+  
 
     # Update acmg_rec
-    curr_version = get_version(
-        f"{args.germline_database}/acmg_rec/hg38/acmg_rec.config"
-    )
+    build_to_check = "hg38" if args.build in ["hg38", "both"] else "hg19"
+    if os.path.exists(f"{args.germline_database}/acmg_rec/{build_to_check}/acmg_rec.config"):
+        curr_version = get_version(f"{args.germline_database}/acmg_rec/{build_to_check}/acmg_rec.config")
+    else:
+        curr_version = None
     update_acmg_rec(
         file=outfile,
         db_germline_dir=args.germline_database,
         backup_dir=backup_dir,
         current_version=curr_version,
+        build=args.build,
     )
 
 

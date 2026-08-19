@@ -1,0 +1,32 @@
+# Formatter configuration for MAFigate.
+#
+# This file exists for one load-bearing reason: to keep black and isort away from
+# streamlit_app/vendor/.
+#
+# vendor/pipeline_utils.py is bin/utils.py *to the byte*, and the drift guard
+# (streamlit_app/tests/test_vendor_drift.py) proves it with a sha256. But bin/utils.py
+# is not black-formatted at width 100 — `black --line-length 100` rewrites 296 of its
+# lines — and its imports are not isort-ordered either. So without the exclusions
+# below, the first `make format` after vendoring silently reformats the copy and the
+# guard goes red for a reason that has nothing to do with drift.
+#
+# The line length is pinned here as well as in the Makefile so that a bare `black .`
+# in this directory agrees with `make format`.
+#
+# There is intentionally no [build-system] table: this is a config file, not a
+# distributable package. The app runs via `streamlit run MAFigate.py`.
+
+[tool.black]
+line-length = 100
+extend-exclude = '''
+(
+    /vendor/
+  | ^/vendor/
+)
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+extend_skip = ["vendor"]
+extend_skip_glob = ["*/vendor/*", "vendor/*"]

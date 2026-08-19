@@ -26,15 +26,18 @@ function help {
 for arg in "$@"; do
   shift
   case "$arg" in
+      "--build")  set -- "$@" "-b" ;;
       "--help")   set -- "$@" "-h" ;;
        *)        set -- "$@" "$arg"
   esac
 done
 
+BUILD="both"
 
-while getopts ":h" OPT
+while getopts ":hb:" OPT
 do
     case $OPT in
+        b) BUILD=$OPTARG;;
         h) help ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -119,6 +122,21 @@ start_column =
 end_column =" > hgnc.config
 
 # create new database
-mkdir -p hgnc/hg38
-mv hgnc.config hgnc_$today.tsv hgnc/hg38
-cp -r hgnc/hg38 hgnc/hg19
+if [[ "$BUILD" == "hg38" || "$BUILD" == "both" ]]; then
+    mkdir -p hgnc/hg38
+    cp hgnc.config hgnc_$today.tsv hgnc/hg38/
+fi
+
+if [[ "$BUILD" == "hg19" || "$BUILD" == "both" ]]; then
+    if [[ "$BUILD" == "both" ]]; then
+        # Copy from hg38 if both
+        cp -r hgnc/hg38 hgnc/hg19
+    else
+        # Create hg19 directly
+        mkdir -p hgnc/hg19
+        cp hgnc.config hgnc_$today.tsv hgnc/hg19/
+    fi
+fi
+
+# Clean up temporary files if they still exist in current directory
+rm -f hgnc.config hgnc_$today.tsv

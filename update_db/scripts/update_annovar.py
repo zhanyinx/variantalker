@@ -91,15 +91,17 @@ def _parse_args():
         "-ce",
         "--cosmic_email",
         type=str,
-        required=True,
-        help="Email of your cosmic account (cancer.sanger.ac.uk).",
+        required=False,
+        default=None,
+        help="Email of your cosmic account (cancer.sanger.ac.uk). If not provided, COSMIC update will be skipped.",
     )
     parser.add_argument(
         "-cp",
         "--cosmic_password",
         type=str,
-        required=True,
-        help="Password of your cosmic account (cancer.sanger.ac.uk).",
+        required=False,
+        default=None,
+        help="Password of your cosmic account (cancer.sanger.ac.uk). If not provided, COSMIC update will be skipped.",
     )
     args = parser.parse_args()
     return args
@@ -129,7 +131,7 @@ def main():
         "1000g2015aug",
         "exac03",
         "dbscsnv11",
-        "dbnsfp31a_interpro",
+        # "dbnsfp31a_interpro",
         "gnomad_genome",
         "rmsk",
     ]

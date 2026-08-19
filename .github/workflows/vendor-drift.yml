@@ -1,0 +1,53 @@
+# Drift guard for the vendored pipeline filter code.
+#
+# streamlit_app/vendor/ holds copies of bin/utils.py and bin/filter_variants.py's
+# filter symbols, so that the Streamlit app reaches the *same* PASS/NOPASS verdict as
+# the pipeline instead of re-deriving it. The copies are only worth anything while they
+# are provably still copies.
+#
+# This is deliberately narrow: it guards the copies, not the whole app. The app's own
+# test suite needs streamlit, streamlit-aggrid, plotly and openpyxl; keeping this job
+# to pytest + pandas makes it fast enough that nobody is tempted to skip it. Running
+# the full suite in CI is a reasonable follow-up, not a substitute for this.
+
+name: vendor drift
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  vendor-drift:
+    name: vendored filter code matches bin/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # The stdlib-only gate. This is the same check the installer builds and the
+      # pre-commit hook run, so it needs nothing installed at all.
+      - name: Check vendored copies against bin/ (stdlib only)
+        run: python streamlit_app/vendor/_sync.py --check
+
+      # pandas is required only because streamlit_app/tests/__init__.py imports it at
+      # module scope; the guard itself compares source text and syntax trees.
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip pytest pandas
+
+      # The pytest guard. It re-checks the same rule independently, and additionally
+      # asserts both installers still ship the vendor package.
+      #
+      # test_vendor_compute_keep.py rides along because it is the other half of the
+      # same claim: the guard proves the column computation is still the pipeline's,
+      # and this proves the one place it deliberately is not — the local copy that
+      # stops a germline run from corrupting the runs after it. It needs pandas and
+      # nothing else, so it costs this job nothing.
+      - name: Run the drift guard
+        working-directory: streamlit_app
+        run: python -m pytest tests/test_vendor_drift.py tests/test_vendor_compute_keep.py -v

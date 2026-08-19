@@ -1,0 +1,530 @@
+{
+ "fixtures": {
+  "genes_germline.txt": {
+   "bytes": 63,
+   "sha256": "20d16e1d3fc84fcb34792a3be345e7510c029b2941f4aa8a1ec561d2e27debea",
+   "genes": 12
+  },
+  "genes_somatic.txt": {
+   "bytes": 71,
+   "sha256": "e4c1bb0285551a5d01c98a9992f7a21c2f798acbb7a175c2e1cf8c2577e2f009",
+   "genes": 12
+  },
+  "genes_somatic_mixed_case.txt": {
+   "bytes": 71,
+   "sha256": "ee8d055b06f2209433e56e09be3973228d6e2e5e86081df46d3049c1fc205960",
+   "genes": 12
+  },
+  "germline_reference.maf": {
+   "arm": "germline",
+   "bytes": 380016,
+   "columns": 380,
+   "provenance": "generator-constructed",
+   "sha256": "f6474de2ad89762e9f4135352d0fa1a0e9b63e29f003b5e85701209364d9016f",
+   "rows": 94,
+   "kind": "constructed reference replacement",
+   "rows_named": [
+    "renovo_lp_depth60",
+    "renovo_ip_depth600",
+    "renovo_hp_depth700",
+    "renovo_lp_depth520",
+    "vaf_exactly_02_1",
+    "vaf_exactly_02_2",
+    "vaf_exactly_02_3",
+    "vaf_exactly_02_4",
+    "vaf_exactly_02_5",
+    "vaf_exactly_02_6",
+    "vaf_between_005_02",
+    "vaf_exactly_005",
+    "vaf_above_02",
+    "renovo_pass_off_list",
+    "renovo_pass_off_list_2",
+    "renovo_pass_in_list",
+    "renovo_pass_in_list_2",
+    "vc_outside_app_vocabulary_1",
+    "vc_outside_app_vocabulary_2",
+    "vc_outside_app_vocabulary_3",
+    "vc_outside_app_vocabulary_4",
+    "vc_outside_app_vocabulary_5",
+    "vc_outside_app_vocabulary_6",
+    "vc_excluded_silent",
+    "vc_excluded_igr",
+    "vc_excluded_rna",
+    "dp_high_sum_low",
+    "dp_low_sum_high",
+    "dp_high_sum_low_2",
+    "dp_low_sum_high_2",
+    "clnsig_split_only_1",
+    "clnsig_split_only_2",
+    "clnsig_split_only_3",
+    "clnsig_split_only_4",
+    "clnsig_split_only_rescue",
+    "clnsig_exact_pathogenic",
+    "germline_escat_only_1",
+    "germline_escat_only_2",
+    "germline_escat_only_3",
+    "germline_escat_only_4",
+    "germline_escat_only_5",
+    "germline_escat_only_6",
+    "germline_escat_outside_keep",
+    "rescue_only_intervar_patho",
+    "rescue_only_intervar_likely",
+    "rescue_only_intervar_patho_2",
+    "renovo_patho_intervar_benign",
+    "renovo_patho_intervar_benign_2",
+    "rescue_only_clnsig_patho",
+    "patho_rescue_only_1",
+    "patho_rescue_only_2",
+    "gnomad_absent",
+    "gnomad_absent_2",
+    "gnomad_rare",
+    "gnomad_high_patho_exempt",
+    "gnomad_high_patho_exempt_2",
+    "gnomad_high_patho_exempt_split_only",
+    "gnomad_high_rescue_dropped",
+    "gnomad_common_not_exempt_1",
+    "gnomad_common_not_exempt_2",
+    "gnomad_common_not_exempt_3",
+    "gnomad_common_not_exempt_4",
+    "gnomad_common_not_exempt_5",
+    "frequency_dot",
+    "renovo_class_HP_Pathogenic",
+    "renovo_class_IP_Pathogenic",
+    "renovo_class_LP_Pathogenic",
+    "renovo_class_LP_Benign",
+    "renovo_class_IP_Benign",
+    "renovo_class_HP_Benign",
+    "gene_row_APOB",
+    "gene_row_AXIN2",
+    "gene_row_CDA",
+    "gene_row_DPYD",
+    "gene_row_EZH2",
+    "gene_row_FH",
+    "gene_row_KLK3",
+    "gene_row_MSH2",
+    "gene_row_NOTCH3",
+    "gene_row_PIK3CA",
+    "gene_row_ROS1",
+    "gene_row_SRSF2",
+    "am_disagrees_dbnsfp_lower",
+    "am_disagrees_dbnsfp_higher",
+    "am_only_funcotator",
+    "clnrevstat_criteria_provided_1",
+    "clnrevstat_reviewed_by_expert_panel_2",
+    "clnrevstat_practice_guideline_3",
+    "legacy_gene_BRCA1",
+    "legacy_gene_BRCA2",
+    "excluded_twice_silent",
+    "excluded_twice_igr",
+    "excluded_twice_rna",
+    "control_guideline_fail"
+   ]
+  },
+  "germline_synthetic.maf": {
+   "arm": "germline",
+   "bytes": 83655,
+   "columns": 380,
+   "provenance": "generator-constructed",
+   "sha256": "540cd81c2215b9f05de18f2875b4b77d231fa4eaa606194dfd3962622e067b9d",
+   "rows": 17,
+   "kind": "synthetic",
+   "rows_named": [
+    "control_guideline_pass",
+    "control_guideline_fail",
+    "missing_t_alt_count",
+    "missing_t_ref_count",
+    "missing_both_depth_components",
+    "missing_DP",
+    "missing_tumor_f",
+    "vaf_exactly_threshold",
+    "dp_high_sum_low",
+    "dp_low_sum_high",
+    "clnsig_semicolon_pathogenic",
+    "clnsig_semicolon_likely",
+    "clnsig_semicolon_benign",
+    "frequency_dot",
+    "escat_only",
+    "renovo_rescue_candidate",
+    "vc_outside_app_vocabulary"
+   ],
+   "expected": {
+    "control_guideline_pass": {
+     "filter": "PASS"
+    },
+    "control_guideline_fail": {
+     "filter": "NOPASS"
+    },
+    "missing_t_alt_count": {
+     "filter": "NOPASS"
+    },
+    "missing_t_ref_count": {
+     "filter": "NOPASS"
+    },
+    "missing_both_depth_components": {
+     "filter": "NOPASS"
+    },
+    "missing_DP": {
+     "filter": "PASS"
+    },
+    "missing_tumor_f": {
+     "filter": "NOPASS"
+    },
+    "vaf_exactly_threshold": {
+     "filter": "NOPASS"
+    },
+    "dp_high_sum_low": {
+     "filter": "NOPASS"
+    },
+    "dp_low_sum_high": {
+     "filter": "PASS"
+    },
+    "clnsig_semicolon_pathogenic": {
+     "filter": "PASS"
+    },
+    "clnsig_semicolon_likely": {
+     "filter": "PASS"
+    },
+    "clnsig_semicolon_benign": {
+     "filter": "NOPASS"
+    },
+    "frequency_dot": {
+     "filter": "PASS"
+    },
+    "escat_only": {
+     "filter": "NOPASS"
+    },
+    "renovo_rescue_candidate": {
+     "filter": "NOPASS"
+    },
+    "vc_outside_app_vocabulary": {
+     "filter": "PASS"
+    }
+   }
+  },
+  "somatic_civic.maf": {
+   "arm": "somatic",
+   "bytes": 73094,
+   "columns": 433,
+   "provenance": "generator-constructed",
+   "sha256": "32685ace0cd2ab5b97ab168e0e124fd1fc838f41232073570ec5cb1538540a5c",
+   "rows": 12,
+   "kind": "grafted",
+   "rows_named": [
+    "list_a_only",
+    "list_b_only",
+    "list_c_only",
+    "list_d_only",
+    "list_a_and_b",
+    "list_c_and_d",
+    "list_a_and_e",
+    "list_d_and_e",
+    "empty_list",
+    "bare_a",
+    "bare_c",
+    "blank"
+   ],
+   "expected": {
+    "list_a_only": {
+     "filter_skip_civic_false": "PASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "list_b_only": {
+     "filter_skip_civic_false": "PASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "list_c_only": {
+     "filter_skip_civic_false": "PASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "list_d_only": {
+     "filter_skip_civic_false": "NOPASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "list_a_and_b": {
+     "filter_skip_civic_false": "PASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "list_c_and_d": {
+     "filter_skip_civic_false": "PASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "list_a_and_e": {
+     "filter_skip_civic_false": "PASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "list_d_and_e": {
+     "filter_skip_civic_false": "NOPASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "empty_list": {
+     "filter_skip_civic_false": "NOPASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "bare_a": {
+     "filter_skip_civic_false": "PASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "bare_c": {
+     "filter_skip_civic_false": "PASS",
+     "filter_skip_civic_true": "NOPASS"
+    },
+    "blank": {
+     "filter_skip_civic_false": "NOPASS",
+     "filter_skip_civic_true": "NOPASS"
+    }
+   }
+  },
+  "somatic_dot_numeric.maf": {
+   "arm": "somatic",
+   "bytes": 41216,
+   "columns": 427,
+   "provenance": "generator-constructed",
+   "sha256": "236cb72755d90831ebf5aaf617b5cac646b5ec3c53ecb7a4f20f52b61e7f39bb",
+   "rows": 5,
+   "kind": "robustness",
+   "rows_named": [
+    "dot_t_alt_count",
+    "dot_t_ref_count",
+    "dot_tumor_f",
+    "dot_DP",
+    "clean"
+   ]
+  },
+  "somatic_gnomad_genome.maf": {
+   "arm": "somatic",
+   "bytes": 45171,
+   "columns": 429,
+   "provenance": "generator-constructed",
+   "sha256": "facb164868eaa6f2ea3168a9c0fde10d743dabd0859912325b477f820c8cad35",
+   "rows": 6,
+   "kind": "grafted",
+   "rows_named": [
+    "gnomad_genome_1",
+    "gnomad_genome_2",
+    "gnomad_genome_3",
+    "gnomad_genome_4",
+    "gnomad_genome_5",
+    "gnomad_genome_6"
+   ]
+  },
+  "somatic_reference.maf": {
+   "arm": "somatic",
+   "bytes": 379537,
+   "columns": 427,
+   "provenance": "generator-constructed",
+   "sha256": "e720ae5f5ec331e0dda7bb5dea0951edf0c4ab99cb3ed633bd7dd14374488b9b",
+   "rows": 82,
+   "kind": "constructed reference replacement",
+   "rows_named": [
+    "escat_pass_depth60",
+    "escat_pass_depth600",
+    "escat_pass_depth700",
+    "escat_pass_depth520",
+    "vaf_exactly_001",
+    "vaf_exactly_005",
+    "vaf_exactly_02",
+    "vaf_between_005_02",
+    "vaf_above_02",
+    "escat_pass_off_list",
+    "escat_pass_off_list_2",
+    "escat_pass_in_list",
+    "escat_pass_in_list_2",
+    "vc_outside_app_vocabulary_1",
+    "vc_outside_app_vocabulary_2",
+    "vc_outside_app_vocabulary_3",
+    "vc_outside_app_vocabulary_4",
+    "vc_outside_app_vocabulary_5",
+    "vc_outside_app_vocabulary_6",
+    "vc_excluded_silent",
+    "vc_excluded_igr",
+    "vc_excluded_rna",
+    "dp_high_sum_low",
+    "dp_low_sum_high",
+    "dp_high_sum_low_2",
+    "dp_low_sum_high_2",
+    "clnsig_split_only_1",
+    "clnsig_split_only_2",
+    "clnsig_split_only_3",
+    "clnsig_split_only_4",
+    "clnsig_exact_pathogenic",
+    "clnsig_exact_likely",
+    "patho_rescue_only_1",
+    "patho_rescue_only_2",
+    "cancervar_tier1_rescue_only",
+    "cancervar_tier2_rescue_only",
+    "cancervar_tier1_guideline",
+    "escat_bare_I",
+    "escat_bare_II",
+    "escat_bare_III",
+    "escat_outside_keep",
+    "gnomad_absent",
+    "gnomad_absent_2",
+    "gnomad_rare",
+    "gnomad_high_patho_exempt",
+    "gnomad_high_patho_exempt_2",
+    "gnomad_high_patho_exempt_split_only",
+    "gnomad_high_rescue_dropped",
+    "gnomad_common_not_exempt_1",
+    "gnomad_common_not_exempt_2",
+    "gnomad_common_not_exempt_3",
+    "gnomad_common_not_exempt_4",
+    "gnomad_common_not_exempt_5",
+    "frequency_dot",
+    "gene_row_APC",
+    "gene_row_CCDC107",
+    "gene_row_CUL3",
+    "gene_row_DROSHA",
+    "gene_row_ERBB3",
+    "gene_row_HLA-A",
+    "gene_row_KMT2C",
+    "gene_row_MAP3K4",
+    "gene_row_MUC6",
+    "gene_row_PDS5B",
+    "gene_row_PMS2",
+    "gene_row_SCAF4",
+    "clnrevstat_no_assertion_criteria_provided_1",
+    "clnrevstat_criteria_provided_2",
+    "clnrevstat_criteria_provided_3",
+    "clnrevstat_criteria_provided_4",
+    "clnrevstat_reviewed_by_expert_panel_5",
+    "clnrevstat_practice_guideline_6",
+    "cancervar_evidence_negative_sum",
+    "cancervar_evidence_zero_sum",
+    "cancervar_evidence_tier_i",
+    "legacy_gene_TP53",
+    "legacy_gene_KRAS",
+    "legacy_gene_EGFR",
+    "excluded_twice_silent",
+    "excluded_twice_igr",
+    "excluded_twice_rna",
+    "control_guideline_fail"
+   ]
+  },
+  "somatic_synthetic.maf": {
+   "arm": "somatic",
+   "bytes": 98489,
+   "columns": 427,
+   "provenance": "generator-constructed",
+   "sha256": "69b7c8f70bb06c0c3de449e131204d4a89338c026682cbcb9a1a856f0d3d3794",
+   "rows": 18,
+   "kind": "synthetic",
+   "rows_named": [
+    "control_guideline_pass",
+    "control_guideline_fail",
+    "missing_t_alt_count",
+    "missing_t_ref_count",
+    "missing_both_depth_components",
+    "missing_DP",
+    "missing_tumor_f",
+    "vaf_exactly_threshold",
+    "dp_high_sum_low",
+    "dp_low_sum_high",
+    "clnsig_semicolon_pathogenic",
+    "clnsig_semicolon_likely",
+    "clnsig_semicolon_benign",
+    "frequency_dot",
+    "escat_bare_I",
+    "escat_bare_II",
+    "escat_bare_III",
+    "vc_outside_app_vocabulary"
+   ],
+   "expected": {
+    "control_guideline_pass": {
+     "filter": "PASS"
+    },
+    "control_guideline_fail": {
+     "filter": "NOPASS"
+    },
+    "missing_t_alt_count": {
+     "filter": "NOPASS"
+    },
+    "missing_t_ref_count": {
+     "filter": "NOPASS"
+    },
+    "missing_both_depth_components": {
+     "filter": "NOPASS"
+    },
+    "missing_DP": {
+     "filter": "PASS"
+    },
+    "missing_tumor_f": {
+     "filter": "NOPASS"
+    },
+    "vaf_exactly_threshold": {
+     "filter": "NOPASS"
+    },
+    "dp_high_sum_low": {
+     "filter": "NOPASS"
+    },
+    "dp_low_sum_high": {
+     "filter": "PASS"
+    },
+    "clnsig_semicolon_pathogenic": {
+     "filter": "PASS"
+    },
+    "clnsig_semicolon_likely": {
+     "filter": "PASS"
+    },
+    "clnsig_semicolon_benign": {
+     "filter": "NOPASS"
+    },
+    "frequency_dot": {
+     "filter": "PASS"
+    },
+    "escat_bare_I": {
+     "filter": "NOPASS"
+    },
+    "escat_bare_II": {
+     "filter": "NOPASS"
+    },
+    "escat_bare_III": {
+     "filter": "NOPASS"
+    },
+    "vc_outside_app_vocabulary": {
+     "filter": "PASS"
+    }
+   }
+  }
+ },
+ "parameters": {
+  "filter_cancervar": [
+   "Tier_II_potential",
+   "Tier_I_strong"
+  ],
+  "filter_civic": [
+   "A",
+   "B",
+   "C"
+  ],
+  "filter_clinvar": [
+   "Pathogenic",
+   "Likely_pathogenic"
+  ],
+  "filter_escat": [
+   "IA",
+   "IB",
+   "IC",
+   "IIA",
+   "IIB"
+  ],
+  "filter_intervar": [
+   "Pathogenic",
+   "Likely pathogenic"
+  ],
+  "filter_renovo": [
+   "LP Pathogenic",
+   "IP Pathogenic",
+   "HP Pathogenic"
+  ],
+  "filter_variant_classification": [
+   "Silent",
+   "IGR",
+   "RNA"
+  ],
+  "min_depth": 50,
+  "skip_civic": false,
+  "skip_pathogenic": false,
+  "vaf_threshold": 0.01,
+  "vaf_threshold_germline": 0.2
+ }
+}

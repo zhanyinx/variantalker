@@ -1,0 +1,36 @@
+# Coverage configuration for MAFigate.
+#
+# This file — not pytest.ini — is where the `omit` for the vendored code has to
+# live: pytest-cov reads coverage settings from .coveragerc / setup.cfg / tox.ini /
+# pyproject.toml, and never from pytest.ini.
+#
+# `vendor/` is excluded because it is not this project's code. It is a copy of the
+# pipeline's filter code held byte-for-byte (see streamlit_app/vendor/README.md);
+# it is covered by a drift guard rather than by unit tests, and its ~1,100 largely
+# unexercised lines would otherwise dominate the measurement of code we do own.
+#
+# `tests/` and `build/` are excluded as the test code itself and the packaging scripts.
+# A `prototypes/` omission also used to live here, for throwaway scratch code kept as the
+# record of how a wayfinder decision was reached — the widget prototype behind #12, the
+# parameter-migration measurements behind #22. Those files were deleted in #52, and
+# because they were omitted all along their removal does not move the figure below.
+#
+# pytest-cov is undeclared (#19), so `make test-cov` does not run on a stock install. The
+# figure has been measured in a virtualenv with pytest-cov added — with these omissions
+# the tree is 2,812 statements at 39%, and the COV_MIN floor is 35 to match. The
+# measurement is taken with `bin/` absent, which is the only shape it is stable in; the
+# Makefile says why.
+
+[run]
+omit =
+    vendor/*
+    */vendor/*
+    tests/*
+    */tests/*
+    build/*
+
+[report]
+exclude_also =
+    if TYPE_CHECKING:
+    raise NotImplementedError
+    if __name__ == .__main__.:

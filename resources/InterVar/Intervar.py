@@ -508,7 +508,7 @@ def check_downdb():
         print("Warning: the folder of %s is already created!" % path)
     ds = paras["database_names"]
     ds.expandtabs(1)
-    # database_names = refGene 1000g2014oct esp6500siv2_all avsnp150 ljb26_all clinvar_20150629 gnomad_genome hg19_dbscsnv11 dbnsfp31a_interpro rmsk ensGene
+    # database_names = refGene 1000g2014oct esp6500siv2_all avsnp151 ljb26_all clinvar_20150629 gnomad_genome hg19_dbscsnv11 dbnsfp31a_interpro rmsk ensGene
     if not os.path.isfile(paras["annotate_variation"]):
         print(
             "Warning: The Annovar file [ %s ] is not here,please download ANNOVAR firstly: http://www.openbioinformatics.org/annovar"
@@ -642,7 +642,7 @@ def check_input():
 
 
 def check_annovar_result():
-    # table_annovar.pl example/ex1.avinput humandb/ -buildver hg19 -out myanno -remove -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,ljb26_all,CLINSIG,gnomad_genome   -operation  g,f,f,f,f,f,f   -nastring . -csvout
+    # table_annovar.pl example/ex1.avinput humandb/ -buildver hg19 -out myanno -remove -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp151,ljb26_all,CLINSIG,gnomad_genome   -operation  g,f,f,f,f,f,f   -nastring . -csvout
     inputft = paras["inputfile_type"]
     annovar_options = " "
     if re.findall("true", paras["otherinfo"], flags=re.IGNORECASE):
@@ -674,7 +674,7 @@ def check_annovar_result():
             + paras["buildver"]
             + " -remove -out "
             + paras["outfile"]
-            + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,dbnsfp42c,clinvar_20231109,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene  -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
+            + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp151,dbnsfp47a,clinvar_20260102,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene  -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
             + annovar_options
         )
         print("%s" % cmd)
@@ -691,7 +691,7 @@ def check_annovar_result():
             + paras["buildver"]
             + " -remove -out "
             + paras["outfile"]
-            + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,dbnsfp42c,clinvar_20231109,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene   -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
+            + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp151,dbnsfp47a,clinvar_20260102,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene   -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
             + annovar_options
         )
         print("%s" % cmd)
@@ -711,7 +711,7 @@ def check_annovar_result():
                 + paras["buildver"]
                 + " -remove -out "
                 + new_outfile
-                + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp150,dbnsfp42c,clinvar_20231109,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene   -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
+                + " -protocol refGene,esp6500siv2_all,1000g2015aug_all,avsnp151,dbnsfp47a,clinvar_20260102,gnomad_genome,dbscsnv11,rmsk,ensGene,knownGene   -operation  g,f,f,f,f,f,f,f,r,g,g   -nastring ."
                 + annovar_options
             )
             print("%s" % cmd)
@@ -2228,7 +2228,7 @@ def my_inter_var(annovar_outfile):
         "CLINSIG": 0,
         "CADD_raw": 0,
         "CADD_phred": 0,
-        "avsnp150": 0,
+        "avsnp151": 0,
         "AAChange.ensGene": 0,
         "AAChange.knownGene": 0,
         "MetaSVM_score": 0,
@@ -2256,7 +2256,7 @@ def my_inter_var(annovar_outfile):
                     "Func.refGene",
                     "ExonicFunc.refGene",
                     "Gene.ensGene",
-                    "avsnp150",
+                    "avsnp151",
                     "AAChange.ensGene",
                     "AAChange.refGene",
                     "Clinvar",
@@ -2296,7 +2296,7 @@ def my_inter_var(annovar_outfile):
                     "Func.refGene",
                     "ExonicFunc.refGene",
                     "Gene.ensGene",
-                    "avsnp150",
+                    "avsnp151",
                     "AAChange.ensGene",
                     "AAChange.refGene",
                     "Clinvar",
@@ -2393,7 +2393,7 @@ def my_inter_var(annovar_outfile):
                             cls[Funcanno_flgs["Func.refGene"]],
                             cls[Funcanno_flgs["ExonicFunc.refGene"]],
                             cls[Funcanno_flgs["Gene.ensGene"]],
-                            cls[Funcanno_flgs["avsnp150"]],
+                            cls[Funcanno_flgs["avsnp151"]],
                             cls[Funcanno_flgs["AAChange.ensGene"]],
                             cls[Funcanno_flgs["AAChange.refGene"]],
                             clinvar_bp,
@@ -2433,7 +2433,7 @@ def my_inter_var(annovar_outfile):
                             cls[Funcanno_flgs["Func.refGene"]],
                             cls[Funcanno_flgs["ExonicFunc.refGene"]],
                             cls[Funcanno_flgs["Gene.ensGene"]],
-                            cls[Funcanno_flgs["avsnp150"]],
+                            cls[Funcanno_flgs["avsnp151"]],
                             cls[Funcanno_flgs["AAChange.ensGene"]],
                             cls[Funcanno_flgs["AAChange.refGene"]],
                             clinvar_bp,

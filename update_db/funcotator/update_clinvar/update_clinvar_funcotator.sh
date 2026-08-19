@@ -2,10 +2,27 @@
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-mkdir clinvar
-mkdir clinvar/hg19
-mkdir clinvar/hg38
+# Default build
+BUILD="both"
 
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --build)
+            BUILD="$2"
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+mkdir clinvar
+
+
+if [[ "$BUILD" == "hg38" || "$BUILD" == "both" ]]; then
+mkdir clinvar/hg38
 cd clinvar/hg38
 	# download data
 	wget https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar.vcf.gz
@@ -27,8 +44,12 @@ cd clinvar/hg38
 
 	#index vcf
 	gatk IndexFeatureFile -I clinvar_$date.vcf
+cd ../..
+fi
 
-cd ../../clinvar/hg19
+if [[ "$BUILD" == "hg19" || "$BUILD" == "both" ]]; then
+mkdir -p clinvar/hg19
+cd clinvar/hg19
 
 	# same as above but for hg19
 	wget https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz
@@ -44,5 +65,5 @@ cd ../../clinvar/hg19
 
 	sed -i 's/DATE/'$date'/g' clinvar_vcf.config
 	gatk IndexFeatureFile -I clinvar_$date.vcf
-
-cd ../../
+cd ../..
+fi

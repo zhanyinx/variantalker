@@ -24,8 +24,13 @@ Modify the configuration file (nextflow.config) by setting the following paramet
 
 To perform biomarker analysis:
 
+> **Note:** on recent Nextflow releases the new strict language parser is the
+> default and is not compatible with this pipeline. Prefix the commands below
+> with `NXF_SYNTAX_PARSER=v1` (or `export NXF_SYNTAX_PARSER=v1` once). See the
+> [main README](../../README.md#quick-start) for details.
+
 ```bash
-nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --outdir outdir --analysis biomarkers
+NXF_SYNTAX_PARSER=v1 nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --outdir outdir --analysis biomarkers
 ```
 
 Add --clonal_tmb_input samplesheet.clonaltmb.csv (see [format](https://github.com/zhanyinx/clonal_evolution#input)) to perform clonal tmb analysis
@@ -33,7 +38,7 @@ Add --clonal_tmb_input samplesheet.clonaltmb.csv (see [format](https://github.co
 To show the whole list of parameters:
 
 ```bash
-nextflow run path_to/main.nf --help --show_hidden_params
+NXF_SYNTAX_PARSER=v1 nextflow run path_to/main.nf --help --show_hidden_params
 ```
 
 ## Input
@@ -68,7 +73,7 @@ If clonal tmb biomarker calculation is also required, the --clonal_tmb_input par
 The format of the clonal_tmb_input file can be found [here](https://github.com/zhanyinx/clonal_evolution#input)
 
 ```bash
-nextflow run path_to/main.nf run -with-tower -c nextflow.config  -profile conda --input sample.csv --outdir variantalker_output/ --analysis biomarkers --clonal_tmb_input sample_clonal_tmb.csv
+NXF_SYNTAX_PARSER=v1 nextflow run path_to/main.nf run -with-tower -c nextflow.config  -profile conda --input sample.csv --outdir variantalker_output/ --analysis biomarkers --clonal_tmb_input sample_clonal_tmb.csv
 ```
 
 ## Output

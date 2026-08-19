@@ -82,7 +82,7 @@ def main():
         context_type="96",
         collapse_to_SBS96=True,
         cosmic_version=args.cosmic_version,
-        exome=False,
+        exome=args.exome,
         genome_build=args.genome,
         signature_database=None,
         exclude_signature_subgroups=None,

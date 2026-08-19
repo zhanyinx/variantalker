@@ -1,0 +1,9 @@
+Hugo_Symbol	Chromosome	Start_Position	End_Position	Reference_Allele	Tumor_Seq_Allele2	Variant_Classification	Variant_Type	Protein_Change	CancerVar	 CancerVar: CancerVar and Evidence 	t_alt_count	t_ref_count
+PRDM16	1	3000001	3000001	C	T	Silent	SNP	p.S148S	Tier_IV_benign	 CancerVar: 2#Tier_IV_benign EVS=[0, 0, 0, 0, 0, 0, 0, -1, 2, 0, 1, 0] 	12	88
+SNRNP200	2	96000001	96000001	G	A	Silent	SNP	p.R427R	Tier_IV_benign	 CancerVar: 0#Tier_IV_benign EVS=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] 	9	91
+AGRN	1	1000001	1000001	G	A	Missense_Mutation	SNP	p.A1514T	Tier_IV_benign	 CancerVar: -2#Tier_IV_benign EVS=[0, 0, 0, 0, 0, 0, 0, -1, 0, -1, 0, 0] 	7	93
+MPL	1	43000001	43000001	A	T	Missense_Mutation	SNP	p.E576V	Tier_III_Uncertain	 CancerVar: 3#Tier_III_Uncertain EVS=[0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0] 	21	79
+PIK3CA	3	179000001	179000001	A	G	Missense_Mutation	SNP	p.M1043V	Tier_II_potential	 CancerVar: 8#Tier_II_potential EVS=[1, 0, 2, 1, 0, 0, 0, 1, 2, -1, 1, 1] 	34	66
+PIK3CA	3	179000002	179000002	A	G	Missense_Mutation	SNP	p.E545G	Tier_I_strong	 CancerVar: 13#Tier_I_strong EVS=[2, 0, 2, 1, 0, 0, 1, 1, 2, 1, 1, 2] 	40	60
+KRAS	12	25000001	25000001	C	T	Missense_Mutation	SNP	p.G12D	Tier_IV_benign	 CancerVar: 1#Tier_IV_benign 	18	82
+BRAF	7	140000001	140000001	A	T	Missense_Mutation	SNP	p.V600E	.	.	25	75

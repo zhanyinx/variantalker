@@ -7,6 +7,7 @@ from numpy import append
 import pandas as pd
 
 from utils import *
+from database.database_utils import *
 
 
 def _parse_args():
@@ -47,6 +48,20 @@ def _parse_args():
         type=str,
         default="LP Pathogenic,IP Pathogenic,HP Pathogenic",
         help="Intervar filters, available: LP Pathogenic,IP Pathogenic,HP Pathogenic,LP Benign,IP Benign,HP Benign",
+    )
+    parser.add_argument(
+        "-fcl",
+        "--filter_clinvar",
+        type=str,
+        default="Pathogenic, Likely pathogenic",
+        help="Clinvar filters, available: Pathogenic, Likely_pathogenic, Uncertain_significance, Conflicting_classifications_of_pathogenicity, Likely_benign, Benign, drug_response, not_provided, , no_classifications_from_unflagged_records, risk_factor, Affects, no_classification_for_the_single_variant, association, other, Uncertain_risk_allele, Likely_risk_allele, _low_penetrance, protective, association_not_found, Established_risk_allele, confers_sensitivity",
+    )
+    parser.add_argument(
+        "-fe",
+        "--filter_escat",
+        type=str,
+        default="IA, IB, IC, IIA, IIB",
+        help="Escat filters, available: IA, IB, IC, IIA, IIB, IIIA, IIIB, V",
     )
     parser.add_argument(
         "-st",
@@ -105,6 +120,70 @@ def _parse_args():
         default="null",
         help="file with list of Hugo_Symbol genes to be kept.",
     )
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=str,
+        default=None,
+        required=True,
+        help="Path to cancervar or intervar config file.",
+    )
+    parser.add_argument(
+        "-f",
+        "--funcotator",
+        type=str,
+        default=None,
+        required=True,
+        help="Path to funcotator database folder.",
+    )
+    parser.add_argument(
+        "-t",
+        "--technology",
+        type=str,
+        default="illumina",
+        help="Technology used for sequencing.",
+    )
+    parser.add_argument(
+        "-av",
+        "--annovar_version",
+        type=str,
+        default="v0",
+        help="Annovar version",
+    )
+    parser.add_argument(
+        "-gb",
+        "--genome_build",
+        type=str,
+        default="GRCh38",
+        help="Genome build",
+    )
+    parser.add_argument(
+        "-ms",
+        "--maf_skip",
+        type=str,
+        required=False,
+        default=None,
+        help="Maf file with variants that skipped annotation because found in db",
+    )
+    parser.add_argument(
+        "-sc",
+        "--skip_civic",
+        action="store_true",
+        help="Skip CIViC columns",
+    )
+    parser.add_argument(
+        "-sp",
+        "--skip_pathogenic",
+        action="store_true",
+        help="Skip automatic retention of pathogenic variants",
+    )
+    parser.add_argument(
+        "-pid",
+        "--projectid",
+        type=str,
+        default="other",
+        help="The project id corresponding to the analysed sample",
+    )
     args = parser.parse_args()
     return args
 
@@ -129,34 +208,48 @@ def has_element_from_list(s: str, my_list: list):
     return False
 
 
+def check_civic_column_exists(maf: pd.DataFrame):
+    """Check if CIViC_Evidence_Level column exists in the DataFrame."""
+    civic_exists = 'CIViC_Evidence_Level' in maf.columns
+    if not civic_exists:
+        print("Warning: CIViC_Evidence_Level column not found in MAF file. CIViC filtering will be skipped.")
+    return civic_exists
+
+
 def somatic_filters(
     maf: pd.DataFrame,
     vaf: float,
     somatic_genes: str,
     cancervar_keep: list,
     civic_keep: list,
+    escat_keep: list,
+    clinvar_keep: list,
+    skip_civic: bool,
+    skip_pathogenic: bool = False,
 ):
-    """Set of somatic specific filters."""
-    clinvar_exclude = CLINVAR_EXCLUDE
-    escat_exclude = [
-        "IIIA",
-        "IIIB",
-        "IIIC",
-        ".",
-        "V",
-    ]
 
-    filter_guidelines = (
-        (maf["CancerVar"].isin(cancervar_keep))
-        | (
-            ~maf["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude)
-            & (~maf["ClinVar_VCF_CLNSIG"].isna())
+    # Check if CIViC columns exist before using them
+    civic_column_exists = check_civic_column_exists(maf)
+    
+    if skip_civic or not civic_column_exists:
+        filter_guidelines = (
+            maf["CancerVar"].isin(cancervar_keep)
+            | maf["ClinVar_VCF_CLNSIG"].apply(
+                lambda x: has_clinvar_term(x, clinvar_keep)
+            )
+            | maf["ESCAT"].isin(escat_keep)
         )
-        | (~(maf["ESCAT"].isin(escat_exclude)))
-        | maf["CIViC_Evidence_Level"].apply(
-            lambda x: has_element_from_list(x, civic_keep)
+    else:
+        filter_guidelines = (
+            maf["CancerVar"].isin(cancervar_keep)
+            | maf["ClinVar_VCF_CLNSIG"].apply(
+                lambda x: has_clinvar_term(x, clinvar_keep)
+            )
+            | maf["ESCAT"].isin(escat_keep)
+            | maf["CIViC_Evidence_Level"].apply(
+                lambda x: has_element_from_list(x, civic_keep)
+            )
         )
-    )
 
     # filter on variant allele frequency
     filter_vaf = maf["tumor_f"] > vaf
@@ -174,18 +267,31 @@ def somatic_filters(
         else:
             Warning(f"{somatic_genes} file does not exist. No filters applied")
 
-    # keep all pathogenetic variants
-    filter_patho = (
-        (maf["CancerVar"].isin(["Tier_II_potential", "Tier_I_strong"]))
-        | (maf["ClinVar_VCF_CLNSIG"].isin(CLINVAR_PATHO))
-        | maf["CIViC_Evidence_Level"].apply(
-            lambda x: has_element_from_list(x, ["A", "B"])
+    # keep all pathogenic variants (unless skip_pathogenic is True)
+    if skip_pathogenic:
+        # If pathogenic filter is disabled, use empty filter (no pathogenic variants retained)
+        filter_patho = pd.Series([False] * len(maf), index=maf.index)
+    elif skip_civic or not civic_column_exists:
+        filter_patho = (
+            maf["CancerVar"].isin(["Tier_II_potential", "Tier_I_strong"])
+            | maf["ClinVar_VCF_CLNSIG"].apply(
+                lambda x: has_clinvar_term(x, CLINVAR_PATHO)
+            )
         )
-    )
+    else:
+        filter_patho = (
+            (maf["CancerVar"].isin(["Tier_II_potential", "Tier_I_strong"]))
+            | maf["ClinVar_VCF_CLNSIG"].apply(
+                lambda x: has_clinvar_term(x, CLINVAR_PATHO)
+            )
+            | maf["CIViC_Evidence_Level"].apply(
+                lambda x: has_element_from_list(x, ["A", "B"])
+            )
+        )
 
     return (
         filter_guidelines & filter_vaf & filter_genes,
-        filter_patho & filter_vaf & filter_genes,
+        filter_patho,
     )
 
 
@@ -195,15 +301,14 @@ def germline_filters(
     germline_genes: str,
     intervar_keep: list,
     renovo_keep: list,
+    clinvar_keep: list,
+    skip_pathogenic: bool = False,
 ):
-    """Set of somatic specific filters."""
-    clinvar_exclude = CLINVAR_EXCLUDE
 
     filter_guidelines = (
         (maf["InterVar"].isin(intervar_keep))
-        | (
-            ~maf["ClinVar_VCF_CLNSIG"].isin(clinvar_exclude)
-            & (~maf["ClinVar_VCF_CLNSIG"].isna())
+        | maf["ClinVar_VCF_CLNSIG"].apply(
+            lambda x: has_clinvar_term(x, clinvar_keep)
         )
         | (maf["RENOVO_Class"].isin(renovo_keep))
     )
@@ -224,15 +329,23 @@ def germline_filters(
         else:
             Warning(f"{germline_genes} file does not exist. No filters applied")
 
-    # keep all pathogenetic variants
-    filter_patho = (maf["InterVar"].isin(["Pathogenic", "Likely pathogenic"])) | (
-        maf["ClinVar_VCF_CLNSIG"].isin(CLINVAR_PATHO)
-    )
+    # keep all pathogenic variants (unless skip_pathogenic is True)
+    if skip_pathogenic:
+        # If pathogenic filter is disabled, use empty filter (no pathogenic variants retained)
+        filter_patho = pd.Series([False] * len(maf), index=maf.index)
+    else:
+        filter_patho = (
+            maf["InterVar"].isin(["Pathogenic", "Likely pathogenic"])
+            | maf["ClinVar_VCF_CLNSIG"].apply(
+                lambda x: has_clinvar_term(x, CLINVAR_PATHO)
+            )
+        )
 
     return (
         filter_guidelines & filter_vaf & filter_genes,
-        filter_patho & filter_vaf & filter_genes,
+        filter_patho,
     )
+
 
 
 def main():
@@ -240,52 +353,8 @@ def main():
     # Parse input
     args = _parse_args()
 
-    keep = [
-        "Tumor_Sample_Barcode",
-        "Matched_Norm_Sample_Barcode",
-        "project_id",
-        "Hugo_Symbol",
-        "Annotation_Transcript",
-        "Chromosome",
-        "Start_Position",
-        "End_Position",
-        "Variant_Classification",
-        "Variant_Type",
-        "Reference_Allele",
-        "Tumor_Seq_Allele1",
-        "Tumor_Seq_Allele2",
-        "AAChange.refGene",
-        "cDNA_Change",
-        "Codon_Change",
-        "Protein_Change",
-        "Transcript_Exon",
-        "tumor_f",
-        "DP",
-        "t_alt_count",
-        "t_ref_count",
-        "n_alt_count",
-        "n_ref_count",
-        "ClinVar_VCF_CLNSIG",
-        "CancerVar",
-        "ESCAT",
-        "ESCAT_TISSUE",
-        "ESCAT_CANCER",
-        "CIViC_Evidence_Level",
-        "CIViC_Evidence_Rating",
-        "CIViC_Entity_Disease",
-        "CIViC_Variant_URL",
-        "CIViC_Entity_URL",
-        "CIViC_Entity_Status",
-        "am_class",
-        "am_pathogenicity",
-        "Otherinfo",
-        "tumor_tissue",
-        "cosmic",
-        "Freq_ExAC_ALL",
-        "Freq_esp6500siv2_all",
-        "Freq_1000g2015aug_all",
-        "gnomAD_exome_AF",
-    ]
+    keep = KEEP
+
 
     if args.sample_type == "germline":
         keep.remove("Tumor_Sample_Barcode")
@@ -302,6 +371,34 @@ def main():
         raise ValueError(f"Maf file {args.maf} does not exist!")
 
     out = read_maf(args.maf)
+
+    # Check if CIViC columns exist in the MAF file
+    civic_columns_exist = any(col in out.columns for col in ["CIViC_Evidence_Level", "CIViC_Evidence_Rating", "CIViC_Entity_Disease", "CIViC_Variant_URL", "CIViC_Entity_URL", "CIViC_Entity_Status"])
+    
+    if args.skip_civic or not civic_columns_exist:
+        keep = [item for item in keep if not item.startswith("CIViC")]
+        if not civic_columns_exist and not args.skip_civic:
+            print("Warning: CIViC columns not found in MAF file. CIViC columns will be automatically excluded from output.")
+
+
+    if "gnomAD_exome_AF_raw" in out.columns.values:
+        keep.append("gnomAD_exome_AF_raw")
+    elif "gnomAD_exome_AF" in out.columns.values:
+        keep.append("gnomAD_exome_AF")
+
+    if "gnomAD_genome_AF_raw" in out.columns.values:
+        keep.append("gnomAD_genome_AF_raw")
+    elif "gnomAD_genome_AF" in out.columns.values:
+        keep.append("gnomAD_genome_AF")
+
+    # get variants from skipped maf file: variants from db
+    if args.maf_skip and os.path.exists(args.maf_skip) and os.path.getsize(args.maf_skip) != 0:
+        maf_skip = pd.read_csv(args.maf_skip, sep="\t")
+        out = outer_concat_preserve_order(out, maf_skip, fill_value="")
+    
+    # add project id
+    out["project_id"] = args.projectid
+
     variant_classification_filter = args.filter_variant_classification.split(",")
     out["filter_common"] = common_filters(
         out,
@@ -315,25 +412,34 @@ def main():
         )
 
     if args.sample_type == "somatic":
-        cancervar_keep = args.filter_cancervar.split(",")
-        civic_keep = args.filter_civic.upper().split(",")
+        cancervar_keep = [x.strip() for x in args.filter_cancervar.split(",") if x.strip()]
+        civic_keep = [x.strip() for x in args.filter_civic.split(",") if x.strip()]
+        escat_keep = [x.strip() for x in args.filter_escat.split(",") if x.strip()]
+        clinvar_keep = [x.strip() for x in args.filter_clinvar.split(",") if x.strip()]
         out["filter_specific"], filter_patho = somatic_filters(
             out,
+            vaf=args.vaf_threshold,
             somatic_genes=args.filter_genes_somatic,
             cancervar_keep=cancervar_keep,
             civic_keep=civic_keep,
-            vaf=args.vaf_threshold,
+            escat_keep=escat_keep,
+            clinvar_keep=clinvar_keep,
+            skip_civic=args.skip_civic,
+            skip_pathogenic=args.skip_pathogenic,
         )
 
     if args.sample_type == "germline":
-        intervar_keep = args.filter_intervar.split(",")
-        renovo_keep = args.filter_renovo.split(",")
+        intervar_keep = [x.strip() for x in args.filter_intervar.split(",") if x.strip()]
+        clinvar_keep = [x.strip() for x in args.filter_clinvar.split(",") if x.strip()]
+        renovo_keep = [x.strip() for x in args.filter_renovo.split(",") if x.strip()]
         out["filter_specific"], filter_patho = germline_filters(
             out,
+            vaf=args.vaf_threshold_germline,
             germline_genes=args.filter_genes_germline,
             intervar_keep=intervar_keep,
-            vaf=args.vaf_threshold_germline,
+            clinvar_keep=clinvar_keep,
             renovo_keep=renovo_keep,
+            skip_pathogenic=args.skip_pathogenic,
         )
 
     out["filter"] = "NOPASS"
@@ -342,13 +448,6 @@ def main():
     out = out.drop(["filter_common", "filter_specific"], axis=1)
 
     writeheader(args.maf, args.output)
-    overlapping_columns = list(set(out.columns) & set(COLUMNS_TO_REMOVE))
-    columns_to_remove = np.array([False] * len(out.columns))
-    columns_to_remove[(out == "__UNKNOWN__").all()] = True
-    columns_to_remove[out.T.duplicated()] = True
-    columns_to_remove[out.columns.isin(overlapping_columns)] = True
-    columns_to_remove[out.columns.isin(keep)] = False
-    out = out.loc[:, ~columns_to_remove]
     out.to_csv(args.output, sep="\t", index=False, mode="a")
 
     if len(out[out["filter"] == "NOPASS"]):

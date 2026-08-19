@@ -1,0 +1,40 @@
+# An example MAFigate parameter file: the pipeline's own germline defaults.
+#
+# Downloaded from the app's Parameter Configuration page, and uploadable back into it
+# under Presets -> Upload Custom Preset. Both JSON and YAML are accepted.
+#
+# `schema_version` is the parameter format's own version, and it is what decides whether
+# an uploaded file is migrated. It is deliberately not the app version: a file carrying
+# the current stamp is loaded exactly as written, and one carrying an older stamp -- or
+# none at all, which is every file written before the stamp existed -- is migrated onto
+# the current parameter set, with anything dropped named on screen.
+#
+# `parameters` is the whole of what filters. The keys are the pipeline's own long
+# options, with its skip_* polarity; streamlit_app/config/pipeline_params.py says what
+# each one means and which nextflow.config default it comes from.
+schema_version: 1
+app_version: 2.0.0
+timestamp: '2026-08-13T00:00:00'
+parameters:
+  sample_type: germline
+  min_depth: 50
+  filter_variant_classification:
+  - Silent
+  - IGR
+  - RNA
+  filter_clinvar:
+  - Pathogenic
+  - Likely_pathogenic
+  filter_genes: []
+  skip_civic: false
+  skip_pathogenic: false
+  max_freq_population: 1.0
+  vaf_threshold: 0.2
+  filter_intervar:
+  - Pathogenic
+  - Likely pathogenic
+  filter_renovo:
+  - LP Pathogenic
+  - IP Pathogenic
+  - HP Pathogenic
+  vaf_threshold_germline: 0.2

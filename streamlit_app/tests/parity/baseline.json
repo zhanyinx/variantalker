@@ -1,0 +1,764 @@
+{
+  "cases": {
+    "civic_present": {
+      "app_column_count": 46,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 8,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_civic.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 46,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 8,
+      "rows": 12
+    },
+    "civic_skipped": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 0,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_civic.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 0,
+      "rows": 12
+    },
+    "dot_numeric": {
+      "app_column_count": 0,
+      "app_error": "UnreadableNumericColumns",
+      "app_extra_columns": [],
+      "app_pass": null,
+      "app_refused_columns": [
+        "t_alt_count",
+        "t_ref_count",
+        "tumor_f"
+      ],
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_dot_numeric.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 0,
+      "pipeline_columns_not_shown": [],
+      "pipeline_error": "TypeError: '>=' not supported between instances of 'str' and 'int'",
+      "pipeline_pass": null,
+      "rows": 5
+    },
+    "germline_defaults": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 59,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 59,
+      "rows": 94
+    },
+    "germline_defaults_literal": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 59,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 59,
+      "rows": 94
+    },
+    "germline_depth_500": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 3,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 3,
+      "rows": 94
+    },
+    "germline_empty_guidelines": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 18,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 18,
+      "rows": 94
+    },
+    "germline_genes": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 57,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 57,
+      "rows": 94
+    },
+    "germline_genes_skip_patho": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 47,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 47,
+      "rows": 94
+    },
+    "germline_genes_spaced_skip_patho": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 47,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 47,
+      "rows": 94
+    },
+    "germline_skip_patho": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 51,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 51,
+      "rows": 94
+    },
+    "germline_synthetic": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 7,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_synthetic.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 7,
+      "rows": 17
+    },
+    "germline_vaf_005": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 58,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 58,
+      "rows": 94
+    },
+    "germline_vaf_02": {
+      "app_column_count": 39,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 51,
+      "app_refused_columns": null,
+      "arm": "germline",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "germline_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 39,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 51,
+      "rows": 94
+    },
+    "gnomad_genome_present": {
+      "app_column_count": 41,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 0,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_gnomad_genome.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 41,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 0,
+      "rows": 6
+    },
+    "somatic_defaults": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 60,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 60,
+      "rows": 82
+    },
+    "somatic_defaults_literal": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 60,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 60,
+      "rows": 82
+    },
+    "somatic_depth_0": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 56,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 56,
+      "rows": 82
+    },
+    "somatic_depth_500": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 3,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 3,
+      "rows": 82
+    },
+    "somatic_empty_guidelines": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 19,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 19,
+      "rows": 82
+    },
+    "somatic_empty_guidelines_skip_patho": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 0,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 0,
+      "rows": 82
+    },
+    "somatic_genes": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 58,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 58,
+      "rows": 82
+    },
+    "somatic_genes_mixed_case": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 58,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 58,
+      "rows": 82
+    },
+    "somatic_genes_mixed_case_semicolons_skip_patho": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 49,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 49,
+      "rows": 82
+    },
+    "somatic_genes_mixed_case_skip_patho": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 49,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 49,
+      "rows": 82
+    },
+    "somatic_genes_pasted_skip_patho": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 49,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 49,
+      "rows": 82
+    },
+    "somatic_genes_skip_patho": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 49,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 49,
+      "rows": 82
+    },
+    "somatic_genes_spaced_skip_patho": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 49,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 49,
+      "rows": 82
+    },
+    "somatic_skip_patho": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 54,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 54,
+      "rows": 82
+    },
+    "somatic_synthetic": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 7,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_synthetic.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 7,
+      "rows": 18
+    },
+    "somatic_synthetic_depth_0": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 8,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_synthetic.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 8,
+      "rows": 18
+    },
+    "somatic_vaf_005": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 53,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 53,
+      "rows": 82
+    },
+    "somatic_vaf_02": {
+      "app_column_count": 40,
+      "app_error": null,
+      "app_extra_columns": [
+        "dbSNP_ID"
+      ],
+      "app_pass": 51,
+      "app_refused_columns": null,
+      "arm": "somatic",
+      "attribution": {},
+      "columns_in_parity": true,
+      "fixture": "somatic_reference.maf",
+      "in_parity": true,
+      "only_app": 0,
+      "only_pipeline": 0,
+      "pipeline_column_count": 40,
+      "pipeline_columns_not_shown": [
+        "variantalker_naive"
+      ],
+      "pipeline_error": null,
+      "pipeline_pass": 51,
+      "rows": 82
+    }
+  },
+  "note": "Measured baseline: what the parity harness catches on the app as it stands, before any fix. Regenerate with `python streamlit_app/tests/parity/harness.py --update-baseline`. Changing a number here is a deliberate act -- test_parity.py asserts against it, so an unexplained change is a regression."
+}

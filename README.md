@@ -3,167 +3,200 @@
 [![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
 [![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
 
-# Variant annotation and prioritization pipeline
+# VarianTalker
+
+A Nextflow pipeline for cancer variant annotation, prioritization, and biomarker extraction.
 
 ## Contents
-- [Contents](#contents)
 - [Overview](#overview)
+- [Features](#features)
 - [Installation](#installation)
-- [Documentation](#documentation)
-- [Usage](#usage)
-- [Input](#input)
+- [Quick Start](#quick-start)
+- [Input Format](#input-format)
 - [Output](#output)
-- [Liability](#liability)
+- [Modules](#modules)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Overview
 
-Variant annotation in cancer genomics involves identifying and characterizing the genetic changes (variants) that contribute to cancer development and progression. The challenge is that there are many different types of variants that can occur in the genome, and not all of them are relevant to cancer. Therefore, accurate annotation is critical for identifying the key driver mutations and designing targeted therapies. However, this process is complicated by the large number of potential variants, the need to integrate data from multiple sources, and the ongoing discovery of new cancer-associated variants.
+VariantAlker is a comprehensive pipeline for annotating and prioritizing genetic variants in cancer genomics. It integrates multiple annotation databases and tools to identify clinically relevant mutations and extract actionable biomarkers.
 
-We have developed a Nextflow pipeline called variantalker that enables users to annotate variants from VCF files. Our pipeline supports VCF files generated from dragen, nf-sarek, and ION-torrent platforms.
+**Supported platforms:** Dragen, nf-sarek, ION-Torrent  
+**Supported genomes:** hg19, hg38
 
-BETA version: we have implemented the possibility to extract biomarkers such as TMB, mutational signatures (apobec, uv and tabacco), clonal TMB (if bam/cram files and sex are provided), expression of specific genes (if RNA-seq data are provided), gene cnv, etc. For more information, look at [here](https://github.com/zhanyinx/variantalker/tree/main/docs/biomarkers/)
+## Features
+
+### Core Annotation
+- **Somatic variants** - CancerVar prioritization and CIViC evidence levels
+- **Germline variants** - InterVar classification 
+- **CNV annotation** - CNVKit (nf-sarek) and Dragen outputs
+- **Multi-database integration** - Funcotator, Annovar, CIViC, AlphaMissense
+
+### Biomarker Extraction (Beta)
+- Tumor Mutational Burden (TMB)
+- Mutational signatures (APOBEC, UV, tobacco)
+- Clonal TMB (requires BAM/CRAM files)
+- Gene expression (requires RNA-seq data)
+- Gene CNV
+
+See [biomarker documentation](docs/biomarkers/README.md) for details.
+
+### Data Visualization
+Filter and browse the annotated MAF interactively with the **MAFigate** app (see [`streamlit_app/`](streamlit_app/README.md)).
 
 ## Installation
-Clone the repo
 
+### 1. Clone the repository
 ```bash
 git clone https://github.com/zhanyinx/variantalker.git
+cd variantalker
 ```
 
-variantalker relies on [Annovar](https://annovar.openbioinformatics.org/en/latest/) software and [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) databases.
-
-Download the updated databases. Separate repositories for hg19 and hg38 are available.
+### 2. Download annotation databases
+Separate databases are available for hg19 and hg38:
 
 ```bash
-wget -r -N --no-parent -nH --cut-dirs=3 -P public_databases/hg38 https://bioserver.ieo.it/repo/dima/hg38 
-wget -r -N --no-parent -nH --cut-dirs=3 -P public_databases/hg19 https://bioserver.ieo.it/repo/dima/hg19
+# For hg38
+wget -r -N --no-parent -nH --cut-dirs=3 -P public_databases/hg38 https://bioserver.ieo.it/repo/dima/2026/hg38 
+
+# For hg19
+wget -r -N --no-parent -nH --cut-dirs=3 -P public_databases/hg19 https://bioserver.ieo.it/repo/dima/2026/hg19
+
+# Annovar databases
+wget -r -N --no-parent -nH --cut-dirs=3 -P public_databases/humandb https://bioserver.ieo.it/repo/dima/2026/humandb
 ```
 
-## Documentation
+### 3. Configure the pipeline
+Edit [nextflow.config](nextflow.config) with your database paths:
 
-The pipeline employs several tools to annotate and prioritize variants: 
+```groovy
+params {
+  funcotator_germline_db = "path/to/public_databases/funcotator_dataSources.v1.7.20200521g"
+  funcotator_somatic_db  = "path/to/public_databases/funcotator_dataSources.v1.7.20200521s"
+  annovar_db             = "path/to/public_databases/humandb"
+  annovar_software_folder = "path/to/annovar"
+  alpha_mis_genome_basedir = "path/to/public_databases"
+  fasta                  = "path/to/reference.fasta"
+  target                 = "path/to/target.bed"
+}
+```
 
-- [Funcotator](https://gatk.broadinstitute.org/hc/en-us/articles/360035889931-Funcotator-Information-and-Tutorial) for variant annotation
-- [CancerVar](https://github.com/WGLab/CancerVar) for somatic variants prioritization
-- [InterVar](https://github.com/WGLab/InterVar) for germline variants annotation
-- [Annovar](https://annovar.openbioinformatics.org/en/latest/): cancervar and intervar reply on Annovar. 
-- [CIViC](https://civicdb.org/): somatic variant classification using CIViC evidence level.
-- [AlphaMissense](https://www.science.org/doi/10.1126/science.adg7492): somatic and germline variant prioritization.
+## Quick Start
 
-To ensure the accuracy of the pipeline, the databases for Funcotator and Annovar must be regularly updated using the provided tools found here: [update utilities](https://github.com/zhanyinx/variantalker/tree/main/update_db).
+> **Nextflow version / language parser**
+> Recent Nextflow releases ship a new, stricter language parser as the default,
+> which is **not** compatible with this pipeline's current syntax. Run with the
+> legacy parser by setting `NXF_SYNTAX_PARSER=v1` (shown below), or use an older
+> Nextflow release (≥ 22.10.1). All commands in this README assume the legacy
+> parser.
 
-
-## Usage
-
-If you are using for the first time, please consider updating the databases following the [instructions](https://github.com/zhanyinx/variantalker/tree/main/update_db). 
-
-Modify the configuration file (nextflow.config) by setting the following parameters:
-
-- funcotator_germline_db: e.g. path2/public_databases/funcotator_dataSources.v1.7.20200521g
-
-- funcotator_somatic_db: e.g. path2/public_databases/funcotator_dataSources.v1.7.20200521s
-
-- annovar_db: e.g. path2/public_databases/humandb
-
-- annovar_software_folder: e.g. path2/annovar
-
-- alpha_mis_genome_basedir: e.g. path2/public_databases
-
-- fasta: path to fasta file used to generate the vcf
-
-- target: path to the target bed file
-
-The main command line for the annotation is the following
-
+### Basic annotation
 ```bash
-nextflow run path_to/main.nf -c yourconfig -profile singularity --input samplesheet.csv --outdir outdir
+NXF_SYNTAX_PARSER=v1 nextflow run main.nf -profile singularity --input samplesheet.csv --outdir results
 ```
 
+### View all options
 ```bash
-nextflow run path_to/main.nf --help --show_hidden_params
+NXF_SYNTAX_PARSER=v1 nextflow run main.nf --help --show_hidden_params
 ```
 
-## Input
+> **Tip:** to avoid prefixing every command, export it once in your shell:
+> ```bash
+> export NXF_SYNTAX_PARSER=v1
+> ```
 
-variantalker takes as input a csv samplesheet with 4 columns
 
+## Input Format
 
+Create a CSV samplesheet with the following columns (**header required**):
 
-__IMPORTANT: HEADER is required__ 
+| patient  | tumor_tissue | sample_file              | sample_type |
+|----------|--------------|--------------------------|-------------|
+| patient1 | Lung         | /path/to/tumor.vcf.gz    | somatic     |
+| patient2 | Breast       | /path/to/germline.vcf.gz | germline    |
+| patient3 | Lung         | /path/to/cnv.cnr         | cnv         |
 
-| patient        | tumor_tissue   | sample_file       | sample_type  |
-| -------------- | -------------- | ----------------- | -------------|
-| patient1       | Lung           | path/tumor.vcf.gz | somatic      |
-| .....          | .....          | .....             | .....        |
+**Important:** Use absolute paths for `sample_file`, not relative paths.
 
-Sample_file must be provided with full path, __not__ relative path
+### Sample Types
 
-Available sample_type are: somatic, germline, cnv. 
+- **somatic** - Single-sample (tumor-only) or multi-sample (tumor-normal) VCF. Requires `tumor_tissue`.
+- **germline** - Single-sample VCF. `tumor_tissue` optional.
+- **cnv** - CNVKit `.cnr` file (nf-sarek) or VCF (Dragen). `tumor_tissue` optional.
 
-- somatic sample type: it can be tumoronly (single sample) or tumor_normal (multi sample) vcf.gz file. Requires tumor_tissue to be specified
-
-- germline: single sample vcf.gz file. It does not require tumor_tissue
-
-- cnv: for nfcore/sarek, CNVKit output is supported (cnr file). For dragen, vcf.gz file required. It does not require tumor_tissue 
-
-Available tumor_tissue are: Adrenal_Gland Bile_Duct Bladder Blood Bone Bone_Marrow Brain Breast Cancer_all Cervix Colorectal Esophagus Eye Head_and_Neck Inflammatory Intrahepatic Kidney Liver Lung Lymph_Nodes Nervous_System Other Ovary Pancreas Pleura Prostate Skin Soft_Tissue Stomach Testis Thymus Thyroid Uterus
+### Tumor Tissue Options
+Adrenal_Gland, Bile_Duct, Bladder, Blood, Bone, Bone_Marrow, Brain, Breast, Cancer_all, Cervix, Colorectal, Esophagus, Eye, Head_and_Neck, Inflammatory, Intrahepatic, Kidney, Liver, Lung, Lymph_Nodes, Nervous_System, Other, Ovary, Pancreas, Pleura, Prostate, Skin, Soft_Tissue, Stomach, Testis, Thymus, Thyroid, Uterus
 
 ## Output
 
-Output structure:
+The pipeline generates the following directory structure:
 
 ```
-params.outdir
-|-- date
-|   `-- annotation
-|       |-- germline
-|       |   `-- patient
-|       |       |-- filtered.patient.maf.pass.tsv
-|       |       |-- filtered.patient.maf.nopass.tsv
-|       |       |-- patient.vcf
-|       |       `-- patient.maf
-|       `-- somatic
-|           `-- patient
-|       |       |-- filtered.patient.maf.pass.tsv
-|       |       |-- filtered.patient.maf.nopass.tsv
-|       |       |-- patient.vcf
-|               `-- patient.maf
-|       `-- cnv
-|           `-- patient
-|       |       |-- patient.cnv.annotated.tsv
+results/
+└── YYYY-MM-DD/
+    └── annotation/
+        ├── somatic/
+        │   └── patient_name/
+        │       ├── patient.maf                    # Full MAF with all annotations
+        │       ├── patient.vcf                    # PASS variants only
+        │       ├── filtered.patient.maf.pass.tsv  # Filtered variants (passing filters)
+        │       └── filtered.patient.maf.nopass.tsv # Filtered variants (not passing)
+        ├── germline/
+        │   └── patient_name/
+        │       ├── patient.maf
+        │       ├── patient.vcf
+        │       ├── filtered.patient.maf.pass.tsv
+        │       └── filtered.patient.maf.nopass.tsv
+        └── cnv/
+            └── patient_name/
+                └── patient.cnv.annotated.tsv
 ```
 
-variantalker outputs for each sample multiple files
+### Default Filters
 
-1) maf file with all the annotations
-2) vcf file with the PASS variants 
-3) filtered pass file with variants passing the filters (see below).
-4) filtered nopass file with variants not passing the filters (see below).
-5) cnv annotated file (if cnv samples provided)
+Variants are filtered based on the following criteria:
 
-Default filters applied:
+**Excluded variant types:**
+- Silent, IGR, RNA (unless pathogenic/likely pathogenic)
 
-- "Silent",  "IGR",  "RNA" variant types are filtered out (unless it's pathogenic or likely pathogenic for clinvar/cancervar/intervar)
+**Coverage thresholds:**
+- Minimum depth: 50× (unless pathogenic/likely pathogenic)
 
-- minimum coverage 50 (unless it's pathogenic or likely pathogenic for clinvar/cancervar/intervar)
+**Variant allele frequency:**
+- Somatic: VAF ≥ 0.01
+- Germline: VAF ≥ 0.2
 
-- minimum somatic VAF: 0.01
+**Classification filters (OR logic):**
+- **InterVar** (germline): Pathogenic, Likely pathogenic
+- **CancerVar** (somatic): Tier_I_strong, Tier_II_potential
+- **ReNOVo**: LP Pathogenic, IP Pathogenic, HP Pathogenic
+- **CIViC**: Evidence levels A, B, C
 
-- minimum germline VAF: 0.2
+> **Note:** A variant passes if it meets at least one of the classification criteria (OR logic).
 
-- InterVar classes to be kept: Pathogenic,Likely pathogenic (logic OR)
+## Modules
 
-- CancerVar classes to be kept: Tier_II_potential,Tier_I_strong (logic OR)
+### Database Update (`update_db/`)
+Tools for updating Funcotator and Annovar databases. **Recommended before first use.**
 
-- ReNOVo class to be kept: LP Pathogenic,IP Pathogenic,HP Pathogenic (logic OR)
+See [update_db/README.md](update_db/README.md) for instructions.
 
-- CIViC evidence levels to be kept: A,B,C (logic OR)
+### Data Visualization (`streamlit_app/`)
+**MAFigate** — filter and browse the pipeline's annotated MAF interactively: clinical,
+frequency, gene and quality filters you can change as you go, with the variants that passed
+and the variants that did not side by side.
 
-- no filters on genes (somatic or germline)
+See [streamlit_app/README.md](streamlit_app/README.md) to install and run it.
 
-Logic OR filters: a variant is kept if at least one of the OR filters is true
+## Contributing
 
+Issues and pull requests are welcome. This repository is a one-way export of a private
+development tree, which changes what happens to yours after you send it, and how you are
+credited for it — please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
-# Liability
+## License
 
-Variantalker assumes no responsibility for any injury to person or damage to persons or property arising out of, or related to any use of Variantalker, or for any errors or omissions. The user recognizes they are using Liability at their own risk.
+This software is provided for research use only. See [LICENSE](LICENSE) for details.
+
+**Disclaimer:** VariantAlker assumes no responsibility for any injury, damage, errors, or omissions arising from its use. Users assume all risks associated with using this software.

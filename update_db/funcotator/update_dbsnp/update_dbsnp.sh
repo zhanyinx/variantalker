@@ -7,7 +7,7 @@
 
 
 function usage {
-    echo -e "usage : update_dbsnp.sh -d db_dir [-h]"
+    echo -e "usage : update_dbsnp.sh -d db_dir [--build hg19|hg38|both] [-h]"
     echo -e "Use option -h|--help for more information"
 }
 
@@ -18,6 +18,7 @@ function help {
     echo "---------------"
     echo "OPTIONS"
     echo "   -d|--db db_dir : directory of the current dbsnp vcf. Funcotator folder with hg38 and hg19 within it."
+    echo "   [--build]: genome build to update: hg19, hg38, or both (default: both)"
     echo "   [-h|--help]: help"
     exit;
 }
@@ -28,17 +29,20 @@ for arg in "$@"; do
   shift
   case "$arg" in
       "--db") set -- "$@" "-d" ;;
+      "--build") set -- "$@" "-b" ;;
       "--help")   set -- "$@" "-h" ;;
        *)        set -- "$@" "$arg"
   esac
 done
 
 db_dir=""
+build="both"
 
-while getopts ":d:h" OPT
+while getopts ":d:b:h" OPT
 do
     case $OPT in
         d) db_dir=$OPTARG;;
+        b) build=$OPTARG;;
         h) help ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
@@ -65,38 +69,37 @@ if ! [ -d $db_dir ]; then
     exit
 fi
 
-if ! [ -d "$db_dir/hg38" ]; then
-    echo "WARNING!! $db_dir does not contain hg38 directory!"
-fi
-
-if ! [ -d "$db_dir/hg19" ]; then
-    echo "WARNING!! $db_dir does not contain hg19 directory!"
-fi
-
 # get info
 curl https://ftp.ncbi.nlm.nih.gov/snp/latest_release/VCF/ 2>/dev/null > appo
 awk '{if($0 ~/^<a href/) print $0}' appo | cut -d '"' -f2 > list_files
 
 
 ######################################## hg19 ########################################
+if [[ "$build" == "hg19" || "$build" == "both" ]]; then
 latest_version=`awk '{print $1}' list_files | grep -v "tbi" | grep -v "md5" | grep GCF | sort | awk 'BEGIN{getline; print $0}'`
-curl https://ftp.ncbi.nlm.nih.gov/snp/latest_release/VCF/${latest_version}.md5 > ${latest_version}.md5
-latest_md5sum=`awk '{print $1}' ${latest_version}.md5`
 
-# check if current file is different from latest
-check=0
-if ! [ -f "$db_dir/hg19/${latest_version}.md5" ]; then
-    let check=check+1
+# Check if current database exists - skip update if missing
+if ! [ -d "$db_dir/hg19" ] || [ -z "$(ls -A $db_dir/hg19/*.md5 2>/dev/null)" ]; then
+    echo "SKIPPED: hg19 dbSNP update - no existing database found in $db_dir/hg19/"
+    echo "To initialize dbSNP hg19, manually download and set up the database first."
 else
-    current_md5sum=`awk '{print $1}' $db_dir/hg19/${latest_version}.md5`
+    curl https://ftp.ncbi.nlm.nih.gov/snp/latest_release/VCF/${latest_version}.md5 > ${latest_version}.md5
+    latest_md5sum=`awk '{print $1}' ${latest_version}.md5`
 
-    if ! [[ $latest_md5sum == $current_md5sum ]]; then
+    # check if current file is different from latest
+    check=0
+    if ! [ -f "$db_dir/hg19/${latest_version}.md5" ]; then
         let check=check+1
-    fi
-fi
+    else
+        current_md5sum=`awk '{print $1}' $db_dir/hg19/${latest_version}.md5`
 
-# if current file is different from former
-if ! [ $check -eq 0 ]; then
+        if ! [[ $latest_md5sum == $current_md5sum ]]; then
+            let check=check+1
+        fi
+    fi
+
+    # if current file is different from former
+    if ! [ $check -eq 0 ]; then
 
     # get data
     wget https://ftp.ncbi.nlm.nih.gov/snp/latest_release/VCF/${latest_version}
@@ -110,7 +113,7 @@ if ! [ $check -eq 0 ]; then
 
     # get version
     version=`head -n 10 $name | grep dbSNP_BUILD_ID | awk -F '=' '{print $2}'`
-
+    
     bgzip -c $name > $name.gz
     tabix -p vcf $name.gz
     rm $name
@@ -174,27 +177,36 @@ end_column =" > dbSNP.config
 
     # cleaning
     rm appo primary_chromosomes.txt ucsc_primary_chromosomes.txt
-fi
-
-######################################## hg38 ########################################
-latest_version=`awk '{print $1}' list_files | grep -v "tbi" | grep -v "md5" | grep GCF | sort | awk 'BEGIN{getline;getline; print $0}'`
-curl https://ftp.ncbi.nlm.nih.gov/snp/latest_release/VCF/${latest_version}.md5 > ${latest_version}.md5
-latest_md5sum=`awk '{print $1}' ${latest_version}.md5`
-
-# check if current file is different from latest
-check=0
-if ! [ -f "$db_dir/hg38/${latest_version}.md5" ]; then
-    let check=check+1
-else
-    current_md5sum=`awk '{print $1}' $db_dir/hg38/${latest_version}.md5`
-
-    if ! [[ $latest_md5sum == $current_md5sum ]]; then
-        let check=check+1
     fi
 fi
+fi  # End of hg19 build check
 
-# if current file is different from former
-if ! [ $check -eq 0 ]; then
+######################################## hg38 ########################################
+if [[ "$build" == "hg38" || "$build" == "both" ]]; then
+latest_version=`awk '{print $1}' list_files | grep -v "tbi" | grep -v "md5" | grep GCF | sort | awk 'BEGIN{getline;getline; print $0}'`
+
+# Check if current database exists - skip update if missing
+if ! [ -d "$db_dir/hg38" ] || [ -z "$(ls -A $db_dir/hg38/*.md5 2>/dev/null)" ]; then
+    echo "SKIPPED: hg38 dbSNP update - no existing database found in $db_dir/hg38/"
+    echo "To initialize dbSNP hg38, manually download and set up the database first."
+else
+    curl https://ftp.ncbi.nlm.nih.gov/snp/latest_release/VCF/${latest_version}.md5 > ${latest_version}.md5
+    latest_md5sum=`awk '{print $1}' ${latest_version}.md5`
+
+    # check if current file is different from latest
+    check=0
+    if ! [ -f "$db_dir/hg38/${latest_version}.md5" ]; then
+        let check=check+1
+    else
+        current_md5sum=`awk '{print $1}' $db_dir/hg38/${latest_version}.md5`
+
+        if ! [[ $latest_md5sum == $current_md5sum ]]; then
+            let check=check+1
+        fi
+    fi
+
+    # if current file is different from former
+    if ! [ $check -eq 0 ]; then
 
     # get data
     wget https://ftp.ncbi.nlm.nih.gov/snp/latest_release/VCF/${latest_version}
@@ -271,7 +283,16 @@ end_column =" > dbSNP.config
     mv dbSNP.config dbsnp/hg38/
 
     rm list_files appo primary_chromosomes.txt ucsc_primary_chromosomes.txt
+    fi
+fi
+fi  # End of hg38 build check
+
+# Clean up list_files if it still exists
+if [ -f "list_files" ]; then
+    rm list_files
 fi
 
-
+if [ -f "appo" ]; then
+    rm appo
+fi
 

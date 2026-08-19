@@ -8,7 +8,6 @@ __pycache__/
 
 # Distribution / packaging
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
@@ -141,3 +140,11 @@ dev/
 
 #vscode
 .vscode
+
+# variant db
+resources/sqlite_db/
+
+.DS_Store
+
+# release
+releases/

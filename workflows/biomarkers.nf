@@ -9,6 +9,28 @@
 params.date = new java.util.Date().format('yyMMdd')
 params.ascat_genome = params.build
 
+def safe_ascat_loci =
+    params.ascat_loci == null ?
+    "${params.database_dir}/${params.build}/ascat_wes_files/${params.build}/G1000_loci_${params.build}.zip" :
+    params.ascat_loci
+def safe_ascat_alleles =
+    params.ascat_alleles == null ?
+    "${params.database_dir}/${params.build}/ascat_wes_files/${params.build}/G1000_alleles_${params.build}.zip" :
+    params.ascat_alleles
+def safe_ascat_loci_rt =
+    params.ascat_loci_rt == null ?
+    "${params.database_dir}/${params.build}/ascat_wes_files/${params.build}/RT_G1000_${params.build}.zip" :
+    params.ascat_loci_rt
+def safe_ascat_loci_gc =
+    params.ascat_loci_gc == null ?
+    "${params.database_dir}/${params.build}/ascat_wes_files/${params.build}/GC_G1000_${params.build}.zip" :
+    params.ascat_loci_gc
+
+log.info "ASCAT loci file chosen: ${safe_ascat_loci}"
+log.info "ASCAT alleles file chosen: ${safe_ascat_alleles}"
+log.info "ASCAT RT file chosen: ${safe_ascat_loci_rt}"
+log.info "ASCAT GC file chosen: ${safe_ascat_loci_gc}"
+
 include {extract_tpm; calculate_tmb_signature} from '../modules/local/biomarkers/main.nf'
 include {ASCAT; generate_ascat_loci; generate_ascat_alleles; generate_ascat_rt; generate_ascat_gc} from '../modules/local/ascat/main.nf'
 include {SAMTOOLS_CONVERT as BAM_TO_CRAM} from '../modules/nf-core/samtools/convert/main.nf'
@@ -22,6 +44,7 @@ workflow BIOMARKERS {
     ch_rna = extract_csv(file(params.input), "rna")
     ch_variant_germline = extract_csv(file(params.input), "variant_germline")
     ch_variant_somatic = extract_csv(file(params.input), "variant_somatic")
+    ch_variant_somatic_vcf = extract_csv(file(params.input), "variant_somatic_vcf")
     ch_msi = extract_csv(file(params.input), "msi")
     ch_tmb = extract_csv(file(params.input), "tmb")
     ch_hrd = extract_csv(file(params.input), "hrd")
@@ -30,7 +53,7 @@ workflow BIOMARKERS {
     
 
     // tmb and mutational signatures
-    calculate_tmb_signature(ch_variant_somatic)
+    calculate_tmb_signature(ch_variant_somatic_vcf.join(ch_variant_somatic, by: 0))
 
     // trascript per million from RNAseq
     if (params.pipeline.toUpperCase() == "DRAGEN"){
@@ -41,10 +64,10 @@ workflow BIOMARKERS {
     if (params.pipeline.toUpperCase() == "DRAGEN" && params.clonal_tmb_input){
 
         // create channel from input genome files
-        ch_loci = Channel.from(file(params.genomes[params.build].ascat_loci))
-        ch_alleles = Channel.from(file(params.genomes[params.build].ascat_alleles))
-        ch_rt = Channel.from(file(params.genomes[params.build].ascat_loci_rt))
-        ch_gc = Channel.from(file(params.genomes[params.build].ascat_loci_gc))
+        ch_loci = Channel.from(file(safe_ascat_loci))
+        ch_alleles = Channel.from(file(safe_ascat_alleles))
+        ch_rt = Channel.from(file(safe_ascat_loci_rt))
+        ch_gc = Channel.from(file(safe_ascat_loci_gc))
 
         // extract channels from input file
         input_sample = extract_csv_clonal_tmb(file(params.clonal_tmb_input))

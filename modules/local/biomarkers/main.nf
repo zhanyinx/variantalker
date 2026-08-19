@@ -8,7 +8,7 @@ All processes to extract biomarkers from maf files
 process extract_tpm{
     fair true
     cpus 1
-    maxRetries = 2
+    maxRetries 2
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}", mode: "copy"
     container "docker://yinxiu/clonal_evolution:latest"
@@ -32,27 +32,33 @@ process extract_tpm{
 process calculate_tmb_signature{
     fair true
     cpus 1
-    maxRetries = 2
+    maxRetries 2
     memory { 1.GB * task.attempt }
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/", mode: "copy"
     tag "tmb calculation"
     container "docker://yinxiu/sigprofilerassignment:latest"
 
     input:
-        tuple val(patient), path(maf)
+        tuple val(patient), path(vcf), path(maf)
     output:
-        tuple val(patient), file(maf)
+        tuple val(patient), path(vcf), file(maf)
         tuple val(patient), file("tmb_signatures.${patient}.txt")
     script:
 
     """
     mkdir input
-    cp ${maf} input/
+    cp ${vcf} input/
 
+    extraoptions=""
+    if [ "${params.exome}" = "true" ]; then
+        extraoptions="--exome"
+    fi
+    
     extract_signatures.py -i ./input \
     -g ${params.build_alt_name} -c ${params.cosmic_version}\
     --cosmic_group ${params.cosmic_group} \
-    -o signatures.txt
+    -o signatures.txt \
+    \${extraoptions}
 
     calculate_tmb.py -m ${maf} \
         -t ${params.target} \

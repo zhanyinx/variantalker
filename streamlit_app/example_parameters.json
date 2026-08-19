@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "app_version": "2.0.0",
+  "timestamp": "2026-08-13T00:00:00",
+  "parameters": {
+    "sample_type": "somatic",
+    "min_depth": 50,
+    "filter_variant_classification": [
+      "Silent",
+      "IGR",
+      "RNA"
+    ],
+    "filter_clinvar": [
+      "Pathogenic",
+      "Likely_pathogenic"
+    ],
+    "filter_genes": [],
+    "skip_civic": false,
+    "skip_pathogenic": false,
+    "max_freq_population": 1.0,
+    "vaf_threshold": 0.01,
+    "filter_cancervar": [
+      "Tier_II_potential",
+      "Tier_I_strong"
+    ],
+    "filter_civic": [
+      "A",
+      "B",
+      "C"
+    ],
+    "filter_escat": [
+      "IA",
+      "IB",
+      "IC",
+      "IIA",
+      "IIB"
+    ]
+  }
+}

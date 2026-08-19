@@ -33,25 +33,176 @@ process annotate_cnv {
     script:
     if (params.pipeline.toUpperCase() == "DRAGEN")
         """
-        name="\$(basename ${input} | sed 's,vcf\\.gz,bed,g')"
-        zcat ${input} | awk '{if(\$7=="PASS") print \$3,\$5, \$10}' > \$name
-        sed -i 's/DRAGEN:GAIN://g' \$name
-        sed -i 's/DRAGEN:LOSS://g' \$name
-        sed -i 's/:/\\t/g' \$name
-        sed -i 's/-/\\t/g' \$name
-        sed -i 's/<//g' \$name
-        sed -i 's/>//g' \$name
-        awk '{print \$1, \$2, \$3 +1, \$4, \$6}' \$name > appo
-        mv appo \$name
-        sed -i 's/ /\\t/g' \$name
+        name="\$(basename "${input}" | sed 's,vcf\\.gz,bed,g')"
+
+        zcat "${input}" | awk -v OFS="\\t" '
+        BEGIN {
+            header_found = 0
+        }
+
+        # Check if row "#CHROM" contains required columns and save their indices
+        (/^#CHROM/) {
+            for (i = 1; i <= NF; i++) {
+                if (\$i == "ID") col_id = i
+                else if (\$i == "ALT") col_alt = i
+                else if (\$i == "FORMAT") {
+                    col_format = i
+                    col_sample = i + 1  # SAMPLE column right after FORMAT
+                }
+            }
+
+            # Check if all required columns were found
+            if (!col_id || !col_alt || !col_format || !col_sample) {
+                printf("ERROR: incomplete header or missing columns\\n") > "/dev/stderr"
+                exit 1
+            }
+
+            # Save header with only relevant columns
+            print "ID", "ALT", "FORMAT", "SAMPLE"
+            header_found = 1
+            next
+        }
+
+        # Ignore rows with metadata "##"
+        /^##/ { next }
+
+        # Filter rows with FILTER=="PASS"
+        (header_found && \$7 == "PASS") {
+            print \$col_id, \$col_alt, \$col_format, \$col_sample
+        }' > "\$name"
+
+        awk -v fname="\$name" '
+        BEGIN {
+            OFS = "\\t"
+        }
+
+        NR == 1 {
+            # Find FORMAT and SAMPLE columns
+            for (i = 1; i <= NF; i++) {
+                if (\$i == "FORMAT") {
+                    col_format = i
+                    col_sample = i + 1
+                    break
+                }
+            }
+
+            if (!col_format) {
+                printf("ERROR [%s]: no FORMAT column found in header\\n", fname) > "/dev/stderr"
+                exit 1
+            }
+
+            next  # skip header
+        }
+
+        {
+            # Split FORMAT and SAMPLE
+            n_key = split(\$col_format, keys, ":")
+            n_val = split(\$col_sample, values, ":")
+
+            if (n_key != n_val) {
+                printf("WARNING [%s]: row %d -> %d keys but %d values\\n", fname, NR, n_key, n_val) > "/dev/stderr"
+            }
+
+            out = ""
+            m = (n_key < n_val) ? n_key : n_val
+            for (i = 1; i <= m; i++) {
+                out = out keys[i] "=" values[i] "\\t"
+            }
+            sub(/\\t\$/, "", out)  # remove trailing tab
+
+            # Rebuild row without FORMAT and SAMPLE
+            for (i = 1; i <= NF; i++) {
+                if (i == col_format) continue
+                else if (i == col_sample) printf "%s%s", out, (i < NF ? OFS : "")
+                else printf "%s%s", \$i, (i < NF ? OFS : "")
+            }
+            printf "\\n"
+        }' "\$name" > tmp && mv tmp "\$name"
+
+        sed -i 's/DRAGEN:[^:]*://g' "\$name"
+        sed -i 's/:/\\t/g; s/-/\\t/g; s/[<>]//g' "\$name"
+
+        awk -F"\\t" '{
+            cnf = ""
+
+            # Look for CNF first
+            for (i = 5; i <= NF; i++) {
+                if (\$i ~ /^CNF=/) {
+                    split(\$i, arr, "=")
+                    cnf = arr[2]
+                    break
+                }
+            }
+
+            # If CNF not found, try CN
+            if (cnf == "") {
+                for (i = 5; i <= NF; i++) {
+                    if (\$i ~ /^CN=/) {
+                        split(\$i, arr, "=")
+                        cnf = arr[2]
+                        break
+                    }
+                }
+            }
+
+            # If CNF & CN not found, try SM
+            if (cnf == "") {
+                for (i = 5; i <= NF; i++) {
+                    if (\$i ~ /^SM=/) {
+                        split(\$i, arr, "=")
+                        cnf = arr[2]
+                        break
+                    }
+                }
+            }
+
+            # Check CNF/CN/SM presence
+            if (cnf == "" || cnf == ".") {
+                printf("WARNING: CNF/CN/SM not found on line %d\\n", NR) > "/dev/stderr"
+                cnf = NA
+            }
+
+            # Compute logR only if cnf is numeric
+            if (cnf ~ /^[0-9.]+\$/) {
+                logR = (cnf == 0) ? -17.600000 : log(cnf)/log(2)
+            } else {
+                logR = "NA"
+            }
+
+            # Print output (same format as before)
+            printf "%s\\t%s\\t%s\\t%s\\t%.6f\\t%.6f\\n", \$1, \$2, \$3+1, \$4, logR, cnf
+        }' "\$name" > aaa
+
+        mv aaa "\$name"
+
+        sed -i 's/ /\\t/g' "\$name"
+
+        : > bbb
+        awk '{if (\$4=="DEL" || \$4=="DUP") print > "bbb"}' "\$name"
+        mv bbb "\$name"
+
         python ${params.classifyCNV_folder}/ClassifyCNV.py --infile \$name --GenomeBuild ${params.build} --cores 5 --outdir tmp
-        awk 'BEGIN{fn=0}{if(FNR==1) fn++; if(fn==1){score[\$1,\$2,\$3] = \$5}; if(fn==2){if(header==0) {print \$0, "logRatio"; header++}else{print \$0, score[\$2,\$3,\$4]}}}' \$name tmp/Scoresheet.txt > ${meta.patient}.cnv.annotated.tsv
+        awk 'BEGIN{OFS="\\t"; fn=0}
+        FNR==NR {
+            key = \$1 FS \$2 FS \$3;
+            logr[key] = \$5;
+            cnf[key]  = \$6;
+            next
+        }
+        FNR==1 && NR!=FNR {
+            print \$0, "logRatio", "CNF";
+            next
+        }
+        {
+            key = \$2 FS \$3 FS \$4;
+            print \$0, logr[key], cnf[key]
+        }' \$name tmp/Scoresheet.txt > ${meta.patient}.cnv.annotated.tsv
         """
     else if (params.pipeline.toUpperCase() == "SAREK")
         """
-        awk 'BEGIN{getline;}{if(\$4!="Antitarget"){if(\$6>3) print  \$1, \$2,\$3, "DUP"; if(\$6<1) print \$1, \$2,\$3, "DEL"}}' ${input} > appo
-        sed -i 's/ /\\t/g' appo
-        python ${params.classifyCNV_folder}/ClassifyCNV.py --infile appo --GenomeBuild ${params.build} --cores 5 --outdir tmp
+        awk 'BEGIN{getline;}{if(\$4!="Antitarget"){if(\$6>3) print  \$1, \$2,\$3, "DUP"; if(\$6<1) print \$1, \$2,\$3, "DEL"}}' ${input} > ccc
+        sed -i 's/ /\\t/g' ccc
+        python ${params.classifyCNV_folder}/ClassifyCNV.py --infile ccc --GenomeBuild ${params.build} --cores 5 --outdir tmp
         mv tmp/Scoresheet.txt ${meta.patient}.cnv.annotated.tsv
         """
 }

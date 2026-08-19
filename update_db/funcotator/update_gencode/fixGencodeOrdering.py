@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Reorders a GENCODE GTF file to be in ascending order by chromosome, start, end.
 
@@ -14,42 +14,16 @@ import csv
 
 DELIMITER = "\t"
 TOTAL_EXPECTED_LINES = 2840283
-PERCENT_MARKER = TOTAL_EXPECTED_LINES / 20
-CONTIG_PRINT_ORDER_LIST = [
-    "chr1",
-    "chr2",
-    "chr3",
-    "chr4",
-    "chr5",
-    "chr6",
-    "chr7",
-    "chr8",
-    "chr9",
-    "chr10",
-    "chr11",
-    "chr12",
-    "chr13",
-    "chr14",
-    "chr15",
-    "chr16",
-    "chr17",
-    "chr18",
-    "chr19",
-    "chr20",
-    "chr21",
-    "chr22",
-    "chrX",
-    "chrY",
-    "chrM",
-]
+PERCENT_MARKER = TOTAL_EXPECTED_LINES/20
+CONTIG_PRINT_ORDER_LIST = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11",
+                           "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21",
+                           "chr22", "chrX", "chrY", "chrM"]
 
 ########################################################################
 # Set up parsing for arguments:
 
-parser = argparse.ArgumentParser(
-    description="Creates a new file with each Gene in the given GENCODE_GTF_FILE in "
-    "increasing order by location."
-)
+parser = argparse.ArgumentParser(description="Creates a new file with each Gene in the given GENCODE_GTF_FILE in "
+                                             "increasing order by location.")
 parser.add_argument("GENCODE_GTF_FILE", help="Gencode GTF file to read and reorder")
 
 ########################################################################
@@ -84,27 +58,23 @@ if __name__ == "__main__":
         parser.print_usage()
         sys.exit(1)
 
-    out_writer = csv.writer(
-        sys.stdout,
-        delimiter=DELIMITER,
-        quoting=csv.QUOTE_NONE,
-        quotechar="",
-        lineterminator="\n",
-    )
+    out_writer = csv.writer(sys.stdout, delimiter=DELIMITER, quoting=csv.QUOTE_NONE, quotechar='', lineterminator='\n')
 
     sys.stderr.write("Processing file: " + args.GENCODE_GTF_FILE + " ...\n")
 
     # Open our GTF file:
-    with open(args.GENCODE_GTF_FILE, "r") as f:
+    with open(args.GENCODE_GTF_FILE, 'r') as f:
 
         # Set up our CSV reader:
         gtf_csv_reader = csv.reader(f, delimiter=DELIMITER)
 
+        row = next(gtf_csv_reader)
         # Save the header:
-        for i in range(0, 5):
-            out_writer.writerow(next(gtf_csv_reader))
+        while row[0].startswith("#"):
+            out_writer.writerow(row)
+            row = next(gtf_csv_reader)
 
-        gene = [next(gtf_csv_reader)]
+        gene = [row] 
 
         # contig -> gene_list
         contig_dictionary = {gene[0][0]: []}
@@ -112,17 +82,13 @@ if __name__ == "__main__":
         # Read until there's nothing left:
         try:
             while True:
-                l = next(gtf_csv_reader)
+                row = next(gtf_csv_reader) 
 
                 if gtf_csv_reader.line_num % PERCENT_MARKER == 0:
-                    percent_done = (
-                        float(gtf_csv_reader.line_num) / float(TOTAL_EXPECTED_LINES)
-                    ) * 100.0
-                    sys.stderr.write(
-                        "\tRead " + "{0:1.0f}".format(percent_done) + "%\n"
-                    )
+                    percent_done = (float(gtf_csv_reader.line_num) / float(TOTAL_EXPECTED_LINES)) * 100.0
+                    sys.stderr.write("\tRead " + "{0:1.0f}".format(percent_done) + "%\n")
 
-                if l[2] == "gene":
+                if row[2] == "gene":
 
                     # Add our gene to the contig:
                     if gene[0][0] not in contig_dictionary:
@@ -134,7 +100,7 @@ if __name__ == "__main__":
                     gene = []
 
                 # add this line to the new gene
-                gene.append(l)
+                gene.append(row)
 
         except StopIteration as e:
             pass

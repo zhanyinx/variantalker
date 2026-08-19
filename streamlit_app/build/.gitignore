@@ -1,0 +1,7 @@
+# Cached Python downloads (large binaries)
+mac/.python_cache/
+
+# Build artifacts
+mac/staging/
+mac/*.dmg
+windows/output/

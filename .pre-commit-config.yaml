@@ -1,0 +1,24 @@
+# Pre-commit hooks for variantalker.
+#
+# Deliberately scoped to ^(bin/|streamlit_app/vendor/). This repo's pipeline code is
+# frozen for the filtering-parity effort, and a repo-wide formatter hook would rewrite
+# bin/ — which is both out of bounds and the very thing the drift guard measures
+# against. So the only hook here is the guard itself, and it fires exactly when one
+# side of the copy changes.
+#
+# Install once per clone:  pre-commit install
+# Run against everything:  pre-commit run --all-files
+
+repos:
+  - repo: local
+    hooks:
+      - id: vendor-drift
+        name: vendored pipeline code matches bin/
+        description: >
+          streamlit_app/vendor/ holds byte-for-byte copies of the pipeline's filter
+          code. Editing either side without re-syncing makes the app's filter results
+          silently stop matching the pipeline's.
+        entry: python streamlit_app/vendor/_sync.py --check
+        language: system
+        pass_filenames: false
+        files: ^(bin/|streamlit_app/vendor/)

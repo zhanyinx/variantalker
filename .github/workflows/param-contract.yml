@@ -1,0 +1,46 @@
+# Drift guard for the parameter contract.
+#
+# streamlit_app/config/pipeline_params.py claims to hold the pipeline's own filter
+# defaults — nextflow.config's params block — under the CLI long-option names
+# bin/filter_variants.py accepts. The packaged .dmg/.exe ships none of those three
+# files, so the claim is a set of literals in the app and this job is what keeps them
+# honest: it fails when a pipeline default moves, when a config-to-CLI name changes, or
+# when a new filter parameter is wired up that the contract does not carry.
+#
+# Separate from vendor-drift.yml on purpose. That job guards *copied code*; this one
+# guards *copied values*. They fail for different reasons and are fixed differently —
+# vendor drift by re-running _sync.py, contract drift by a human deciding whether the
+# app should follow the pipeline's new default and re-recording the parity baselines.
+#
+# Not in the pre-commit hook: that hook is deliberately stdlib-only so it runs on any
+# clone, and this guard needs pytest.
+
+name: param contract
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  param-contract:
+    name: parameter contract matches nextflow.config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # pandas is required only because streamlit_app/tests/__init__.py imports it at
+      # module scope; the guard itself reads config text and plain dicts, and imports
+      # neither pandas, streamlit, nor the filter code.
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip pytest pandas
+
+      - name: Run the parameter contract guard
+        working-directory: streamlit_app
+        run: python -m pytest tests/test_param_contract.py -v

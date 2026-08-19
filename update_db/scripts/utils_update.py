@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import subprocess
+import tempfile
 from typing import Union
 
 
@@ -101,20 +102,22 @@ def check_dna_repair_genes(file: str):
     """Check dna repair genes. (hard coded)"""
     # Get website data
     r = requests.get(
-        "https://www.mdanderson.org/documents/Labs/Wood-Laboratory/human-dna-repair-genes.html"
+        "https://www.mdanderson.org/research/departments-labs-institutes/labs/wood-laboratory/resources.html"
     )
     soup = BeautifulSoup(r.text, features="lxml")
-    string = soup.find("p", attrs={"align": "right"}).text.strip()
+    for line in soup.get_text().splitlines():
+        if "Table information was last updated" in line:
+            string=line.strip()
 
     # Compare with current state
-    previous_string = "This table was last modified by R. Wood and M. Lowery on Wednesday 10th June 2020"
+    previous_string = "Table information was last updated by R. Wood and B. Dennehey, November 2025."
     if string == previous_string:
         with open(file, "a") as f:
-            f.write("SUCCESS: no manual update needed - dna_repair_genes. \n")
+            f.write("SUCCESS: no update needed - dna_repair_genes. \n")
     else:
         with open(file, "a") as f:
             f.write(
-                f"WARNING: manual update required, found at https://www.mdanderson.org/documents/Labs/Wood-Laboratory/human-dna-repair-genes.html \n"
+                f"WARNING: manual update required for dna_repair_genes, found at https://www.mdanderson.org/research/departments-labs-institutes/labs/wood-laboratory/resources.html \n"
             )
 
 
@@ -138,34 +141,6 @@ def check_oreganno(file: str):
             )
 
 
-def check_gnomad(file: str):
-    """Check gnomad database. (hard coded)"""
-    output = subprocess.check_output(
-        ["gsutil", "ls", "gs://broad-public-datasets/funcotator/"]
-    )
-    files = sorted(
-        [
-            i.removeprefix("gs://broad-public-datasets/funcotator/").rstrip("/")
-            for i in output.decode().split()
-        ]
-    )
-
-    releases = []
-    for file in files:
-        search = re.search(r"gnomAD_([\d\.]+)_VCF", file)
-        if search is not None:
-            releases.append(search.groups()[0])
-
-    if len(releases) == 1 and releases[0] == "2.1":
-        with open(file, "a") as f:
-            f.write("SUCCESS: no manual update needed - ORegAnno. \n")
-    else:
-        with open(file, "a") as f:
-            f.write(
-                f"WARNING: manual update required, found at http://www.oreganno.org/dump/ \n"
-            )
-
-
 def update_cosmic(
     db_dir: str,
     curr_version: str,
@@ -174,8 +149,12 @@ def update_cosmic(
     scriptdir: str,
     email: str,
     password: str,
+    build: str = "both",
 ):
     """Update cosmic, cosmic_tissue, and cosmic_fusion if a newer version is available on the Sanger Institute website.
+    
+    NOTE: This function is currently DISABLED due to format changes in COSMIC database.
+    COSMIC has changed its download format and authentication method, requiring script updates.
 
     Args:
         db_dir (str): The directory path where the Cosmic database is stored.
@@ -185,7 +164,27 @@ def update_cosmic(
         scriptdir (str): The directory path where the Cosmic update script is stored.
         email (str): email to log in into cancer.sanger.ac.uk
         password (str): password to login into cancer.sanger.ac.uk
+        build (str): Genome build to update: 'hg19', 'hg38', or 'both' (default: 'both').
     """
+    # DISABLED: COSMIC update temporarily disabled due to format changes
+    with open(file, "a") as f:
+        f.write(
+            f"SKIPPED: COSMIC update disabled due to format changes in COSMIC database download. "
+            f"Manual update required. Current version: {curr_version}\n"
+        )
+    return
+    
+    # Original code commented out - update when COSMIC format is fixed
+    # # Check if credentials are provided
+    # if not email or not password:
+    #     with open(file, "a") as f:
+    #         f.write(
+    #             f"SKIPPED: Cosmic update skipped - no credentials provided. "
+    #             f"Please provide --cosmic_email and --cosmic_password to update COSMIC database. "
+    #             f"Current version: {curr_version}\n"
+    #         )
+    #     return
+    
     passcode = base64.b64encode(f"{email}:{password}".encode("ascii")).decode()
 
     # Find latest cosmic version
@@ -231,6 +230,7 @@ def update_dbsnp(
     backup_dir: str,
     scriptdir: str,
     db_germline_dir: str = None,
+    build: str = "both",
 ):
     """
     Updates the dbsnp database used in the Funcotator annotation.
@@ -241,53 +241,136 @@ def update_dbsnp(
         backup_dir (str): Path to the directory where a backup copy of the current dbsnp files will be stored.
         scriptdir (str): Path to the directory where the external shell script is located.
         db_germline_dir (str, optional): Path to the directory containing the germline dbsnp files. Default is None.
+        build (str): Genome build to update: 'hg19', 'hg38', or 'both' (default: 'both').
 
     Raises:
         ValueError: If the dbsnp update fails during somatic Funcotator update.
 
     """
 
-    # TODO path
+    # Convert relative paths to absolute to ensure correct file access
+    file = os.path.abspath(file)
+    db_dir = os.path.abspath(db_dir)
+    backup_dir = os.path.abspath(backup_dir)
+    scriptdir = os.path.abspath(scriptdir)
+    if db_germline_dir:
+        db_germline_dir = os.path.abspath(db_germline_dir)
+    
     update_script = f"{scriptdir}/update_dbsnp/update_dbsnp.sh"
 
-    # Run update script
+    # Run update script with absolute paths and build parameter
     results = subprocess.run(
-        f"sh {update_script} -d {db_dir}/dbsnp/",
-        shell=True,
+        ["bash", update_script, "-d", f"{db_dir}/dbsnp/", "--build", build],
         capture_output=True,
+        text=True,
     )
 
-    if os.path.exists("dbsnp/hg38/dbSNP.config"):
+    # Check if script output indicates skipped updates
+    script_output = results.stdout + results.stderr
+    
+    # Count how many builds were skipped
+    hg38_skipped = "SKIPPED: hg38 dbSNP" in script_output
+    hg19_skipped = "SKIPPED: hg19 dbSNP" in script_output
+    
+    # If both were skipped, raise error
+    if hg38_skipped and hg19_skipped:
+        with open(file, "a") as f:
+            f.write(f"FAILED: dbSNP update failed - both hg38 and hg19 databases are missing.\n")
+            for line in script_output.split('\n'):
+                if "SKIPPED:" in line or "To initialize" in line:
+                    f.write(f"  {line}\n")
+        raise ValueError("dbSNP update failed - both hg38 and hg19 databases are missing")
+    
+    # Check if new database files were created (indicates update occurred)
+    files_created = os.path.exists("dbsnp/hg38/dbSNP.config") or os.path.exists("dbsnp/hg19/dbSNP.config")
+    
+    # Handle partial skips and log appropriately
+    if hg38_skipped and not hg19_skipped:
+        # hg19 was processed (may or may not have been updated)
+        version = None
+        if os.path.exists("dbsnp/hg19/dbSNP.config"):
+            version = get_version("dbsnp/hg19/dbSNP.config")
+        elif os.path.exists(f"{db_dir}/dbsnp/hg19/dbSNP.config"):
+            version = get_version(f"{db_dir}/dbsnp/hg19/dbSNP.config")
+        
+        with open(file, "a") as f:
+            f.write(f"WARNING: hg38 dbSNP update skipped - no existing database found.\n")
+            if version:
+                status = "updated" if os.path.exists("dbsnp/hg19/dbSNP.config") else "already up-to-date"
+                f.write(f"INFO: hg19 dbSNP {status} (version: {version}).\n")
+            else:
+                f.write(f"WARNING: hg19 dbSNP version could not be determined.\n")
+                
+    elif hg19_skipped and not hg38_skipped:
+        # hg38 was processed (may or may not have been updated)
+        version = None
+        if os.path.exists("dbsnp/hg38/dbSNP.config"):
+            version = get_version("dbsnp/hg38/dbSNP.config")
+        elif os.path.exists(f"{db_dir}/dbsnp/hg38/dbSNP.config"):
+            version = get_version(f"{db_dir}/dbsnp/hg38/dbSNP.config")
+        
+        with open(file, "a") as f:
+            f.write(f"WARNING: hg19 dbSNP update skipped - no existing database found.\n")
+            if version:
+                status = "updated" if os.path.exists("dbsnp/hg38/dbSNP.config") else "already up-to-date"
+                f.write(f"INFO: hg38 dbSNP {status} (version: {version}).\n")
+            else:
+                f.write(f"WARNING: hg38 dbSNP version could not be determined.\n")
+
+    # If new files were created, update the databases
+    if files_created:
+        # Get version from whichever build was updated
+        if os.path.exists("dbsnp/hg38/dbSNP.config"):
+            version = get_version("dbsnp/hg38/dbSNP.config")
+        else:
+            version = get_version("dbsnp/hg19/dbSNP.config")
+        
+        # Backup old database
         subprocess.run(
-            f"cp -r {db_dir}/dbsnp {backup_dir}; rm -rf {db_dir}/dbsnp",
-            shell=True,
+            ["bash", "-c", f"cp -r {db_dir}/dbsnp {backup_dir}; rm -rf {db_dir}/dbsnp"],
             stdout=subprocess.DEVNULL,
         )
 
+        # Copy new database to db_dir
         subprocess.run(
-            f"cp -r dbsnp {db_dir}/",
-            shell=True,
+            ["bash", "-c", f"cp -r dbsnp {db_dir}/"],
             stdout=subprocess.DEVNULL,
         )
 
+        # Copy to germline dir if specified
         if db_germline_dir:
             subprocess.run(
-                f"rm -rf {db_germline_dir}/dbsnp; cp -r dbsnp {db_germline_dir}",
-                shell=True,
+                ["bash", "-c", f"rm -rf {db_germline_dir}/dbsnp; cp -r dbsnp {db_germline_dir}"],
                 stdout=subprocess.DEVNULL,
             )
 
+        # Clean up local dbsnp directory
         subprocess.run(
-            f"rm -rf dbsnp",
-            shell=True,
+            ["bash", "-c", "rm -rf dbsnp"],
             stdout=subprocess.DEVNULL,
         )
-        version = get_version("dbsnp/hg38/dbSNP.config")
+
         with open(file, "a") as f:
-            f.write(f'SUCCESS: dbsnp updated to {version} "\n')
-    else:
+            if not hg38_skipped and not hg19_skipped:
+                f.write(f'SUCCESS: dbSNP updated to {version}\n')
+            elif hg38_skipped or hg19_skipped:
+                # One was skipped but the other was updated
+                f.write(f'SUCCESS: dbSNP updated to {version} (one build skipped)\n')
+    elif not hg38_skipped and not hg19_skipped:
+        # No new files created AND neither was skipped = databases are already up-to-date
+        # Get version from existing database
+        version = None
+        if os.path.exists(f"{db_dir}/dbsnp/hg38/dbSNP.config"):
+            version = get_version(f"{db_dir}/dbsnp/hg38/dbSNP.config")
+        elif os.path.exists(f"{db_dir}/dbsnp/hg19/dbSNP.config"):
+            version = get_version(f"{db_dir}/dbsnp/hg19/dbSNP.config")
+        
         with open(file, "a") as f:
-            f.write(f"SUCCESS: no manual update needed - dbsnp. \n")
+            if version:
+                f.write(f"SUCCESS: dbSNP is already up-to-date (version: {version}).\n")
+            else:
+                f.write(f"SUCCESS: dbSNP is already up-to-date.\n")
+    # If one was skipped and no update occurred, the message was already logged above in partial skip handling
 
 
 def update_gencode(
@@ -297,6 +380,7 @@ def update_gencode(
     file: str,
     scriptdir: str,
     db_germline_dir: str = None,
+    build: str = "both",
 ):
     """
     Updates the gencode database used in the somatic Funcotator annotation.
@@ -308,11 +392,18 @@ def update_gencode(
         file (str): Path to the file where success status will be written.
         scriptdir (str): Path to the directory where the external shell script is located.
         db_germline_dir (str, optional): Path to the directory containing the germline gencode files. Default is None.
+        build (str): Genome build to update: 'hg19', 'hg38', or 'both' (default: 'both').
 
     Raises:
         ValueError: If the getGencode update fails during somatic Funcotator update.
 
     """
+    
+    # Skip update if curr_version is None (database doesn't exist for requested build)
+    if curr_version is None:
+        with open(file, "a") as f:
+            f.write(f"SKIPPED: gencode update - no existing database found for build {build}.\n")
+        return
 
     data = []
     with FTP("ftp.ebi.ac.uk") as ftp:
@@ -336,29 +427,28 @@ def update_gencode(
             data = f.readlines()
 
         for idx, line in enumerate(data):
-            if line.startswith("LATEST_HG38_RELEASE"):
-                data[idx] = f"LATEST_HG38_RELEASE={version}\n"
+            if line.startswith("LATEST_RELEASE"):
+                data[idx] = f"LATEST_RELEASE={version}\n"
         with open(update_script, "w") as f:
             f.writelines(data)
 
-        # Run update script
-        results = subprocess.run(["sh", update_script], capture_output=True)
-        if results.stderr:
-            raise ValueError("getGencode has failed in somatic functorator update!")
+        # Run update script with build parameter
+        subprocess.run(["sh", update_script, "--build", build], capture_output=True)
+        
         subprocess.run(
-            f"cp -r {db_dir}/gencode/hg38 {backup_dir}; rm -rf {db_dir}/gencode/hg38",
+            f"cp -r {db_dir}/gencode/ {backup_dir}; rm -rf {db_dir}/gencode/",
             shell=True,
             stdout=subprocess.DEVNULL,
         )
         subprocess.run(
-            f"cp -r gencode/hg38 {db_dir}/gencode",
+            f"cp -r gencode/ {db_dir}/gencode",
             shell=True,
             stdout=subprocess.DEVNULL,
         )
 
         if db_germline_dir:
             subprocess.run(
-                f"rm -r {db_germline_dir}/gencode/hg38; cp -r gencode/hg38 {db_germline_dir}/gencode",
+                f"rm -r {db_germline_dir}/gencode; cp -r gencode {db_germline_dir}",
                 shell=True,
                 stdout=subprocess.DEVNULL,
             )
@@ -379,6 +469,7 @@ def update_clinvar(
     file: str,
     scriptdir: str,
     db_germline_dir: str = None,
+    build: str = "both",
 ):
     """Updates ClinVar.
 
@@ -388,13 +479,14 @@ def update_clinvar(
         file (str): File path to log updates.
         scriptdir (str): Directory path to the script.
         db_germline_dir (str, optional): Directory path for the germline database. Defaults to None.
+        build (str): Genome build to update: 'hg19', 'hg38', or 'both' (default: 'both').
     """
 
     # TODO remove hard code script
     update_script = f"{scriptdir}/update_clinvar/update_clinvar_funcotator.sh"
 
-    # Run update script
-    results = subprocess.run(["sh", update_script], capture_output=True)
+    # Run update script with build parameter
+    results = subprocess.run(["sh", update_script, "--build", build], capture_output=True)
 
     subprocess.run(
         f"cp -r {db_dir}/clinvar {backup_dir}; rm -rf {db_dir}/clinvar",
@@ -415,7 +507,7 @@ def update_clinvar(
         f.write(f"SUCCESS: clinvar updated successfully. \n")
 
 
-def update_hgnc(db_dir: str, backup_dir: str, file: str, scriptdir: str):
+def update_hgnc(db_dir: str, backup_dir: str, file: str, scriptdir: str, build: str = "both"):
     """Updates HGNC.
 
     Args:
@@ -423,13 +515,14 @@ def update_hgnc(db_dir: str, backup_dir: str, file: str, scriptdir: str):
         backup_dir (str): Directory path for the backup.
         file (str): File path to log updates.
         scriptdir (str): Directory path to the script.
+        build (str): Genome build to update: 'hg19', 'hg38', or 'both' (default: 'both').
     """
 
     today = datetime.date.today().strftime("%b%d%Y")
     # TODO update path
     update_script = f"{scriptdir}/update_hgnc/get_new_hgnc.sh"
 
-    subprocess.run(["sh", update_script], stdout=subprocess.DEVNULL)
+    subprocess.run(["sh", update_script, "--build", build], stdout=subprocess.DEVNULL)
 
     # get current data
     current_file = glob.glob(f"{db_dir}/hgnc/hg38/hgnc_*.tsv")[0]
@@ -482,9 +575,23 @@ def update_hgnc(db_dir: str, backup_dir: str, file: str, scriptdir: str):
 
 
 def update_acmg_rec(
-    file: str, db_germline_dir: str, backup_dir: str, current_version: str
+    file: str, db_germline_dir: str, backup_dir: str, current_version: str, build: str = "both"
 ):
-    """Update acmg_rec Funcotator database."""
+    """Update acmg_rec Funcotator database.
+    
+    Args:
+        file (str): File path to log updates.
+        db_germline_dir (str): Directory path for the germline database.
+        backup_dir (str): Directory path for the backup.
+        current_version (str): Current version of the database.
+        build (str): Genome build to update: 'hg19', 'hg38', or 'both' (default: 'both').
+    """
+    
+    # Skip update if current_version is None (database doesn't exist for requested build)
+    if current_version is None:
+        with open(file, "a") as f:
+            f.write(f"SKIPPED: acmg_rec update - no existing database found for build {build}.\n")
+        return
 
     today = datetime.date.today().strftime("%b%d%Y")
 
@@ -530,7 +637,8 @@ def update_acmg_rec(
                 f.write("\t".join(row) + "\n")
 
         # write config file
-        with open(f"{db_germline_dir}/acmg_rec/hg38/acmg_rec.config", "r") as f:
+        build_to_use = "hg38" if build in ["hg38", "both"] else "hg19"
+        with open(f"{db_germline_dir}/acmg_rec/{build_to_use}/acmg_rec.config", "r") as f:
             data = f.readlines()
 
         for idx, line in enumerate(data):
@@ -545,11 +653,25 @@ def update_acmg_rec(
         with open("acmg_rec.config", "w") as f:
             f.writelines(data)
 
-        subprocess.run(
-            f"mkdir -p acmg_rec/hg38; mv acmg_{version}_{today}_test_cleaned.txt acmg_rec.config acmg_rec/hg38; cp -r acmg_rec/hg38 acmg_rec/hg19",
-            shell=True,
-            stdout=subprocess.DEVNULL,
-        )
+        # Create directories based on build parameter
+        if build == "both":
+            subprocess.run(
+                f"mkdir -p acmg_rec/hg38; mv acmg_{version}_{today}_test_cleaned.txt acmg_rec.config acmg_rec/hg38; cp -r acmg_rec/hg38 acmg_rec/hg19",
+                shell=True,
+                stdout=subprocess.DEVNULL,
+            )
+        elif build == "hg38":
+            subprocess.run(
+                f"mkdir -p acmg_rec/hg38; mv acmg_{version}_{today}_test_cleaned.txt acmg_rec.config acmg_rec/hg38",
+                shell=True,
+                stdout=subprocess.DEVNULL,
+            )
+        else:  # hg19
+            subprocess.run(
+                f"mkdir -p acmg_rec/hg19; mv acmg_{version}_{today}_test_cleaned.txt acmg_rec.config acmg_rec/hg19",
+                shell=True,
+                stdout=subprocess.DEVNULL,
+            )
 
         subprocess.run(
             f"cp -r {db_germline_dir}/acmg_rec {backup_dir}; rm -r {db_germline_dir}/acmg_rec",
@@ -607,7 +729,10 @@ def get_dbname_version(current_dbs: list):
     for db in current_dbs:
         if re.search("^(.*?)(\\d.*)", db):
             search = re.search("^(.*?)(\\d.*)", db)
-            result[search[1]] = search[2]
+            if "interpro" in search[2]:
+                result[search[1] + "_interpro"] = search[2]
+            else:
+                result[search[1]] = search[2]
         else:
             result[db] = ""
     return result
@@ -641,9 +766,18 @@ def multi_update(
     updated_db = []
     # iterate over databases
     for name, version in name_version.items():
+        # Capture interpro flag
+        interpro = False
+        if "_interpro" in name:
+            name = name.replace("_interpro", "")
+            interpro = True
+
         select = annovar_databases[
             [name in x for x in annovar_databases["name"].values]
         ].sort_values("name", ascending=False)
+
+        if not interpro:
+            select = select[~select["name"].str.contains("interpro")]
 
         # get most recent database on annovar webpage
         most_recent = select["name"].values[0]
@@ -713,6 +847,9 @@ def update_cosmic_annovar(
     scriptdir: FolderType(),
 ) -> str:
     """Update cosmic, cosmic_tissue, and cosmic_fusion if a newer version is available on the Sanger Institute website.
+    
+    NOTE: This function is currently DISABLED due to format changes in COSMIC database.
+    COSMIC has changed its download format and authentication method, requiring script updates.
 
     Args:
         annovar_db_path: Output folder where to save databases files. In general humandb.
@@ -722,6 +859,25 @@ def update_cosmic_annovar(
         password: password to login into cancer.sanger.ac.uk
         scriptdir: The directory path where the Cosmic update script is stored.
     """
+    # DISABLED: COSMIC update temporarily disabled due to format changes
+    with open(logfile, "a") as f:
+        f.write(
+            f"SKIPPED: COSMIC (Annovar) update disabled due to format changes in COSMIC database download. "
+            f"Manual update required. Current version: {curr_version}\n"
+        )
+    return curr_version
+    
+    # Original code commented out - update when COSMIC format is fixed
+    # # Check if credentials are provided
+    # if not email or not password:
+    #     with open(logfile, "a") as f:
+    #         f.write(
+    #             f"SKIPPED: Cosmic (Annovar) update skipped - no credentials provided. "
+    #             f"Please provide --cosmic_email and --cosmic_password to update COSMIC database. "
+    #             f"Current version: {curr_version}\n"
+    #         )
+    #     return curr_version
+    
     passcode = base64.b64encode(f"{email}:{password}".encode("ascii")).decode()
 
     # Find latest cosmic version
@@ -812,21 +968,31 @@ def update_all_cancervar(
         )
     )
 
-    # update cosmic
+    # COSMIC update - DISABLED due to format changes
+    # Keep the existing COSMIC version in the database list
     cosmic = list(filter(lambda x: x.startswith("cosmic"), current_databases))[0]
-    version = update_cosmic_annovar(
-        annovar_db_path=annovar_db_path,
-        annotation_script=cancervar_script,
-        curr_version=re.search("^(.*?)(\\d.*)", cosmic)[2],
-        email=email,
-        logfile=logfile,
-        password=password,
-        scriptdir=scriptdir,
-    )
-    updated.append(f"cosmic{version}")
+    curr_cosmic_version = re.search("^(.*?)(\\d.*)", cosmic)[2]
+    with open(logfile, "a") as f:
+        f.write(
+            f"SKIPPED: COSMIC (Annovar) update disabled due to format changes. "
+            f"Current version: {curr_cosmic_version}\n"
+        )
+    # Commented out - uncomment when COSMIC update script is fixed
+    # version = update_cosmic_annovar(
+    #     annovar_db_path=annovar_db_path,
+    #     annotation_script=cancervar_script,
+    #     curr_version=curr_cosmic_version,
+    #     email=email,
+    #     logfile=logfile,
+    #     password=password,
+    #     scriptdir=scriptdir,
+    # )
+    # Keep existing version
+    updated.append(cosmic)
 
     # update clinvar
     logging.info(f"Updating clinvar to {today}")
+
     subprocess.run(
         f"sh {scriptdir}/update_clinvar_annovar.sh -v {vt} --name clinvar_{today} --output {annovar_db_path}",
         shell=True,
@@ -844,13 +1010,27 @@ def update_all_cancervar(
         )
 
     # Update annotation script
-    curr_version = list(filter(lambda x: x.startswith("clinvar"), current_databases))[0]
+    # remove \n from curr_version
+    curr_version = list(filter(lambda x: x.startswith("clinvar"), current_databases))[0].strip()
     subprocess.run(
         f"sed -i 's/{curr_version}/clinvar_{today}/g' {cancervar_script}",
         shell=True,
         stdout=subprocess.DEVNULL,
     )
-    # re-sorting as cancervar is order sensitive to databases
+    # re-sorting as cancervar is order sensitive to databases  
+
+    # Manual resorting by swapping gnomad_genome and *_interpro in updated list
+    if "gnomad_genome" in updated and "interpro" in "".join(updated):
+        gnomad_idx = updated.index("gnomad_genome")
+        interpro_idx = next(
+            i for i, db in enumerate(updated) if db.endswith("interpro")
+        )
+        # Swap positions
+        updated[gnomad_idx], updated[interpro_idx] = (
+            updated[interpro_idx],
+            updated[gnomad_idx],
+        )
+    
     for idx, line in enumerate(configs):
         if line.startswith("database_names"):
             configs[idx] = f"database_names = {' '.join(updated)}\n"
@@ -929,7 +1109,8 @@ def update_all_intervar(
         )
 
     # Update annotation script
-    curr_version = list(filter(lambda x: x.startswith("clinvar"), current_databases))[0]
+    # Fix intervar clinvar replacement
+    curr_version = list(filter(lambda x: x.startswith("clinvar"), current_databases))[0].strip()
     subprocess.run(
         f"sed -i 's/{curr_version}/clinvar_{today}/g' {intervar_script}",
         shell=True,

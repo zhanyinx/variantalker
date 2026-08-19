@@ -2,7 +2,6 @@
 process generate_pyclone{
     fair true
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/pyclone", mode: "copy"
-    container "docker://yinxiu/clonal_evolution:latest"
 
     input:
         tuple val(patient), val(sex), path(mafs), val(cellularity), path(crams), path(crais), path(pluriploidy), path(cnvs)
@@ -24,7 +23,7 @@ process generate_pyclone{
 
         for index in \${!mafs[@]}; do
             patientmaf=\${mafs[\$index]}
-            awk -F '\\t' '{if(\$10=="SNP") print \$5"-"\$6"-"\$7"-"\$11"-"\$13"-"\$1"-"\$9"-"\$10}' \$patientmaf >> appo
+            awk -F '\\t' '{if(\$9=="SNP") print \$4"-"\$5"-"\$6"-"\$10"-"\$12"-"\$1"-"\$8"-"\$9}' \$patientmaf >> appo
         done
 
         cat appo | sort | uniq > list_unique_mutations
@@ -76,7 +75,6 @@ process generate_pyclone{
 process pyclone{
     fair true
     publishDir "${params.outdir}/${params.date}/biomarkers/${patient}/", mode: "copy"
-    container "docker://yinxiu/clonal_evolution:latest"
     input:
         tuple val(patient), path(pyclone)
     output:

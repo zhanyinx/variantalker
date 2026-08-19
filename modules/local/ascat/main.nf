@@ -2,10 +2,6 @@
 process ASCAT {
     fair true
     publishDir "${params.outdir}/${params.date}/biomarkers/${meta.patient}/ASCAT", mode: "copy"
-    cpus '4'
-    errorStrategy 'retry'
-    maxRetries = 2
-    memory { 40.GB * task.attempt }
 
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
         'https://depot.galaxyproject.org/singularity/mulled-v2-c278c7398beb73294d78639a864352abef2931ce:dfe5aaa885de434adb2b490b68972c5840c6d761-0':

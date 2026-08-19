@@ -56,19 +56,15 @@ def main():
     writeheader(args.maf, args.output)
     write_metadata2file(f"Germline filters arguments: {args}", args.output)
 
-    # merge table based on mutation position, reference and alternative
-    out = pd.merge(
-        maf,
-        renovo,
-        right_on=["Chr", "Start", "Ref", "Alt"],
-        left_on=[
-            "Chromosome",
-            "Start_Position",
-            "Reference_Allele",
-            "Tumor_Seq_Allele2",
-        ],
-    )
-    out = out.drop(["Chr", "Start", "Ref", "Alt"], axis=1)
+    out = merge_with_fallback(left=maf, right = renovo, left_on = [
+                "Chromosome",
+                "Start_Position",
+                "Reference_Allele",
+                "Tumor_Seq_Allele2"
+            ],
+            right_on=["Chr", "Start", "Ref", "Alt"], cols_to_use = renovo.columns)
+    
+    out = out.drop(["Chr", "Start", "Ref", "Alt"], axis=1, errors="ignore")
     out = out.drop_duplicates()
     out.to_csv(args.output, sep="\t", index=False, mode="a")
 

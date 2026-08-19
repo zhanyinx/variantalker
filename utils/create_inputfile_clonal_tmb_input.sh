@@ -84,16 +84,15 @@ fi
 selected_folders=""
 for dir in `ls -d $input/*`; do 
 	nline=`ls $dir/*cram | grep -v "evidence" | wc -l`; 
+    echo $nline
 	if [ $nline -eq 2 ]; then
 		selected_folders+=" $dir"
 	fi
 done
 
-if ! [ -f $output ];then
-	echo "patient,sex,status,sample,lane,cram,crai,cellularity,maf" > $output
-fi
+echo "patient,sex,status,sample,lane,cram,crai,cellularity,maf" > $output
 
-echo  $selected_folders
+echo "selected folders: $selected_folders"
 
 for dir in $selected_folders; do
 	patient=`basename $dir`
