@@ -49,9 +49,15 @@ yet* by accident. Delete the sentence when the first entry lands.
 1. `cd streamlit_app && make release-tag` — that is the tag, derived from `APP_VERSION`.
 2. Push it. The workflow builds the DMG on macOS and the installer on Windows, from the one
    commit the tag names, and attaches both to a draft release.
-3. Author the release page (issue #265 owns its copy) and publish it.
-4. Add the line here, and update the channel table in `streamlit_app/README.md` — the guard
-   will hold you to it, and until step 3 it holds you to the opposite.
+3. Read the release page. Its copy is `build/RELEASE_PAGE.md` and the workflow has already
+   assembled it into the draft (issue #265) — you read it here, you do not write it here.
+4. **`make release-preflight`.** It refuses a draft built from a tree the repository has since
+   moved on from. This step is not a formality: `mafigate-v1.0.0` was drafted from the tip of
+   `main`, sat while twenty-two commits landed, and came within one click of publishing a known
+   wrong-variant bug under the fixed version's number (#328). Nothing about the draft showed it.
+5. Publish it.
+6. Add the line here, and update the channel table in `streamlit_app/README.md` — the guard
+   will hold you to it, and until step 5 it holds you to the opposite.
 
 `build/BUILD_INSTRUCTIONS.md` has the rest of the release route, including how to rehearse
 the workflow on a throwaway pre-release tag without publishing anything.

@@ -251,9 +251,16 @@ Then:
    the web form once per release is a page nobody reviewed. Before publishing, read
    [One thing measured but not settled](#one-thing-measured-but-not-settled-worth-doing-before-the-release-page-goes-out)
    below — it is about what this page promises macOS users, and it is not settled.
-4. Publish it. **CI never does this.** It drafts and stops, so a human decides when a download
+4. **`make release-preflight`.** It refuses if the draft was built from a tree the repository
+   has since moved on from. Do not skip it because you only cut the tag an hour ago — that is
+   exactly the state it was written for: `mafigate-v1.0.0` was drafted from the tip of `main`,
+   sat while twenty-two commits landed, four of which changed code that ships, and came within
+   one click of publishing a known wrong-variant bug under the fixed version's number (#328).
+   The draft says nothing about this. It names its commit correctly and reads exactly like a
+   fresh one.
+5. Publish it. **CI never does this.** It drafts and stops, so a human decides when a download
    exists.
-5. Record it in [RELEASES.md](RELEASES.md), and update the channel table in
+6. Record it in [RELEASES.md](RELEASES.md), and update the channel table in
    `streamlit_app/README.md`. That ledger is what the README's installer copy is held against,
    in both directions: until you record the release, a guard refuses a README that links to a
    download; once you do, it refuses one that still calls the installers unavailable.

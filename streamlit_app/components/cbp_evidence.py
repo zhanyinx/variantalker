@@ -74,9 +74,19 @@ from .acmg_evidence import _TIER_CELL_COLORS as _GERMLINE_CELL_COLORS
 #:
 #: ``values`` is per-criterion because the sets genuinely differ, and a renderer that assumed a
 #: uniform -1..2 range would offer cells the tool cannot produce. ``says`` is keyed by value —
-#: see the module docstring. ``generic`` is the value-independent phrasing, kept as the fallback
-#: for a value outside ``values``: CancerVar has never emitted one in 119,194 measured vectors,
-#: and an unexpected number must still draw a row rather than an empty cell.
+#: see the module docstring. ``generic`` is the value-independent phrasing, the fallback for a
+#: value *inside* ``values`` with no sentence of its own.
+#:
+#: ``values`` is the criterion's **definition**, not a record of what has been observed, and
+#: issue #316 made it load-bearing: :func:`_describe` now names a score that falls outside it
+#: rather than describing it with ``generic``. Issue #313 measured 111,811 real rows with no
+#: out-of-domain score in any of them, and it is still reachable — CancerVar's curated-evidence
+#: override accepts any value ``<= 1`` with no lower bound (``CancerVar.py:1906``), so ``-1`` at
+#: a criterion defined for ``(0, 1)`` comes from upstream, not only from a hand-written fixture.
+#:
+#: ``curated_only`` marks a criterion CancerVar does not compute from the variant. It scores CBP5
+#: and CBP6 **only** from a curated evidence file supplied to the run — see
+#: :data:`_CURATED_ONLY_CODES`.
 _CBP_CRITERIA = (
     {
         "code": "CBP1",
@@ -127,18 +137,30 @@ _CBP_CRITERIA = (
     {
         "code": "CBP5",
         "name": "Variant frequency",
-        "values": (0,),
+        "values": (0, 1),
         "generic": "mosaic variant allele fraction",
-        "says": {0: "CancerVar does not evaluate this — it needs manual input"},
-        "never_evaluated": True,
+        "says": {
+            1: (
+                "mostly mosaic variant allele fraction, supplied by the run's curated "
+                "evidence file"
+            ),
+            0: "no curated input supplied — CancerVar does not compute this from the variant",
+        },
+        "curated_only": True,
     },
     {
         "code": "CBP6",
         "name": "Potential germline",
-        "values": (0,),
+        "values": (0, 1),
         "generic": "non-mosaic variant allele fraction",
-        "says": {0: "CancerVar does not evaluate this — it needs manual input"},
-        "never_evaluated": True,
+        "says": {
+            1: (
+                "mostly non-mosaic variant allele fraction, supplied by the run's curated "
+                "evidence file"
+            ),
+            0: "no curated input supplied — CancerVar does not compute this from the variant",
+        },
+        "curated_only": True,
     },
     {
         "code": "CBP7",
@@ -213,6 +235,33 @@ _CBP_CRITERIA = (
 #: How many scores a CancerVar evidence vector has. Not a magic number in three places: a
 #: vector of any other length is a truncated line, and :func:`parse_cancervar` refuses it.
 CBP_COUNT = 12
+
+#: The criteria CancerVar does not compute from the variant — CBP5 and CBP6 — read off the flag
+#: rather than typed again, so the disclosure below cannot name a set the table does not hold.
+#:
+#: Issue #315 established what the flag means, and it is not what this module said for a year.
+#: ``check_VF`` (``resources/CancerVar/CancerVar.py:1481-1489``) and ``check_PotG`` (``:1492-1500``)
+#: do take the variant line and ``return 0`` without reading it — but thirty lines below the vector
+#: is assembled, the same function **overwrites it from a user evidence file** (``:1886-1915``,
+#: read at ``:141-163``, keyed ``Chr_Start_End_Ref_Alt``). variantalker exposes that file as
+#: ``params.cancervar_evidence_file`` (``nextflow.config:60``,
+#: ``modules/local/annotation/small_variants/somatic/main.nf:107-112``), defaulting to empty.
+#:
+#: So these two have a supported input channel, and a non-zero score at one of them is a curator's
+#: hand assertion rather than noise. The retired caption's *"never evaluated"* was not merely too
+#: absolute: for the one case it can be wrong about, it said the opposite of the truth.
+_CURATED_ONLY_CODES = tuple(c["code"] for c in _CBP_CRITERIA if c.get("curated_only"))
+
+#: The ⚠ glyph's tooltip, on every table it is drawn in.
+#:
+#: It is keyed on the criterion flag, not on the section, so it appears beside a curated ``+1`` in
+#: *what fired* as well as beside a ``0`` behind the disclosure — and there it is the useful bit,
+#: the only thing on screen saying this score came from a human rather than from CancerVar's
+#: algorithm. Worded so that it is true in both places, which *"CancerVar never evaluates this
+#: criterion"* was not.
+_CURATED_ONLY_TITLE = (
+    "Not computed from the variant — scored only from the run's curated evidence file"
+)
 
 #: CancerVar's own word for each score. Not a bar or a meter: the value sets are four discrete
 #: points and they are not uniform across criteria, so a continuous axis would imply cells the
@@ -355,8 +404,91 @@ def _criteria_with_scores(parsed: dict) -> list:
     return list(zip(_CBP_CRITERIA, parsed["scores"]))
 
 
+#: The three sections :func:`render_cbp_evidence` draws, in the order a clinician reads them.
+#:
+#: Naming them once is what makes the split a **partition**. Issue #314 fixed the defect of not
+#: having done so: the three lists were three separately-written predicates — one testing the
+#: score, one testing the score *and* the flag, one testing only the flag — and they agreed on
+#: most inputs rather than by construction. A criterion flagged ``curated_only`` that
+#: CancerVar scored non-zero fell into two of them, and was reported twice and contradictorily.
+_BUCKETS = ("fired", "scored_zero", "not_scored")
+
+
+def _bucket(criterion: dict, score: int) -> str:
+    """Which of :data:`_BUCKETS` this criterion belongs in — the only place that decides.
+
+    The order of the tests is map #308's ruling: CancerVar's evidence string is authoritative per
+    row, so a ``curated_only`` criterion scored non-zero is a criterion that **fired** — a curator
+    supplied it. One row in the table, not a row in the table plus a contradicting row behind a
+    disclosure saying it was never scored.
+
+    ``curated_only`` is therefore a fact about a *zero*, which is the only score for which it is a
+    fact at all: it says this zero is the absence of curated input rather than a finding about this
+    variant.
+    """
+    if score != 0:
+        return "fired"
+    if criterion.get("curated_only"):
+        return "not_scored"
+    return "scored_zero"
+
+
+def _partition_criteria(pairs: list) -> dict:
+    """``{bucket: [(criterion, score), ...]}`` over :data:`_BUCKETS`, each pair in exactly one.
+
+    Exhaustive and mutually exclusive because every pair is routed once, by one function: there
+    is no second predicate to fall out of step with the first. Empty buckets are present, so a
+    caller reads a list rather than testing for a key — and a name added to :data:`_BUCKETS`
+    without a branch in :func:`_bucket` draws nothing, while a branch returning a name that is
+    not in :data:`_BUCKETS` raises rather than dropping a criterion off the panel.
+    """
+    buckets = {name: [] for name in _BUCKETS}
+    for criterion, score in pairs:
+        buckets[_bucket(criterion, score)].append((criterion, score))
+    return buckets
+
+
+def _score_word(score: int) -> str:
+    """A score exactly as :func:`_score_cell` prints it, so a sentence and its cell agree."""
+    return f"{score:+d}" if score else "0"
+
+
+def _join_phrase(parts) -> str:
+    """``a`` · ``a and b`` · ``a, b and c`` — for naming a criterion's declared values or codes."""
+    parts = list(parts)
+    if len(parts) < 2:
+        return "".join(parts)
+    return f"{', '.join(parts[:-1])} and {parts[-1]}"
+
+
 def _describe(criterion: dict, score: int) -> str:
-    """What this criterion says *at this score*."""
+    """What this criterion says *at this score*.
+
+    Three cases, and the first is issue #316's:
+
+    * a score **outside** the criterion's declared ``values`` is named as such. It is the one case
+      where this module does not know what the number means, and describing it with ``generic``
+      anyway is the app asserting what it has not been told — the same class of error as the
+      *"always zero, in every file"* caption this ticket retired.
+    * a score inside ``values`` with no ``says`` entry falls back to ``generic``, exactly as
+      before. :func:`test_every_value_a_criterion_can_take_has_a_sentence_of_its_own` keeps that
+      case empty in practice.
+    * otherwise, the sentence written for that value.
+
+    The out-of-domain sentence is a claim about the criterion's **definition**, not about what
+    CancerVar can emit: the curated-evidence override accepts any value ``<= 1`` with no lower
+    bound (``CancerVar.py:1906``), so *"outside the range CancerVar can produce"* would itself be
+    false — and this ticket is about not shipping false claims.
+
+    Not raised. Map #308 ruled the evidence string authoritative per row, and an exception in a
+    render path would blank the whole panel because one criterion is odd.
+    """
+    if score not in criterion["values"]:
+        declared = _join_phrase(_score_word(v) for v in sorted(criterion["values"]))
+        return (
+            f"the file scores this {_score_word(score)}; this criterion is defined only "
+            f"for {declared}"
+        )
     return criterion["says"].get(score, criterion["generic"])
 
 
@@ -604,9 +736,9 @@ def _cbp_table_html(
         text_color = "#999999" if (muted or score == 0) else "#1a1a1a"
         cell = f"padding:5px 10px;vertical-align:top;color:{text_color};"
         marker = ""
-        if criterion.get("never_evaluated"):
+        if criterion.get("curated_only"):
             marker = (
-                ' <span title="CancerVar never evaluates this criterion" '
+                f' <span title="{html.escape(_CURATED_ONLY_TITLE, quote=True)}" '
                 'style="color:#b8860b;">&#9888;</span>'
             )
         # The markers behind this criterion, in the same cell as the sentence they
@@ -699,8 +831,17 @@ def render_cbp_evidence(
 
     Shape B of issue #188, which the dev drove and picked: **one signed table of the criteria that
     fired**, strongest claim first, with the remainder behind two expanders — *scored zero* and
-    *never evaluated* — that are different facts and so are not one list. Median 2 rows over 109,416
+    *not scored* — that are different facts and so are not one list. Median 2 rows over 109,416
     real rows; no row in the corpus has more than 10 of the twelve non-zero.
+
+    The three sections are a **partition** of the twelve, routed once by :func:`_partition_criteria`
+    rather than filtered three times. Issue #314: three predicates written apart reported a
+    non-zero CBP5 in the table *and* behind a disclosure contradicting it.
+
+    Issue #316 replaced that disclosure's caption. What it claimed — *"these two … are always
+    zero, on every variant in every file"* — is a claim about **files**, and handing the app one
+    that says otherwise falsifies it, which is what the QA report did. The claim is now about the
+    input channel instead: see :data:`_CURATED_ONLY_CODES`.
 
     Args:
         cancervar_result: the row's ``CancerVar and Evidence`` value.
@@ -727,8 +868,11 @@ def render_cbp_evidence(
 
     _render_tier_badge(parsed)
 
-    pairs = _criteria_with_scores(parsed)
-    fired = [(c, s) for c, s in pairs if s != 0]
+    # One classification for all three sections — see :func:`_partition_criteria`. The lists are
+    # read out of it rather than filtered out of `pairs` again, so every criterion is placed
+    # exactly once and no section can be added that silently overlaps another.
+    buckets = _partition_criteria(_criteria_with_scores(parsed))
+    fired = buckets["fired"]
     # Strongest claim first in either direction, and a negative after a positive of equal
     # magnitude — so a dissent reads as a qualification of what precedes it rather than as the
     # headline. Ties broken by code so the order is stable.
@@ -747,10 +891,8 @@ def render_cbp_evidence(
             "annotation."
         )
 
-    scored_zero = [
-        (c, s) for c, s in pairs if s == 0 and not c.get("never_evaluated")
-    ]
-    never_evaluated = [(c, s) for c, s in pairs if c.get("never_evaluated")]
+    scored_zero = buckets["scored_zero"]
+    not_scored = buckets["not_scored"]
 
     if scored_zero:
         with st.expander(f"Scored zero — no support either way ({len(scored_zero)})"):
@@ -758,13 +900,23 @@ def render_cbp_evidence(
                 _cbp_table_html(scored_zero, muted=True, markers=markers, tissue=tissue),
                 unsafe_allow_html=True,
             )
-    if never_evaluated:
-        with st.expander(f"Never evaluated by CancerVar ({len(never_evaluated)})"):
+    if not_scored:
+        # *Not scored* against its sibling *Scored zero*, both showing a 0 in the table: the
+        # heading carries the distinction by parallel construction rather than by asserting
+        # anything about "never" (#315).
+        with st.expander(f"Not scored — needs curated input ({len(not_scored)})"):
+            # The codes are named from :data:`_CURATED_ONLY_CODES` and not as "these two",
+            # because the partition (#314) lets a curated criterion leave this list: with a
+            # curated CBP5 the box holds one row, and "these two" would be counting what is on
+            # screen. Naming the codes keeps the sentence a claim about the *tool*, true in
+            # either state — which is the whole of what #316 retired the old caption for.
             st.caption(
-                "CancerVar automates ten of the twelve categories. These two need manual input "
-                "and are always zero, on every variant in every file — a zero here is not a "
-                "finding about this variant."
+                f"CancerVar does not compute {_join_phrase(_CURATED_ONLY_CODES)} from the "
+                "variant — it scores them only from a curated evidence file supplied to the run "
+                "(variantalker's `cancervar_evidence_file`). With none supplied, CancerVar "
+                "writes a zero. So a zero here means no curated input was supplied, not that "
+                "this variant was assessed and found negative."
             )
-            st.markdown(_cbp_table_html(never_evaluated, muted=True), unsafe_allow_html=True)
+            st.markdown(_cbp_table_html(not_scored, muted=True), unsafe_allow_html=True)
 
     _render_arithmetic(parsed)

@@ -793,14 +793,25 @@ def _row_as_the_filter_saw_it(row: pd.Series) -> "pd.DataFrame | None":
     raise or answer about stringified data. Slicing ``maf_data`` by index preserves both the
     dtypes and the values the filter actually read.
 
-    **Identity.** The AgGrid path recovers the index with
-    ``pd.DataFrame(grid_response.selected_rows).iloc[0].name``, and that frame is built from a
-    list of dicts returned by the browser, so its index is a ``RangeIndex`` position rather
-    than the MAF's own. When that position happens to exist in the report's index the lookup
-    succeeds against **the wrong row**. So the recovered row is checked against the row on
-    screen before anything is claimed about it, and a mismatch draws nothing: an explanation
-    of a variant the user did not select is worse than no explanation, and this is the one
-    surface where being confidently wrong costs the most.
+    **Identity.** ``row.name`` is trusted here as a label of ``maf_data``, and whether it is
+    one depends on how the caller recovered the row. This paragraph used to describe the AgGrid
+    path recovering it from a browser-built frame whose index is a **position** rather than the
+    MAF's own, so that a position which happens to exist in the report's index looks up **the
+    wrong row**. That account is stale as of issue #310: ``variant_table._full_row`` no longer
+    reads the component's identifier as a label at all, and both of its resolving branches now
+    return a row of the report itself — ``full_data.iloc[position]`` or the sole column match —
+    whose ``.name`` *is* the real label. The unresolved branch returns the browser's partial
+    row, and on the ``🔍 View details`` route that row is still named by a position, as a
+    string; against a MAF's int64 labels it is simply absent, so this function returns ``None``
+    and draws nothing, which is the documented degradation.
+
+    The cross-check below stays regardless, because the reason for it never depended on that
+    account being current: the row arrives from a round trip we do not own, and a label is a
+    claim about identity that this surface is not entitled to take on trust. It earned its keep
+    — while the dialog was opening the wrong variant, this section drew nothing rather than
+    explaining a variant nobody picked. A mismatch draws nothing: an explanation of a variant
+    the user did not select is worse than no explanation, and this is the one surface where
+    being confidently wrong costs the most.
 
     Both blanks count as agreement, because the two frames spell a missing value differently
     — ``fillna("")`` on one side and ``NaN`` on the other — and that is a rendering

@@ -35,9 +35,32 @@ pandas==2.3.1              # data handling; the pin is also the upper bound the 
                            # exactly that reason (see tests/test_utils.py)
 numpy==2.3.1               # numeric helpers
 streamlit-aggrid==1.1.6    # interactive data grid (st_aggrid); 1.x rather than the >=0.3.4
-                           # floor, which nothing had ever checked — this is the version the
-                           # table and both dialog routes are exercised against, and the
-                           # route taken when the package is absent altogether has its own
+                           # floor, which nothing had ever checked. This one is a contract
+                           # boundary rather than merely the current version, and the contract
+                           # is a field name: the variant dialog decides which row the reader
+                           # picked from `__pandas_index`, which the component adds to every
+                           # row it sends back. `_AGGRID_INDEX_KEY` in
+                           # components/variant_table.py is our name for it, both dialog routes
+                           # resolve through it, and it holds the row's *position* in the frame
+                           # the grid was handed — never that row's pandas label (issue #310,
+                           # where reading it as a label opened the wrong variant).
+                           #
+                           # 1.1.8 — the very next release — renames that field
+                           # `::auto_unique_id::`, with no compatibility alias. So a bump past
+                           # this pin does not mislabel the identifier, it removes it: both
+                           # routes fall back to matching on three columns, and 37 of 104 real
+                           # MAFs repeat a (gene, chromosome, position) triple, so the reader
+                           # gets the partial row rather than their variant. Two things to
+                           # check against any new number: that the identifier is still built
+                           # by position (it is in all of 1.1.5 – 1.2.1.post2, measured on
+                           # issue #311), and that `_AGGRID_INDEX_KEY` still names the field
+                           # the installed version sends. tests/test_row_recovery.py asserts
+                           # both against the installed component, and
+                           # .github/workflows/dependency-contract.yml runs it — on 1.1.8 it
+                           # fails at *import*, `__parse_row_data` having moved to
+                           # aggrid_utils.py, so the bump cannot pass quietly.
+                           #
+                           # The route taken when the package is absent altogether has its own
                            # tests (tests/test_fallback_dialog.py)
 plotly==6.9.0              # interactive charts; the six Summary charts are checked under
                            # this version (issue #162), a major version above the >=5.15.0

@@ -443,6 +443,16 @@ def create_data_table(
         # unreachable by double-click here because `st.dataframe` has no such event, and this
         # is what the two paths are allowed to differ on: the gesture, not whether a dialog
         # appears unbidden.
+        #
+        # It is not allowed to differ on *which* variant opens — and this route was never at
+        # risk of that, which issue #312 checked here rather than assuming. The grid's defect
+        # (#309/#310) needed a row identifier making a round trip through browser JSON; this
+        # route has none. `range(len(cleaned_data))` makes the selectbox's value a position in
+        # the frame in hand, `format_func` reads the label the reader sees off that same
+        # position, and the row opened is `cleaned_data.iloc[row_idx]` — one frame, one
+        # positional read, no `_full_row` and no three-column match to fall through to. The
+        # variant named in the option is therefore the variant the dialog gets, by
+        # construction.
         if len(cleaned_data) > 0:
             row_idx = st.selectbox(
                 "Select a variant to view details:",
@@ -902,9 +912,39 @@ def render_fallback_table(
 #: list ``create_data_table`` returns — cannot pick it up.
 _DOUBLE_CLICK_COLUMN = "_double_click_stamp"
 
-#: ``st_aggrid``'s own name for the frame's index, which it sends alongside the cells and
+#: ``st_aggrid``'s own name for the row identifier it sends alongside the cells, and which it
 #: sets as the index of ``selected_rows``. The double-clicked row arrives as plain JSON, so
 #: there it is a field like any other and has to be read — and then hidden — by hand.
+#:
+#: **It is a position, not a label**, and the name invites the opposite reading. ``st_aggrid``
+#: builds it as ``[str(i) for i in range(len(frame))]`` before serialising the rows
+#: (``st_aggrid/AgGrid.py:41``, streamlit-aggrid 1.1.6) and deletes it again afterwards, so it
+#: is the row's **position** in the frame the grid was handed, as a string, and it carries no
+#: trace of that frame's own index. Issue #310 is what reading it as a label cost: the frames
+#: this app draws are the report's passed/failed splits, boolean-mask slices whose labels are
+#: neither contiguous nor zero-based, and ``full_data.loc[2]`` on labels ``[2, 3, 5, 7]`` is
+#: the *first* row where position 2 is the third. ``tests/test_row_recovery.py`` holds the
+#: installed component to this, and issue #311 read every published release to find out what
+#: it is holding against: the field is positional in **all nine**, 1.1.5 to 1.2.1.post2, and it
+#: has to be — it feeds AG Grid's ``getRowId``, which requires a unique string, and a pandas
+#: label guarantees neither. So the hazard is not an upgrade that starts sending labels. It is
+#: the **rename** to ``::auto_unique_id::`` at 1.1.8, the release straight after the pin, which
+#: makes the field *absent* rather than misleading: this app degrades to the match below, and
+#: the contract test fails at import. The pin is the boundary, and ``requirements.txt`` is
+#: where it is argued (issue #321).
+#:
+#: **The two routes received this value differently, and one of them never used it at all.**
+#: Issue #309 measured the asymmetry, which matters here because it is invisible from the code
+#: as it now stands. ``selected_rows`` sets its index from this same field and leaves the
+#: ordinal a **string** (``st_aggrid/AgGridReturn.py:266``), so ``'5' in full_data.index`` was
+#: ``False`` against a MAF's int64 labels — always — and the ``🔍 View details`` button had been
+#: resolving variants by the three-column match all along. The double-click **cast** the string
+#: to the frame's index dtype, added by #159 to make the lookup work, and that cast is what
+#: turned a harmless miss into a silent wrong hit: in one Chromium run, on one row, the two
+#: routes named different variants on screen at the same moment. The routes were never
+#: symmetric, so do not "simplify" the two reads back together on the assumption that they
+#: were. They agree now because :func:`_grid_position` reads both as positions — that agreement
+#: is the fix, not a property of what arrives.
 _AGGRID_INDEX_KEY = "__pandas_index"
 
 #: Why a double-click writes a cell instead of just being reported.
@@ -970,17 +1010,71 @@ def _fresh_double_click(grid_response, state, state_key: str):
     return row
 
 
-def _full_row(partial: "pd.Series", full_data: pd.DataFrame) -> "pd.Series":
+def _grid_position(raw, full_data: pd.DataFrame) -> int | None:
+    """The position in ``full_data`` that ``_AGGRID_INDEX_KEY`` names, or ``None``.
+
+    One reader for both routes, because the two receive the same value by different means —
+    the double-click as a field in the row's JSON, the button as the name of the row
+    ``selected_rows`` hands back (``st_aggrid/AgGridReturn.py:266``) — and nothing else about
+    them differs here.
+
+    It arrives as a string and is answered against ``full_data``, which is sound because
+    ``full_data`` is the frame the grid was drawn from: ``display_data`` is
+    ``cleaned_data[visible_columns]``, the same rows in the same order, and the copy handed to
+    ``AgGrid`` only adds a column. Sorting and filtering in the grid do not disturb it either
+    — the value is a field on the row, written before the rows were sent, so it survives the
+    reader reordering the view and is exactly *not* the row's position on screen.
+
+    Out of range is refused rather than clamped, and negatives with it: ``iloc[-1]`` is a
+    perfectly good pandas call that returns the last variant in the report, which is the kind
+    of answer this function exists to stop giving.
+    """
+
+    if raw is None:
+        return None
+
+    try:
+        position = int(raw)
+    except (TypeError, ValueError):
+        return None
+
+    return position if 0 <= position < len(full_data) else None
+
+
+def _full_row(
+    partial: "pd.Series", full_data: pd.DataFrame, grid_position: int | None = None
+) -> "pd.Series":
     """Recover the pristine row behind the partial one the grid handed back.
 
     Lifted out of the ``🔍 View details`` handler unchanged so the dialog is handed the same
     row whichever way it was opened, rather than the double-click growing a second opinion
     about which variant the user picked.
 
-    The index is tried first and matching on gene, chromosome and position second, which is
-    the order that was already here. Issue #147 recorded why the fallback exists and what it
-    cannot promise: the frame is rebuilt from browser JSON, so an index that does not survive
-    the trip leaves three columns to identify a variant by.
+    ``grid_position`` is the component's own answer to *which row was that*, read by
+    :func:`_grid_position`, and it is exact: it identifies one row of ``full_data`` and needs
+    no columns to do it. Both call sites pass it, so on every live path the match below is not
+    reached at all.
+
+    The match is kept anyway, because issue #147's reason for it stands — the row makes a
+    round trip through browser JSON and the identifier is the component's to send, not ours to
+    promise — but it is no longer allowed to guess. Issue #310 is what guessing cost:
+
+    * The mask began all-True and was narrowed only by the columns the partial row carried, so
+      a partial carrying none of the three narrowed it by nothing and ``iloc[0]`` answered
+      with **row 0 of the report**, dressed as the variant the reader picked.
+    * With some of the three it narrowed to a *set* and took the first of it. That is the
+      ordinary case rather than a corner: 37 of the 104 real MAFs on this machine repeat at
+      least one ``(gene, chromosome, position)`` triple — one pooled file on 1711 of its 2361
+      rows — because one variant called in several samples is one variant in all three of
+      those columns. ``Tumor_Sample_Barcode`` is what tells those rows apart and it is not
+      matched on.
+
+    So a clause must have been applied and exactly one row may satisfy every clause; anything
+    else returns ``partial``. That is a thinner dialog — the columns the grid was drawn with,
+    and not the rest of the report's — but it is the row the reader actually picked, and this
+    module's standing rule is that a wrong answer indistinguishable from a right one is worse
+    than a short one. Nothing is refused *visibly*: saying so belongs to the dialog's surface,
+    which issue #308 rules out redesigning here.
     """
 
     # Dropped here rather than at either call site, because *no* caller wants them and the
@@ -994,40 +1088,43 @@ def _full_row(partial: "pd.Series", full_data: pd.DataFrame) -> "pd.Series":
         labels=[_DOUBLE_CLICK_COLUMN, _AGGRID_INDEX_KEY], errors="ignore"
     )
 
-    idx = partial.name if hasattr(partial, "name") else None
-    if idx is not None and idx in full_data.index:
-        return full_data.loc[idx]
+    # `is not None`, not truthiness: position 0 is the first row of every report and the one
+    # falsy value in the range, so a truthiness test sends exactly that row down the match —
+    # where a repeated triple answers it with a different sample's row.
+    if grid_position is not None:
+        return full_data.iloc[grid_position]
 
     mask = pd.Series(True, index=full_data.index)
+    applied = 0
     for match_col in ["Hugo_Symbol", "Chromosome", "Start_Position"]:
         if match_col in partial.index and match_col in full_data.columns:
             mask &= full_data[match_col] == partial[match_col]
-    matches = full_data[mask]
-    return matches.iloc[0] if len(matches) > 0 else partial
+            applied += 1
+
+    if applied:
+        matches = full_data[mask]
+        if len(matches) == 1:
+            return matches.iloc[0]
+
+    return partial
 
 
-def _double_clicked_series(row: dict, full_data: pd.DataFrame) -> "pd.Series":
-    """Turn the double-clicked row's JSON into something :func:`_full_row` can look up.
+def _double_clicked_series(row: dict) -> "pd.Series":
+    """Turn the double-clicked row's JSON into the partial row :func:`_full_row` takes.
 
-    ``st_aggrid`` sends ``__pandas_index`` alongside the cells, so the double-click knows
-    exactly which row was hit — but it arrives as a string, and an index read from a MAF is
-    typically integer, so the raw value alone would miss and fall through to matching on
-    three columns. It is converted where the index's own dtype accepts it and left alone
-    where it does not.
+    It used to do more, and issue #310 retired the rest of it. ``__pandas_index`` arrives as a
+    string, so this cast it to the frame's own index dtype to stop it missing on a MAF's
+    integer index — a conversion that made the lookup *hit*, on a label that names a different
+    variant, and so turned a miss into a wrong answer. The value is a position; positions are
+    read by :func:`_grid_position` and passed to :func:`_full_row` beside the row, and the
+    series no longer carries an index label at all.
+
+    It takes the row alone now — reconciling anything against the frame was the whole of what
+    it did wrong — and stays a named step rather than being inlined so that what was retired
+    has somewhere to be recorded.
     """
 
-    series = pd.Series(row)
-    raw = row.get(_AGGRID_INDEX_KEY)
-    if raw is None:
-        return series
-
-    series.name = raw
-    if raw not in full_data.index:
-        try:
-            series.name = full_data.index.dtype.type(raw)
-        except (TypeError, ValueError):
-            series.name = raw
-    return series
+    return pd.Series(row)
 
 
 def _render_aggrid_with_detail(
@@ -1225,7 +1322,18 @@ def _render_aggrid_with_detail(
             _view_details_label(selected_partial),
             key=f"view_detail_{key_suffix}",
         ):
-            _show_variant_dialog(_full_row(selected_partial, full_data))
+            # The button's position arrives as the row's *name*: `st_aggrid` has already made
+            # `_AGGRID_INDEX_KEY` the index of `selected_rows`, so there is no such field to
+            # read. It is the same string the double-click gets as a field, and both go
+            # through `_grid_position` so the two routes cannot come to different answers
+            # about which variant the reader picked (#310).
+            _show_variant_dialog(
+                _full_row(
+                    selected_partial,
+                    full_data,
+                    _grid_position(selected_partial.name, full_data),
+                )
+            )
 
     # Last, and after the button, so a run that opens the dialog has already drawn the grid
     # and everything under it: `st.dialog` takes over the screen, and what is behind it is
@@ -1240,5 +1348,9 @@ def _render_aggrid_with_detail(
     )
     if double_clicked is not None:
         _show_variant_dialog(
-            _full_row(_double_clicked_series(double_clicked, full_data), full_data)
+            _full_row(
+                _double_clicked_series(double_clicked),
+                full_data,
+                _grid_position(double_clicked.get(_AGGRID_INDEX_KEY), full_data),
+            )
         )

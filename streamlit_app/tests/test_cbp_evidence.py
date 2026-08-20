@@ -15,7 +15,9 @@ Three groups of guards, and they fail for three different reasons:
 Each guard here was made to fail before being trusted, per this repo's standing rule.
 """
 
+import html
 import os
+import re
 import sys
 
 import pandas as pd
@@ -26,7 +28,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from components.cbp_evidence import (  # noqa: E402
     CBP_COUNT,
     _CBP_CRITERIA,
+    _CURATED_ONLY_CODES,
+    _CURATED_ONLY_TITLE,
     _TIER_COLORS,
+    _describe,
     parse_cancervar,
     tier_color,
     tier_label,
@@ -55,15 +60,30 @@ def test_there_are_exactly_twelve_criteria_in_cancervars_own_order():
     assert codes == [f"CBP{n}" for n in range(1, 13)]
 
 
-def test_only_cbp5_and_cbp6_are_marked_never_evaluated():
-    """#185 measured them 0 on all 109,416 rows: they ``return 0`` unconditionally.
+def test_only_cbp5_and_cbp6_are_scored_only_from_curated_input():
+    """The same two criteria, on a footing that does not depend on a row count.
+
+    This assertion used to rest on *"#185 measured them 0 on all 109,416 rows"* — a claim about
+    files, which the QA report behind map #308 falsified by handing the app one. Issue #315 read
+    the vendored tool instead, and the set is unchanged: ``check_VF``
+    (``resources/CancerVar/CancerVar.py:1481-1489``) and ``check_PotG`` (``:1492-1500``) take the
+    variant line and ``return 0`` without reading it, and they are the only two that do.
+
+    What #315 added is *why* the zero is not the end of it: the same function overwrites the
+    vector from a curated evidence file at ``:1886-1915``, which variantalker wires up as
+    ``params.cancervar_evidence_file``. So the flag says **not computed from the variant**, which
+    is true whatever the score, rather than "never evaluated", which stops being true the moment a
+    curator supplies one.
 
     They are marked rather than dropped because a clinician who reads ``CBP5: 0`` as "no mosaic
-    evidence in this variant" has been misled — the zero is CancerVar declining to evaluate.
+    evidence in this variant" has been misled — that zero means no curated input was supplied.
     """
-    never = [c["code"] for c in _CBP_CRITERIA if c.get("never_evaluated")]
+    curated = [c["code"] for c in _CBP_CRITERIA if c.get("curated_only")]
 
-    assert never == ["CBP5", "CBP6"]
+    assert curated == ["CBP5", "CBP6"]
+    assert list(_CURATED_ONLY_CODES) == curated, (
+        "the disclosure names a set the criteria table does not hold"
+    )
 
 
 def test_every_value_a_criterion_can_take_has_a_sentence_of_its_own():
@@ -381,26 +401,344 @@ def test_all_twelve_at_zero_is_named_as_a_result_not_left_silent():
 
 
 def test_the_two_kinds_of_zero_are_not_one_list():
-    """*Scored zero* and *never evaluated* are different facts about the file.
+    """*Scored zero* and *not scored* are different facts about the file.
 
-    CancerVar evaluated ten categories and found nothing either way; it does not evaluate CBP5
-    or CBP6 at all. Collapsing them invites reading ``CBP5: 0`` as a finding about the variant.
+    CancerVar scored ten categories and found nothing either way; it does not compute CBP5 or
+    CBP6 from the variant at all. Collapsing them invites reading ``CBP5: 0`` as a finding about
+    the variant.
+
+    The two headings are asserted together because the distinction is carried by their **parallel
+    construction** — *Scored zero* against *Not scored*, both showing a 0 in the table (#315). A
+    heading reworded on its own would take the contrast with it.
     """
     drawn = _render(" CancerVar: 3#Tier_III_Uncertain EVS=[0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0] ")
     labels = [text for kind, text in drawn if kind == "expander"]
 
     assert len(labels) == 2
     assert "Scored zero" in labels[0] and "(7)" in labels[0]
-    assert "Never evaluated" in labels[1] and "(2)" in labels[1]
+    assert "Not scored — needs curated input" in labels[1] and "(2)" in labels[1]
 
 
-def test_cbp5_and_cbp6_never_appear_in_the_table_of_what_fired():
-    """They are 0 on every row of every file, so they can only ever be remainder."""
+def test_a_zero_at_cbp5_or_cbp6_is_remainder_rather_than_a_row_in_what_fired():
+    """A zero there is CancerVar declining to evaluate, which is not a criterion firing.
+
+    Named for the *zero*, not for the code: map #308 settled that CancerVar's evidence string is
+    authoritative per row, so "CBP5 never appears in this table" is no longer a law this section
+    may hold — see
+    :func:`test_a_nonzero_criterion_that_cancervar_declines_to_evaluate_is_reported_once`.
+    """
     drawn = _render(" CancerVar: 13#Tier_I_strong EVS=[2, 0, 2, 1, 0, 0, 1, 1, 2, 1, 1, 2] ")
     table = next(text for kind, text in drawn if kind == "markdown" and "<table" in text)
 
     assert "CBP5" not in table
     assert "CBP6" not in table
+
+
+# ---------------------------------------------------------------------------
+# The three sections are a partition (issue #314)
+# ---------------------------------------------------------------------------
+#
+# The section draws three tables — what fired, *Scored zero*, *Not scored* — and the three
+# together are the twelve criteria, each in exactly one of them. That is the property; the guards
+# below assert the property rather than spot-checking the one criterion that broke it, because
+# `_CBP_CRITERIA` has gained a flag before and the next one will be sorted by the same code.
+
+#: A criterion code as ``_cbp_table_html`` draws it: first cell, then either the curated-only
+#: warning span or the ``<br>`` before its name. Anchored both ends because ``CBP1`` is a prefix
+#: of ``CBP10``, ``CBP11`` and ``CBP12`` — a substring test would report three phantom rows.
+_CODE_IN_A_ROW = re.compile(r">(CBP\d{1,2})(?=[< ])")
+
+
+def _sections_by_code(drawn):
+    """``{code: [section, ...]}`` — where each criterion's row was drawn, in document order.
+
+    The section is ``"what fired"`` until the first expander is entered and that expander's label
+    afterwards, which is exactly how a clinician reads the panel: above the fold, or behind one of
+    the two disclosures. A code listed twice was drawn twice.
+    """
+    sections = {}
+    where = "what fired"
+    for kind, text in drawn:
+        if kind == "expander":
+            where = text
+        elif kind == "markdown" and "<table" in text:
+            for code in _CODE_IN_A_ROW.findall(text):
+                sections.setdefault(code, []).append(where)
+    return sections
+
+
+def test_a_nonzero_criterion_that_cancervar_declines_to_evaluate_is_reported_once():
+    """The reported defect: ``CBP5 = +1`` was drawn in *what fired* **and** *Never evaluated*.
+
+    Three predicates written apart: ``fired`` tested the score, *Never evaluated* tested only the
+    flag, so a criterion carrying both fell into both lists — and contradictorily, since the
+    second one's caption says the value is always zero. Map #308 settled which one is right: the
+    evidence string is authoritative, so a nonzero CBP5 is a criterion that fired.
+    """
+    drawn = _render(" CancerVar: 14#Tier_I_strong EVS=[2, 0, 2, 1, 1, 0, 1, 1, 2, 1, 1, 2] ")
+    sections = _sections_by_code(drawn)
+
+    assert sections.get("CBP5") == ["what fired"], (
+        "a nonzero CBP5 was drawn somewhere other than exactly once in what fired: "
+        f"{sections.get('CBP5')}"
+    )
+    # Its still-zero sibling stays behind the disclosure, so this is the score being read and not
+    # the flag being ignored.
+    assert len(sections.get("CBP6", [])) == 1
+    assert "Not scored" in sections["CBP6"][0]
+
+
+@pytest.mark.parametrize(
+    "vector, why",
+    [
+        ([2, 0, 2, 1, 1, 0, 1, 1, 2, 1, 1, 2], "a nonzero CBP5 — the reported defect"),
+        ([0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0], "both flagged criteria nonzero, nothing else"),
+        ([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "all twelve zero — no table of what fired"),
+        ([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], "all twelve fired — neither disclosure drawn"),
+        ([1, 0, 2, 1, 0, 0, 0, 1, 2, -1, 1, 1], "the real vector, negatives and all"),
+    ],
+)
+def test_every_criterion_is_drawn_in_exactly_one_of_the_three_sections(vector, why):
+    """The invariant, not a spot-check: the three sections partition the twelve.
+
+    Exhaustive *and* mutually exclusive. Both halves matter and they fail differently — a
+    criterion in two sections is reported twice and contradictorily, one in none is reasoning
+    CancerVar did that the panel silently drops.
+    """
+    evs = ", ".join(str(v) for v in vector)
+    drawn = _render(f" CancerVar: {sum(vector)}#Tier_II_potential EVS=[{evs}] ")
+    sections = _sections_by_code(drawn)
+
+    drawn_twice = {code: where for code, where in sections.items() if len(where) > 1}
+    assert not drawn_twice, f"reported more than once ({why}): {drawn_twice}"
+    assert sorted(sections, key=lambda code: int(code[3:])) == [
+        c["code"] for c in _CBP_CRITERIA
+    ], f"the three sections are not all twelve ({why}): {sorted(sections)}"
+
+
+def test_the_partition_survives_a_score_no_criterion_declares():
+    """One classification, so an undeclared value cannot fall between the buckets.
+
+    ``_CBP_CRITERIA`` gives every criterion a ``values`` tuple, and since #316 ``_describe``
+    *names* a score outside it — but nothing rejects one, and nothing should: the bucketing reads
+    the score, not the declared range. So the partition is asserted over the whole range
+    CancerVar's grader can emit, for every criterion, rather than over the values each one
+    declares.
+    """
+    from components.cbp_evidence import _criteria_with_scores, _partition_criteria
+
+    for score in (-1, 0, 1, 2):
+        parsed = {"scores": [score] * CBP_COUNT, "sum": score * CBP_COUNT}
+        buckets = _partition_criteria(_criteria_with_scores(parsed))
+        placed = [c["code"] for bucket in buckets.values() for c, _ in bucket]
+
+        assert sorted(placed) == sorted(c["code"] for c in _CBP_CRITERIA), (
+            f"every criterion at {score:+d} did not land in exactly one bucket: {placed}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# The retired claim, and what replaced it (issue #316)
+# ---------------------------------------------------------------------------
+#
+# What was retired is one assertion with four spellings, so these guards test the *claim* and not
+# the string that reported it: "always zero", "never evaluated", "needs manual input" and "ten of
+# the twelve" all say that CancerVar's CBP5/CBP6 zero is a property of every file there is. It is
+# a claim about **files**, and handing the app one that says otherwise falsifies it — which is
+# what the QA report behind map #308 did.
+#
+# Issue #315 replaced it with a claim about the **input channel**: CancerVar does not compute
+# these two from the variant, it scores them only from a curated evidence file the run supplies,
+# and with none supplied it writes a zero. That is tool-scoped, so it holds for files nobody here
+# has seen, *and* it stays true when the score is non-zero, because it names what put it there.
+
+#: The retired assertion, in every spelling that has been on screen or in the prototype (#188).
+_RETIRED_CLAIM = (
+    "always zero",
+    "never evaluat",
+    "needs manual input",
+    "ten of the twelve",
+)
+
+def _row_for(table, code):
+    """The one ``<tr>`` drawing ``code``, matched as ``_CODE_IN_A_ROW`` does.
+
+    Split on the code alone and ``CBP1`` matches ``CBP11``; split on ``>CBP5<`` and a flagged
+    criterion is missed entirely, because its ⚠ span sits between the code and the next tag.
+    """
+    rows = [row for row in table.split("<tr") if re.search(rf">{code}(?=[< ])", row)]
+
+    assert len(rows) == 1, f"{code} was drawn {len(rows)} times in one table"
+    return rows[0]
+
+
+def _what_it_says(table, code):
+    """The third cell of ``code``'s row — the sentence, and not the tooltip beside the code.
+
+    Scoped deliberately. A guard reading the whole row is satisfied by the ⚠ glyph's ``title``,
+    which carries the same words as the sentence it is meant to be checking: written that way,
+    it passed with the sentence deleted.
+    """
+    cells = _row_for(table, code).split("<td")
+
+    assert len(cells) == 4, f"{code}'s row is not the three-column shape this reads"
+    return cells[-1]
+
+
+#: The two states the disclosure has: no curated file behind the run, and one criterion curated.
+_BOTH_STATES = (
+    (" CancerVar: 3#Tier_III_Uncertain EVS=[0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0] ", "no curation"),
+    (" CancerVar: 14#Tier_I_strong EVS=[2, 0, 2, 1, 1, 0, 1, 1, 2, 1, 1, 2] ", "a curated CBP5"),
+)
+
+
+@pytest.mark.parametrize("evidence, state", _BOTH_STATES)
+def test_no_surface_the_section_draws_still_makes_the_retired_claim(evidence, state):
+    """Every surface, not the one that was reported — the ticket's first requirement.
+
+    The claim was on four of them and they did not agree with each other: two expander captions,
+    the ⚠ glyph's tooltip and the ``says`` sentence in the table. Asserted over everything
+    ``render_cbp_evidence`` draws — HTML attributes included, since the tooltip lives in one —
+    so a fifth surface written later is covered without this guard being touched.
+    """
+    text = _all_text(_render(evidence)).lower()
+
+    for spelling in _RETIRED_CLAIM:
+        assert spelling not in text, f"the retired claim is still on screen ({state}): {spelling}"
+
+
+def test_the_disclosure_names_the_criteria_the_table_flags_rather_than_counting_them():
+    """The caption is checked against the constant it describes, not against a remembered number.
+
+    The retired caption said *"These two"*. Post-#314 the partition lets a curated criterion leave
+    this list, so with a curated CBP5 the box holds **one** row and "these two" would be counting
+    what is on screen. Naming the codes keeps the sentence a claim about the tool, true in either
+    state — and reading them off ``curated_only`` means a third flagged criterion cannot leave the
+    caption behind, which is how a glyph outlived its explanation here before.
+    """
+    for evidence, state in _BOTH_STATES:
+        drawn = _render(evidence)
+        captions = [text for kind, text in drawn if kind == "caption"]
+        disclosure = [c for c in captions if "curated evidence file" in c]
+
+        assert len(disclosure) == 1, f"the disclosure's caption was not drawn once ({state})"
+        for code in _CURATED_ONLY_CODES:
+            assert code in disclosure[0], f"{code} is flagged but unnamed ({state})"
+        unflagged = [c["code"] for c in _CBP_CRITERIA if not c.get("curated_only")]
+        for code in unflagged:
+            assert code not in disclosure[0], f"{code} is named but not flagged ({state})"
+
+
+def test_the_warning_glyph_is_true_in_the_fired_table_as_well_as_the_disclosure():
+    """The glyph is keyed on the criterion flag, so it is drawn in *every* table it appears in.
+
+    That is one rule rather than a second predicate about where it may appear — the shape #314
+    removed. It costs the wording something: beside a curated ``+1`` in *what fired*, the old
+    tooltip read "CancerVar never evaluates this criterion" next to a score, which is a
+    contradiction on one row. The replacement is true in both places, and in the fired table it
+    is the only thing on screen saying the score came from a human.
+    """
+    drawn = _render(" CancerVar: 14#Tier_I_strong EVS=[2, 0, 2, 1, 1, 0, 1, 1, 2, 1, 1, 2] ")
+    sections = _sections_by_code(drawn)
+    tables = {}
+    where = "what fired"
+    for kind, text in drawn:
+        if kind == "expander":
+            where = text
+        elif kind == "markdown" and "<table" in text:
+            tables[where] = text
+
+    assert sections.get("CBP5") == ["what fired"] and "Not scored" in sections["CBP6"][0], (
+        "the fixture no longer puts one flagged criterion in each place"
+    )
+    # Escaped as the renderer escapes it: this module writes raw HTML into ``st.markdown``, which
+    # sanitises nothing, so every attribute goes through ``html.escape``.
+    expected = f'title="{html.escape(_CURATED_ONLY_TITLE, quote=True)}"'
+    for where, table in tables.items():
+        if "&#9888;" not in table:
+            continue
+        assert expected in table, (
+            f"the glyph in {where!r} does not carry the flag's one explanation"
+        )
+
+
+def test_a_curated_score_is_described_as_curated_rather_than_as_a_bare_noun_phrase():
+    """``says`` had only a ``0`` key, so a curated ``+1`` fell through to ``generic``.
+
+    The reproduction in #313: ``CBP5 = +1`` drawn as *"mosaic variant allele fraction"*, a noun
+    phrase where a sentence belongs, and one that says nothing about where the score came from —
+    which for these two criteria is the single most informative thing about it.
+    """
+    for code, evidence in (
+        ("CBP5", " CancerVar: 14#Tier_I_strong EVS=[2, 0, 2, 1, 1, 0, 1, 1, 2, 1, 1, 2] "),
+        ("CBP6", " CancerVar: 14#Tier_I_strong EVS=[2, 0, 2, 1, 0, 1, 1, 1, 2, 1, 1, 2] "),
+    ):
+        drawn = _render(evidence)
+        table = next(text for kind, text in drawn if kind == "markdown" and "<table" in text)
+        says = _what_it_says(table, code)
+
+        assert "curated evidence file" in says, f"{code} at +1 does not say where it came from"
+        assert says.strip() != "", f"{code} at +1 drew an empty sentence"
+
+
+@pytest.mark.parametrize("criterion", _CBP_CRITERIA, ids=lambda c: c["code"])
+def test_a_score_outside_a_criterions_declared_values_is_named_not_described(criterion):
+    """``values`` stops being decorative — the general half of #315's ruling.
+
+    Before this, ``values`` recorded what had been *observed* and nothing read it: an undeclared
+    score fell back to ``generic`` and drew a confident phrase for a number this module cannot
+    interpret. That is the app asserting what it has not been told, which is the same class of
+    error as the caption above.
+
+    Asserted for all twelve rather than for the two that surfaced it. The out-of-domain case is
+    reachable from upstream, not only from a hand-written fixture: the curated-evidence override
+    accepts any value ``<= 1`` with no lower bound (``CancerVar.py:1906``).
+    """
+    undeclared = next(v for v in (-9, 9) if v not in criterion["values"])
+    sentence = _describe(criterion, undeclared)
+
+    assert criterion["generic"] not in sentence, (
+        f"{criterion['code']} describes an undeclared {undeclared} with its generic phrasing"
+    )
+    assert "defined only for" in sentence and str(undeclared) in sentence
+
+
+def test_an_undeclared_score_is_named_in_the_cell_and_does_not_blank_the_panel():
+    """Named rather than raised, and named rather than hidden — both halves of the ruling.
+
+    Not raised: map #308 ruled the evidence string authoritative per row, and an exception in a
+    render path would blank the whole panel because one criterion is odd. Not hidden: this is the
+    live case in ``tests/fixtures/parity/somatic_reference.maf`` line 185, a ``CBP11 = -1`` that
+    ``check_Path`` cannot emit and that drew once, silently mislabelled.
+
+    An undeclared score still routes through ``_bucket`` as an ordinary non-zero, so it appears in
+    *what fired*.
+    """
+    drawn = _render(" CancerVar: 8#Tier_II_potential EVS=[1, 0, 2, 1, 0, 0, 0, 1, 2, -1, -1, 1] ")
+    table = next(text for kind, text in drawn if kind == "markdown" and "<table" in text)
+    says = _what_it_says(table, "CBP11")
+
+    assert "defined only for 0 and +1" in says
+    assert "cancer gene lists" not in says, "the undeclared score kept CBP11's generic phrasing"
+
+
+def test_a_declared_score_with_no_sentence_of_its_own_still_falls_back_to_generic():
+    """The fallback #316 narrowed, not removed: it now serves declared values only.
+
+    ``test_every_value_a_criterion_can_take_has_a_sentence_of_its_own`` keeps this case empty in
+    the shipped table, so this guard fixes the *behaviour* against a criterion built for it —
+    otherwise narrowing the fallback to nothing at all would go unnoticed.
+    """
+    made_up = {
+        "code": "CBP0",
+        "name": "Test",
+        "values": (0, 1),
+        "generic": "the generic phrasing",
+        "says": {0: "a sentence for zero"},
+    }
+
+    assert _describe(made_up, 1) == "the generic phrasing"
+    assert _describe(made_up, 0) == "a sentence for zero"
 
 
 def test_the_tier_badge_carries_the_tier_from_the_string_in_the_panels_own_colour():

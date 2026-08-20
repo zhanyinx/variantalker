@@ -74,13 +74,69 @@ def _double_click(row: dict, stamp: str):
     )
 
 
-def _row(index: int, gene: str = "BRCA1", position: int = 41244936) -> dict:
+def _row(
+    row_position: int,
+    gene: str = "BRCA1",
+    position: int = 41244936,
+    *,
+    of_rows: int | None = None,
+    impossible: bool = False,
+) -> dict:
+    """The JSON for the row at ``row_position`` in the frame the grid was drawn from.
+
+    The first argument was called ``index`` and read as a label. It is not one: ``st_aggrid``
+    numbers the rows it sends by position (issue #310, ``tests/test_row_recovery.py``), so a
+    call passing one of ``_frame()``'s labels was describing a payload the component cannot
+    produce — and one such call *asserted the bug* while all 22 tests here passed.
+
+    Hence the bounds check, which is issue #311's ruling on what stops that happening again.
+    A comment was tried and is not enough: ``variant_detail.py`` has stated this exact truth
+    since issue #147 and the bug shipped anyway, because the comment lived at a downstream
+    consumer while the code reading the field had none of it. A helper that **refuses** the
+    impossible fails at the moment the false premise is typed, rather than passing loudly.
+
+    ``of_rows`` is how many rows the frame in the test has, defaulting to :func:`_frame`'s
+    three; pass it when the test builds its own. ``impossible=True`` is the deliberate escape,
+    for the one test that needs a position no frame could have sent — and being a keyword it
+    cannot be reached by accident.
+    """
+
+    limit = len(_frame()) if of_rows is None else of_rows
+    if not impossible and not 0 <= row_position < limit:
+        raise AssertionError(
+            f"position {row_position} is not a row of a {limit}-row frame, so `st_aggrid` "
+            f"could not have sent it: it numbers rows `[str(i) for i in range(len(frame))]`. "
+            f"If you meant one of the frame's index *labels*, that is the premise issue #310 "
+            f"was filed about. Pass `impossible=True` only to exercise the refusal itself."
+        )
+
     return {
         "Hugo_Symbol": gene,
         "Chromosome": "chr17",
         "Start_Position": position,
-        INDEX_KEY: str(index),
+        INDEX_KEY: str(row_position),
     }
+
+
+def test_the_helper_refuses_a_payload_the_component_cannot_send():
+    """The instrument issue #311 chose over a comment, guarded so it cannot quietly go away.
+
+    ``7`` is the value that was written here five times, because it is a *label* of
+    :func:`_frame` — and a three-row frame has no position 7. The escape stays available and
+    is asserted too, so a stricter helper cannot break the one test that needs it.
+
+    Mutation: drop the bounds check and this test fails, which is the whole of its job.
+    """
+
+    with pytest.raises(AssertionError, match="could not have sent it"):
+        _row(7)
+    with pytest.raises(AssertionError, match="could not have sent it"):
+        _row(-1)
+    with pytest.raises(AssertionError, match="could not have sent it"):
+        _row(0, of_rows=0)
+
+    assert _row(7, impossible=True)[INDEX_KEY] == "7"
+    assert _row(2)[INDEX_KEY] == "2"
 
 
 # --- the one-shot token -------------------------------------------------------------------
@@ -93,7 +149,7 @@ def _row(index: int, gene: str = "BRCA1", position: int = 41244936) -> dict:
 def test_a_stamped_double_click_is_a_double_click():
     state = {}
     row = variant_table._fresh_double_click(
-        _double_click(_row(7), "1786974405748:1"), state, "k"
+        _double_click(_row(1), "1786974405748:1"), state, "k"
     )
 
     assert row is not None, "a stamped double-click was not recognised at all"
@@ -108,7 +164,7 @@ def test_the_same_payload_arriving_again_is_not_a_second_double_click():
     """
 
     state = {}
-    response = _double_click(_row(7), "1786974405748:1")
+    response = _double_click(_row(1), "1786974405748:1")
 
     assert variant_table._fresh_double_click(response, state, "k") is not None
     for _ in range(3):
@@ -129,7 +185,7 @@ def test_the_same_row_double_clicked_again_does_open_again():
     """
 
     state = {}
-    row = _row(7)
+    row = _row(1)
 
     assert variant_table._fresh_double_click(_double_click(row, "1:1"), state, "k")
     assert variant_table._fresh_double_click(_double_click(row, "2:1"), state, "k"), (
@@ -142,7 +198,7 @@ def test_the_two_tabs_do_not_consume_each_other_s_stamps():
     """One state key per grid. Both results tabs render through this same function."""
 
     state = {}
-    response = _double_click(_row(7), "1786974405748:1")
+    response = _double_click(_row(1), "1786974405748:1")
 
     assert variant_table._fresh_double_click(response, state, "passed") is not None
     assert variant_table._fresh_double_click(response, state, "failed") is not None
@@ -167,7 +223,7 @@ def test_each_grid_remembers_its_own_stamp(monkeypatch):
     monkeypatch.setattr(
         variant_table,
         "AgGrid",
-        lambda *a, **k: _double_click(_row(7), "1:1"),
+        lambda *a, **k: _double_click(_row(1), "1:1"),
         raising=False,
     )
     monkeypatch.setattr(
@@ -352,14 +408,26 @@ def _opened_row(monkeypatch, response, full_data):
 
 
 def test_a_double_click_opens_the_dialog_on_the_row_that_was_clicked(monkeypatch):
-    """And on the pristine row, found by the index the component sends.
+    """And on the pristine row, found by the identifier the component sends.
 
-    ``__pandas_index`` arrives as a string while a MAF's index is integer, so the raw value
-    alone misses and falls through to matching on three columns.
+    Rewritten by issue #310, which found this test asserting the bug. It sent
+    ``__pandas_index: "7"`` for a two-row frame labelled ``[4, 7]`` and required the row at
+    *label* 7 — a payload ``st_aggrid`` cannot produce, since it numbers rows by position
+    (``[str(i) for i in range(len(frame))]``). Passing it meant resolving that value with
+    ``.loc``, which is what opened a different variant on every report frame whose labels are
+    not its positions — that is, on every passed/failed split.
 
-    Mutation: stop converting it and this still finds BRCA1 by column match — so the guard
-    below checks the *index* was used, by giving the frame a second row the column match
-    would also accept.
+    What it guards is unchanged and still worth guarding: the identifier is used, not the
+    column match. The frame's two rows agree on all three matched columns, so the column
+    match cannot tell them apart and only the identifier can.
+
+    Mutation: read the value with ``full_data.loc`` instead of ``iloc`` and this opens
+    ``first`` — label 1 is absent, so it falls to the column match and takes the first of two.
+
+    It is no longer the only cover for that, and is kept as the render-path instance in the
+    double-click's own file: ``test_row_recovery.py`` parametrises the same guard over four
+    positions of a masked frame and over both routes, deriving each payload from the frame so
+    the premise cannot be misstated at all. Read that file first when this one fails.
     """
 
     full_data = pd.DataFrame(
@@ -372,12 +440,14 @@ def test_a_double_click_opens_the_dialog_on_the_row_that_was_clicked(monkeypatch
         index=[4, 7],
     )
 
-    opened = _opened_row(monkeypatch, _double_click(_row(7), "1:1"), full_data)
+    opened = _opened_row(
+        monkeypatch, _double_click(_row(1, of_rows=len(full_data)), "1:1"), full_data
+    )
 
     assert len(opened) == 1, f"the dialog opened {len(opened)} times"
     assert opened[0]["Tumor_Sample_Barcode"] == "second", (
-        "the dialog was handed a different variant than the one double-clicked — the index "
-        "the component sent was not used"
+        "the dialog was handed a different variant than the one double-clicked — the "
+        "identifier the component sent was not used"
     )
 
 
@@ -392,7 +462,10 @@ def test_the_dialog_is_never_handed_the_machinery(monkeypatch):
     """
 
     empty = pd.DataFrame(columns=["Hugo_Symbol", "Chromosome", "Start_Position"])
-    opened = _opened_row(monkeypatch, _double_click(_row(7), "1:1"), empty)
+    # The one place `impossible=True` is warranted: an empty frame has no positions at all, so
+    # every payload is one the component could not have sent. That is the point — it is how the
+    # unmatchable row is reached, and the unmatchable row is what carries the machinery.
+    opened = _opened_row(monkeypatch, _double_click(_row(7, impossible=True), "1:1"), empty)
 
     assert len(opened) == 1, f"the dialog opened {len(opened)} times"
     assert STAMP not in opened[0].index, f"the stamp reached the dialog: {list(opened[0].index)}"
@@ -404,13 +477,19 @@ def test_the_dialog_is_never_handed_the_machinery(monkeypatch):
 def test_the_selection_route_still_opens_the_same_row(monkeypatch):
     """The ``🔍 View details`` button was not disturbed.
 
-    What happens to that button is issue #160's to settle; until it does, both routes must
-    reach the dialog, and both must go through the same row recovery so they cannot come to
-    different answers about which variant the user picked.
+    Issue #160 has since settled that the button stays — it is the discoverable route for a
+    reader who does not guess that rows are double-clickable — so both routes reach the dialog,
+    and both go through the same row recovery so they cannot come to different answers about
+    which variant the user picked. They *did* come to different answers, on screen, in one
+    Chromium run (issue #309): this route missed the identifier outright because
+    ``selected_rows`` leaves the ordinal a string, and resolved by the column match instead.
     """
 
     full_data = _frame()
-    selected = pd.DataFrame([{**_row(7)}]).set_index(INDEX_KEY)
+    # Position 1 of `_frame()`, which is BRCA1. It was `_row(7)` — the label — and passed on
+    # the column match while the position path was never reached; #310 made the two routes
+    # share one reader for this value, so the payload here has to be one the component sends.
+    selected = pd.DataFrame([{**_row(1)}]).set_index(INDEX_KEY)
 
     opened = []
     fake_st = MagicMock()

@@ -1,0 +1,74 @@
+# Contract guard for the pinned dependencies, and for what the app reads back out of one.
+#
+# Two guards, one subject: what `streamlit_app/requirements.txt` promises.
+#
+# * `tests/test_launcher_dependencies.py` — every line of that file still pins one exact
+#   version, and installing MAFigate still lands in the interpreter that launches it (issues
+#   #162, #256, #258). Both installers and the clone route build their environment from the
+#   file, so a line that stops pinning means two people installing the same MAFigate release
+#   a month apart run different software under one version number.
+#
+# * `tests/test_row_recovery.py` — the other side of one particular pin. The variant dialog
+#   decides which row the reader picked from `__pandas_index`, a field
+#   `streamlit-aggrid==1.1.6` adds to every row it sends back, and
+#   `test_the_component_sends_a_position_and_not_a_label` reaches into the installed
+#   component's own serialiser to assert that a gappy frame comes back numbered
+#   `["0","1","2","3"]` — a *position*, not a pandas label. Issue #310 is what reading it as
+#   a label cost: the dialog opened a variant the reader had not picked. Issue #311 measured
+#   every published release and found the hazard is a rename — `::auto_unique_id::` at 1.1.8,
+#   the release straight after our pin, with no compatibility alias.
+#
+# Deliberately **not** `paths:`-filtered on `requirements.txt`, though a pin bump is the event
+# this is aimed at: the contract has two sides — the pinned version *and* our reader — and a
+# filter on `requirements.txt` would sail straight past an edit to
+# `streamlit_app/components/variant_table.py`.
+#
+# **The honest cost.** This job cannot be narrow the way its two siblings are. `vendor-drift.yml`
+# keeps itself to `pytest pandas` on purpose, "so that nobody is tempted to skip it" — but
+# `streamlit-aggrid` requires `streamlit` (`Requires: pandas, python-decouple, streamlit`), so
+# any job that exercises the component installs the big stack. Given that, it installs from
+# `requirements.txt` rather than from a hand-written list, so the environment it checks is the
+# set of pins the app actually ships; and it is the only job where
+# `test_an_interpreter_that_can_run_the_app_has_plotly_too` asserts rather than skipping, since
+# that guard stands down anywhere the app cannot be imported at all.
+#
+# **The shape of this guard.** Because it installs the *pinned* version, it is green until
+# somebody edits a pin. That is the point: it goes red at the one moment this contract can
+# break, and it goes red loudly rather than subtly — `__parse_row_data` does not exist in 1.1.8
+# at all (it moved to `aggrid_utils.py`), so on that bump the contract test's **import** fails,
+# not merely its assertion.
+#
+# Running the whole suite in CI is the reasonable follow-up `vendor-drift.yml:11` already
+# names — with this job the three narrow guards run five test files between them, out of the
+# repo's several dozen. This is not that follow-up, and must not grow into it.
+
+name: dependency contract
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-contract:
+    name: the pins, and the row identifier the app reads
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # From requirements.txt rather than a hand-written list, so the versions under test are
+      # the versions the app ships. pytest is installed separately and unpinned on purpose:
+      # that file pins what ships, not what a contributor chooses to install, and its dev
+      # dependencies are comments for exactly that reason.
+      - name: Install the pinned runtime dependencies
+        run: python -m pip install --upgrade pip pytest -r streamlit_app/requirements.txt
+
+      - name: Run the dependency contract guards
+        working-directory: streamlit_app
+        run: python -m pytest tests/test_row_recovery.py tests/test_launcher_dependencies.py -v

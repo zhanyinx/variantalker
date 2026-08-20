@@ -31,6 +31,7 @@ help:
 	@echo "  build-win   Build Windows .exe installer (Windows only)"
 	@echo "  version     Print APP_VERSION, the one place the version is written"
 	@echo "  release-tag Print the tag a release is cut from (mafigate-v<version>)"
+	@echo "  release-preflight  Refuse to publish a draft the tree has moved on from"
 	@echo ""
 	@echo "Maintenance Commands:"
 	@echo "  clean       Clean temporary files and caches"
@@ -128,7 +129,7 @@ check-params:
 # Read inside the recipes rather than as a `$(shell …)` variable at the top of the file, so
 # `make help` and `make clean` do not need a working python3 to expand something they never
 # print.
-.PHONY: version release-tag
+.PHONY: version release-tag release-preflight
 version:
 	@$(PYTHON) build/version.py
 
@@ -136,6 +137,13 @@ version:
 # repository's v1.x tags are the Nextflow pipeline's, on an independent cadence (#229).
 release-tag:
 	@$(PYTHON) build/version.py --tag
+
+# Run this immediately before pressing Publish. It refuses a draft built from a tree the
+# repository has moved on from, which is how mafigate-v1.0.0 came within one click of
+# shipping a known wrong-variant bug under the fixed version's number (#328). TAG= to
+# check a rehearsal tag instead of the one APP_VERSION derives.
+release-preflight:
+	@$(PYTHON) build/release_preflight.py $(if $(TAG),--tag $(TAG),)
 
 build-mac: check-vendor
 	@echo "🍎 Building macOS .dmg installer..."
