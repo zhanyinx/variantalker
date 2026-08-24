@@ -200,7 +200,7 @@ def _gh(*args):
     return completed.stdout.strip()
 
 
-#: How ``tools/export_public.py`` opens every commit it writes — ``Sync from <private repo> @
+#: How the export script opens every commit it writes — ``Sync from <private repo> @
 #: <sha>``. Assembled from halves rather than written out, for the reason
 #: ``tests/test_public_repo_name.py`` gives: that sweep asserts the private repository's name
 #: occurs zero times across the tracked tree, and this file travels. The export tooling composes
@@ -226,7 +226,7 @@ def exported_from(message):
 def _private_head(repo_root=None):
     """This tree's HEAD, but only when this *is* the private tree.
 
-    Told apart by ``tools/export_public.py``, which the export strips from what it publishes —
+    Told apart by the export script itself, which the export strips from what it publishes —
     so its presence is the same signal the export tooling already relies on, rather than a new
     one invented here. In a public clone the answer is unknowable rather than false, and the
     caller must not read it as fine.

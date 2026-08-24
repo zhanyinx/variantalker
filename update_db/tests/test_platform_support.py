@@ -177,7 +177,31 @@ def test_the_scan_is_not_hiding_shell_scripts_in_its_own_tree():
     )
     # And the scan must actually be reaching the tree: a walk that found nothing would make
     # every count above vacuously equal to an empty dict.
-    assert len(_shell_scripts()) == 9, (
-        f"expected the 9 shell scripts under update_db/, found {len(_shell_scripts())}. "
-        "README_DOCKER.md's `Known limitations` also says nine; both need updating together."
+    #
+    # Named scripts rather than a total, and that is the whole point (issue 407). This was
+    # `== 9`, which is a statement about one checkout rather than about the repository: the
+    # export strips the gnomAD preprocessing directory, so the published tree holds eight
+    # and the anchor failed there — red CI on the repository the release is cut from, on a
+    # claim that was never about anything a reader cares about. The deny-list cannot be
+    # consulted to excuse it either, since `.publicignore` does not travel: only a claim true
+    # in **both** trees can hold, so the anchor names the scripts that are always present.
+    #
+    # Third time this shape has bitten — see issues 383 and 375, both anchors written as
+    # totals, both false in the public clone. Assert files and rules, never a total.
+    found = {path.name for path in _shell_scripts()}
+    always_present = {
+        "update_clinvar_annovar.sh",
+        "update_cosmic.sh",
+        "update_clinvar_funcotator.sh",
+        "createSqliteCosmicDb.sh",
+        "updateCosmicDataBase.sh",
+        "update_dbsnp.sh",
+        "getGencode.sh",
+        "get_new_hgnc.sh",
+    }
+    missing = sorted(always_present - found)
+    assert not missing, (
+        f"the scan is not reaching {missing}. Every script named here ships in both the private "
+        "tree and the published one, so this is a walk that has stopped working rather than a "
+        "tree that has changed — and without it every count in this module goes vacuously true."
     )

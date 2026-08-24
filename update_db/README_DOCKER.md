@@ -199,7 +199,7 @@ route by issue 353, the CancerVar/InterVar (Annovar) route by issue 354. What fo
 instead, because it changes how you read the log.
 
 The defect was one thing with two halves. The image is Ubuntu 22.04, where `/bin/sh` is **dash**,
-and the nine scripts under `update_db/` are all `#!/bin/bash` and use bash-only syntax — so handing
+and every shell script under `update_db/` is `#!/bin/bash` and uses bash-only syntax — so handing
 one to `sh` killed it, either on a parse error or at the first `[[ ... ]]` with every conditional
 silently false. `utils_update.py` did that at seven call sites, and inspected the outcome at none of
 them. All seven now run under `bash`, and both routes validate what the script produced before
