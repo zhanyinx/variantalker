@@ -1,8 +1,8 @@
 """The clinical row, after map #199 re-homed every annotation the panel draws (issue #204).
 
 Five decisions land in one place, so five guards do. Each was **made to fail before being
-trusted**, per this repo's standing rule; ``docs/wayfinder/issue-204/README.md`` records what each
-mutation was and which assertion caught it.
+trusted**, per this repo's standing rule; issue #204's notes record what each mutation was and
+which assertion caught it.
 
 1. **Drawn exactly once.** Read off a recording ``st`` planted in *every* module the panel draws
    through, so the claim is about what a clinician sees rather than about one function's source.
@@ -355,8 +355,8 @@ def test_the_guideline_row_no_longer_reads_either_re_homed_column():
 # ---------------------------------------------------------------------------
 
 #: Every review status the corpus holds, with its star level and the rows carrying it, re-walked
-#: for issue #204 (``docs/wayfinder/issue-204/measure204.json``). **Ten** values, not the nine
-#: issue #200 recorded: ``no_interpretation_for_the_single_variant`` is on 50 real rows and was
+#: for issue #204. **Ten** values, not the nine issue #200 recorded:
+#: ``no_interpretation_for_the_single_variant`` is on 50 real rows and was
 #: falling through to the unrecognised branch, printing its raw string where the stars belong.
 CORPUS_REVIEW_STATUSES = {
     "reviewed_by_expert_panel": (3, 4831),
@@ -543,8 +543,8 @@ def test_renovo_degrades_to_class_only_when_the_score_says_nothing(score):
     also the **only** germline rows in the corpus with no ``InterVar`` column at all — so on 100%
     of the germline rows where the guideline row can draw no verdict, RENOVO's badge is the only
     pathogenicity claim in the panel, and on exactly those rows its score is missing too. (Issue
-    #201 counted 6,597 in 2 files; a third has arrived on disk since, and
-    ``docs/wayfinder/issue-204/measure204.py`` re-derives the figure through this function.)
+    #201 counted 6,597 in 2 files; a third has arrived on disk since, and issue #204
+    re-derives the figure through this function.)
     """
     row = {"RENOVO_Class": "HP Benign"}
     if score is not None:

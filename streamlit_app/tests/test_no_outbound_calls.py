@@ -263,8 +263,8 @@ def _tracked(*, under=""):
     scratch file left in ``components/`` would reach a DMG cut on that machine without this
     guard ever seeing it. The alternative — walking the app directory — trades that for
     failing on every developer's working copy, which is how a guard gets deleted by whoever
-    meets it. So the scan is over what the repository ships, and the mutation sweep in
-    ``docs/wayfinder/issue-257/`` demonstrates the boundary rather than hiding it: restoring
+    meets it. So the scan is over what the repository ships, and the mutation sweep for
+    issue #257 demonstrates the boundary rather than hiding it: restoring
     the deleted launcher scores SURVIVED until the file is added to the index, and CAUGHT the
     moment it is.
     """
@@ -733,7 +733,7 @@ def test_the_scanner_refuses_every_shape_it_claims_to_catch():
     A guard that has never refused anything has not been demonstrated, and this suite has a
     documented history of tests that passed because they had stopped applying. The manual
     demonstration #257 asked for — an outbound call added to a real app module, watched
-    going red, removed — is recorded in ``docs/wayfinder/issue-257/``; this test is the part
+    going red, removed — is recorded in that issue's notes; this test is the part
     that keeps being run after that afternoon.
     """
     seeded = {

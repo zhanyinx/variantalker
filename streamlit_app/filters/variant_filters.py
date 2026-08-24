@@ -124,7 +124,7 @@ Three properties, each of which was a measured decision rather than a preference
   Issue #28 states these as "111 of 115 disputed rows". Re-running issue #16's own
   instrument at the app's actual rule shows 115 is the *disagreement* count and 136 the
   disputed count; the spec transposes the two and the conclusion is unaffected. Measured
-  against this code over all 100 reference MAFs in ``docs/wayfinder/issue-37/``.
+  against this code over all 100 reference MAFs, under issue #37.
 * It is **neutral at the parity default** of 1.0, algebraically and not by the guard:
   frequencies lie in [0, 1], so the comparison is a tautology there. Asserted that way with
   the short-circuit bypassed, and separately end-to-end.
@@ -196,8 +196,8 @@ REASON_REJECTED = "rejected"
 #:
 #: **Every entry is a panel's opinion about one variant, and the two pre-QC ``_raw``
 #: columns are opinions of the same kind** — issue #126's decision, over 164 real MAFs
-#: (104 somatic, 60 germline) through the whole filter, by
-#: ``docs/wayfinder/issue-126/measure_shapes.py``. Three things settled it.
+#: (104 somatic, 60 germline) through the whole filter, by that issue's shape-measuring
+#: harness. Three things settled it.
 #:
 #: That harness reproduces #122's per-arm deltas exactly — 435, 91, 0, 0 — over 164 files
 #: where #122 reported 171, and the difference is corpus selection rather than a changed

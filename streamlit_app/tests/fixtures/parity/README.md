@@ -1,16 +1,16 @@
 # Parity fixture set
 
-The MAFs the parity harness (#17) measures `streamlit_app`'s filter against `bin/filter_variants.py`
+The MAFs the parity harness (issue 17) measures `streamlit_app`'s filter against `bin/filter_variants.py`
 on. **Constructed end to end** by [`build_parity_fixtures.py`](build_parity_fixtures.py), which needs
-nothing mounted and runs anywhere; assembled under #18, replaced wholesale under #246.
+nothing mounted and runs anywhere; assembled under issue 18, replaced wholesale under issue 246.
 
 Every number below was produced by running `bin/filter_variants.py` over the committed
 files, not derived on paper.
 
 ## Why the whole set was replaced
 
-The files this set replaces were cut from the 50-sample paired GERSOM run recorded in #9 and had
-their barcodes pseudonymised. Issue #233 measured what that left behind, and the answer was wider
+The files this set replaces were cut from the 50-sample paired GERSOM run recorded in issue 9 and had
+their barcodes pseudonymised. Issue 233 measured what that left behind, and the answer was wider
 than the tickets assumed: **all seven** carried real calls, not the two named as "reference".
 
 | file | what it was |
@@ -33,7 +33,7 @@ Protein_Change   p.A386D
 — the real coordinate, verbatim, in an annotation column. The variant was fully recoverable.
 "Synthetic" in the old set meant *one field was edited to flip a verdict*, not *no patient data*.
 
-That is also why `tools/export_public.py` checks recorded **provenance** rather than content: five
+That is also why the public export checks recorded **provenance** rather than content: five
 of those seven passed every identifier pattern the export gate can apply, because the bytes that
 must not travel are, by content, indistinguishable from the bytes that must.
 
@@ -63,7 +63,7 @@ About 1.0 MiB total.
 
 ## Baseline under the parameter contract
 
-`nextflow.config`'s `params` block, with #11's one deliberate departure (underscored
+`nextflow.config`'s `params` block, with issue 11's one deliberate departure (underscored
 `Likely_pathogenic`). Recorded in `MANIFEST.json` under `parameters`.
 
 | fixture | invocation | PASS | NOPASS | output cols |
@@ -89,7 +89,7 @@ thirteenth, `somatic_dot_numeric`, is asserted there too, as a pair of non-verdi
 than as counts. A change to these fixtures moves both tables, together and deliberately.
 
 The gene-list rows are the point of `genes_somatic_mixed_case.txt`: 58 PASS either way,
-because both sides route through the vendored `.str.upper()`. That is divergence #9
+because both sides route through the vendored `.str.upper()`. That is divergence 9
 dying by routing, made observable.
 
 **The pass rate is higher than the subsample's, and that is what construction does.** 60 of 82
@@ -112,7 +112,7 @@ constructed; the column that used to say "real" is gone with the rows it describ
 | 3 | VAF `>` vs `>=`, NaN | `*_reference`, `*_synthetic` | one row *at* each swept threshold — germline has **6 at exactly `tumor_f == 0.2`** — plus rows between them so each sweep step moves; `vaf_exactly_threshold`, `missing_tumor_f` |
 | 4 | ClinVar split vs `.isin()` | `*_reference`, `*_synthetic` | every separator the vendored splitter handles, one value each, chosen to match `CLINVAR_KEEP` **only** after the split; the three `clnsig_semicolon_*` rows |
 | 5 | `All` sentinel / always-OR | — | not witnessable in a MAF: the sentinel is a UI concept that never reaches the vendored filters |
-| 6 | germline ESCAT filter | `germline_reference` | **6 rows via `germline_escat_only`**: in-keep `ESCAT`, Benign on InterVar, ClinVar *and* RENOVO, clearing depth on both `t_alt+t_ref` and `DP`, VAF and classification, so the row diverges on #6 and on nothing else. Plus `germline_escat_outside_keep`, which exercises the column without claiming to witness the divergence |
+| 6 | germline ESCAT filter | `germline_reference` | **6 rows via `germline_escat_only`**: in-keep `ESCAT`, Benign on InterVar, ClinVar *and* RENOVO, clearing depth on both `t_alt+t_ref` and `DP`, VAF and classification, so the row diverges on divergence 6 and on nothing else. Plus `germline_escat_outside_keep`, which exercises the column without claiming to witness the divergence |
 | 7 | somatic patho-retain | `somatic_reference`, `somatic_synthetic` | `CancerVar` Tier I/II rows at sub-threshold VAF so the rescue is what decides them, the two `CLINVAR_PATHO`-only ClinVar values, and `escat_bare_I/II/III` — the values that make the app's clause dead |
 | 8 | germline patho-retain | `germline_reference` | rows RENOVO-pathogenic where InterVar is not and the other way, all at sub-threshold VAF |
 | 9 | gene list case + format | `genes_*.txt` | mixed case yields identical PASS sets |
@@ -122,21 +122,21 @@ constructed; the column that used to say "real" is gone with the rows it describ
 
 Coverage is **measured, not listed**: `../../parity/test_mutation_coverage.py` re-injects each
 divergence into the app and requires some case to notice. It reports 13/13 on this set, the same
-score the replaced set reached, and catches #1 and #3 on 24 cases against the old set's 11 —
+score the replaced set reached, and catches divergences 1 and 3 on 24 cases against the old set's 11 —
 a constructed witness can be placed where it is visible, while a sampled one lands where the data
 put it.
 
 ### Why "the column is populated" was not coverage
 
-Divergence #6 once read **0%** on the old fixture set while running at **51%** of the reference's
-attributed diverging rows, and the `#6` cell was not empty the whole time. It selected a
+Divergence 6 once read **0%** on the old fixture set while running at **51%** of the reference's
+attributed diverging rows, and the divergence 6 cell was not empty the whole time. It selected a
 PIK3CA `ESCAT: IA` call, Benign on InterVar, ClinVar and RENOVO — the shape exactly. Its
-`DP` was **46** against a `min_depth` of **50**, so the app dropped it on divergence #2
+`DP` was **46** against a `min_depth` of **50**, so the app dropped it on divergence 2
 before the ESCAT clause could admit it, the pipeline rejected it on the guideline block,
 and both sides answered NOPASS. Two divergences pointing opposite ways cancelled, and a
 row that witnessed nothing was counted as coverage.
 
-The lesson generalises past #6, and it is the rule the generator is written to:
+The lesson generalises past divergence 6, and it is the rule the generator is written to:
 **a witness cell must pin the row's whole path to the verdict, not just the field under
 test.** Every other divergence has to be held neutral — depth clear on *both* sides'
 columns, VAF off the boundary, classification inside the app's vocabulary and outside the
@@ -185,7 +185,7 @@ that the alteration is what flips the verdict. Two are needed:
 - a **guideline-failing** one, so a `CLNSIG` or `ESCAT` edit is the only thing that can
   flip it.
 
-Under the #11 contract the somatic guideline trigger set is a subset of `filter_patho`'s
+Under the issue 11 contract the somatic guideline trigger set is a subset of `filter_patho`'s
 except for the `ESCAT` clause (`filter_cancervar` is literally the same list, and
 `filter_clinvar` ⊂ `CLINVAR_PATHO`), so a usable passing template must be ESCAT-driven —
 germline likewise must be `RENOVO_Class`-driven. That containment is worth carrying into
@@ -214,7 +214,7 @@ never reaches the NaN ruling at all. The synthetic fixtures use empty; `somatic_
 pins the pipeline's `TypeError`, so the harness can assert the app fails on the same files
 rather than silently coping.
 
-Since issue #38 the two sides no longer fail *identically*, and that is the intended state:
+Since issue 38 the two sides no longer fail *identically*, and that is the intended state:
 the pipeline dies with `TypeError: '>=' not supported between instances of 'str' and 'int'`,
 naming neither the column nor the value, while the app raises `UnreadableNumericColumns`
 naming all three offending columns and the `.` in each. Same non-verdict, usable message —
@@ -251,10 +251,10 @@ replaced set live in `column_profiles.json`:
   values are numeric.
 
 Those are Funcotator/ANNOVAR software artifacts — the same class of metadata as the column names
-themselves — and no cell value is among them. `docs/wayfinder/issue-233/extract_column_profiles.py`
-is the script that derived them, kept as the record; it needs the replaced files and therefore
-cannot be re-run here, which is exactly the status the old generator had and the reason it is not
-what builds the set.
+themselves — and no cell value is among them. The script that derived them is kept as the record
+in the private notes for issue 233; it needs the replaced files and therefore cannot be re-run
+here, which is exactly the status the old generator had and the reason it is not what builds the
+set.
 
 There is no RNG and no clock is read, so two builds are byte identical and `--check` holds it.
 
@@ -287,7 +287,7 @@ on every row, which is a state those scales do not have.
   NOPASS frame with `~(out == "__UNKNOWN__").all()`. Set a *whole* KEEP column to that
   placeholder and the run dies with `KeyError: ['Matched_Norm_Sample_Barcode'] not in
   index` before reaching a verdict. `__UNKNOWN__` is kept verbatim on the germline tumour
-  barcode, because #15's finding depends on it, and the matched-normal barcode is
+  barcode, because issue 15's finding depends on it, and the matched-normal barcode is
   deliberately *not* uniform. The old set survived this by accident.
 * **`RENOVO_pls` is not free.** See above: the score follows the class, or
   `test_clinical_summary` fails.
@@ -307,7 +307,7 @@ barcodes, no internal paths and no coordinates carried from any run — `Genome_
 from the coordinate the generator assigns, which is the cell the replaced fixtures leaked the real
 position through.
 
-`tools/export_public.py` does not take that on trust. Every `.maf` in an export must be recorded in
+The public export does not take that on trust. Every `.maf` in an export must be recorded in
 a `MANIFEST.json` **in its own directory** as `"provenance": "generator-constructed"` and match its
 recorded sha256, or the export refuses.
 
@@ -337,7 +337,7 @@ technologies is **not claimed** by this fixture set. Specifically untested:
   (the probe above exercises the branch by column presence, nothing more);
 - ~~the two gnomAD v4 names in the app's column tail (`gnomAD_exome_AF_grpmax`,
   `gnomad41_genome_AF`), which match 0 of 100 reference MAFs~~ — **no longer applicable.**
-  Issue #35 dropped both from the app's tail on exactly this evidence: they match no
+  Issue 35 dropped both from the app's tail on exactly this evidence: they match no
   reference MAF on either build, and `compute_keep` hardcodes the older spellings, so it
   could not surface them even where they existed;
 - any Illumina-specific annotation shape.
@@ -374,7 +374,7 @@ Running `bin/filter_variants.py` against these fixtures needs three things worth
 - Each invocation needs a **fresh process**: `keep = KEEP` at `filter_variants.py:352` is
   an alias, not a copy, so one germline run mutates the module-level list and the next somatic run
   in the same process raises `KeyError: "['InterVar', 'RENOVO_Class', 'RENOVO_pls'] not in index"`.
-  Reproduced here; it is the bug #15 requires the vendored `compute_keep` to fix.
+  Reproduced here; it is the bug issue 15 requires the vendored `compute_keep` to fix.
 
 ## The fixture this replaces
 

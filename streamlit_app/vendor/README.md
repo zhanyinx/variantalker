@@ -2,7 +2,7 @@
 
 This directory is **not** app code. It is a copy of parts of the VarianTalker
 pipeline, held here so that MAFigate's PASS/NOPASS verdict *is* the pipeline's
-verdict rather than a re-implementation of it — and, since issue #198, so that the
+verdict rather than a re-implementation of it — and, since issue 198, so that the
 markers CancerVar cites *are* the ones it cited.
 
 | File | What it is | Origin |
@@ -47,6 +47,17 @@ python streamlit_app/vendor/_sync.py --check   # report drift, change nothing
 make -C streamlit_app check-vendor             # same check, via make
 ```
 
+### Which `bin/` is the authority
+
+`bin/` is authoritative for `vendor/`, and the **private tree** is authoritative for
+`bin/`. This file is exported to the public repository unchanged, so it is read from both
+trees — and only in the private one does "change `bin/` and re-sync" end with a change
+that survives. A public clone receives each release as one squashed commit that replaces
+the working tree wholesale, so an edit to `bin/` there is overwritten by the next export
+rather than merged; see [`CONTRIBUTING.md`](../../CONTRIBUTING.md), which spells out what
+happens to a pull request. Propose the change there and it is reapplied by hand into the
+private tree, where `bin/` moves and `_sync.py` follows it.
+
 ## Why copies and not an import
 
 The app ships as a standalone `.dmg` / `.exe` that carries no `bin/`, so importing the
@@ -58,14 +69,16 @@ whole, and only `filter_variants.py` needs symbol extraction.
 
 The marker table is here for the same reason and it is the plainer case: it is a data
 file under `resources/CancerVar/`, which the `.dmg` / `.exe` does not carry at all. The
-alternative issue #198 weighed — read `resources/` where it exists, show nothing where
+alternative issue 198 weighed — read `resources/` where it exists, show nothing where
 it does not — would have put the marker detail in developer checkouts only, which is to
 say not in the product.
 
 Copying is a real risk, taken deliberately and with a guard. It has already gone wrong
-here once without one: `streamlit_app/utils/main_utils.py` holds a hand-copied `KEEP`
+here once without one: `streamlit_app/utils/main_utils.py` **held** a hand-copied `KEEP`
 that drifted to **39 entries against the pipeline's 45**, with different membership and
-different order.
+different order, while nothing read it. That copy is gone — issue 32 deleted it, and
+`main_utils.py`'s docstring is where the history is now recorded. The live list is
+`vendor.pipeline_utils.KEEP`, which this guard holds to the pipeline's 45.
 
 ## How drift is caught
 
@@ -77,7 +90,7 @@ Four mechanisms, one per unit:
   test that row 0 is still the header. Here intolerance is the *point*, not a tolerable
   side effect. A MAF's `Therap_list` / `Diag_list` / `Prog_list` cell holds **0-based
   line offsets** into this file — `CancerVar.py:193` reads it with
-  `list(csv.reader(...))`, header included, and `:1090` indexes straight into the
+  `list(csv.reader(...))`, header included, and `:1091` indexes straight into the
   result — so a copy of a different vintage does not fail to resolve. Every index after
   an inserted row resolves to the *neighbouring* marker, and the app names a drug the
   file never associated with the variant. There is no cosmetic edit to a data file.
@@ -122,23 +135,41 @@ Four enforcement points, because a test nobody runs is what produced the drift a
    cannot be cut from a drifted copy.
 4. `.pre-commit-config.yaml` — fires when `bin/` or `vendor/` changes.
 
-Points 3 and 4 run `python3 vendor/_sync.py --check`, which is stdlib-only — no pytest,
-no pandas — so a bare build machine needs nothing installed. Because the rule is
-therefore implemented twice, `test_sync_check_agrees_with_this_guard` pins the two
-together: if they ever disagree, one of them is lying about whether the app still
-matches the pipeline.
+Points 3 and 4 run `_sync.py --check` and nothing else — the Makefile through
+`$(PYTHON)` (`$MAFIGATE_PYTHON`, else this directory's `.venv`, else a bare `python3`),
+the pre-commit hook through plain `python`. Either interpreter will do, because the
+script is stdlib-only — no pytest, no pandas — so a bare build machine needs nothing
+installed. Because the rule is therefore implemented twice,
+`test_sync_check_agrees_with_this_guard` pins the two together: if they ever disagree, one
+of them is lying about whether the app still matches the pipeline.
 
 **Where a source tree is absent, every enforcement point skips rather than fails** —
 the packaged app and app-only checkouts stay green, because there the comparison is
 impossible to make rather than failed. The skip is **per source**: a tree with `bin/`
-but no `resources/CancerVar/` still checks the filter code. Only when *every* source is
-missing does `--check` fall back to "the vendored copies were not compared", and it
-never prints "in sync" in that case — `test_sync_check_skips_cleanly_without_bin`
-pins that wording, because a build log must not read an impossible comparison as a
-passing one. The pytest guard skips its cases; `--check`
-prints a `SKIP` line and exits 0, worded so a build log cannot mistake it for a check
-that ran and passed. The one exception is `_sync.py` in *repair* mode, which still
-exits non-zero: with no `bin/` to copy from, succeeding would claim work it never did.
+but no `resources/CancerVar/` still checks the filter code. The one exception is
+`_sync.py` in *repair* mode, which still exits non-zero: with no `bin/` to copy from,
+succeeding would claim work it never did.
+
+### Telling a skip from a check
+
+That skip is the guard's most dangerous state, because a guard that compared nothing is
+still green. So green is not the thing to read. Both forms report **how many sources they
+compared**, and that is:
+
+- **`_sync.py --check`** ends in `vendored copies are in sync (2 of 2 sources compared)`.
+  The count is the message: `1 of 2` means one tree was absent, and a `SKIP` line above
+  names which. When *every* source is missing it prints `The vendored copies were not
+  compared against the pipeline.` and never the words "in sync" —
+  `test_sync_check_skips_cleanly_without_bin` pins that wording, because a build log must
+  not read an impossible comparison as a passing one. Both shapes exit 0.
+- **the pytest guard** says it in the **skip count** of its summary line, and nowhere
+  else. Measured on this tree, with the two files CI runs
+  (`tests/test_vendor_drift.py tests/test_vendor_compute_keep.py`): a full checkout is
+  `50 passed` and **nothing skipped**; `bin/` present but no `resources/CancerVar/` is
+  `48 passed, 2 skipped`, the two marker-table tests; neither tree present is
+  `20 passed, 30 skipped`. So `50 passed` with a bare zero skips is the only shape that
+  means the whole copy was compared, and any skip count at all means less than everything
+  was. `-rs` names which; the workflow's `-v` shows each one.
 
 ## Two things that would quietly break the copy
 

@@ -16,7 +16,7 @@ Four groups, failing for four different reasons:
   MAFs so the arm gate is exercised as bytes on disk.
 
 Each guard here was made to fail before being trusted, per this repo's standing rule; the harness
-is ``docs/wayfinder/issue-190/mutate190.py``.
+is issue #190's mutation script.
 """
 
 import os
@@ -382,8 +382,8 @@ def test_the_tally_counts_what_the_classifier_could_read_and_names_the_rest():
     """The three counts are distinct on purpose: 2 damaging, 1 benign, 2 unreadable.
 
     A row with one benign and one unreadable would let ``benign`` be counted as *unreadable* and
-    still read 1 — which is exactly the mutation that survived the first pass of
-    ``docs/wayfinder/issue-190/mutate190.py``. Every count here has to be its own number.
+    still read 1 — which is exactly the mutation that survived the first pass of issue #190's
+    mutation sweep. Every count here has to be its own number.
     """
     readings = _cbp10_readings(
         pd.Series(

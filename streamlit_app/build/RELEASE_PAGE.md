@@ -1,7 +1,7 @@
 <!--
 The release page, written once and assembled by CI.
 
-Issue #265. This is the body of every MAFigate release on GitHub, and it is the only
+Issue 265. This is the body of every MAFigate release on GitHub, and it is the only
 surface that reaches a Windows recipient before SmartScreen does — the installer is
 blocked before any screen of ours can be drawn, so a person who is not told here is not
 told at all. It is also where a reader of the paper who has no MAF of their own finds

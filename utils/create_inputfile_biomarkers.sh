@@ -7,14 +7,14 @@
 
 
 function usage {
-    echo -e "usage : $(basename $0) -i INPUT -a ANNOTATION_FOLDER [-o OUTPUT] [-h]"
+    echo -e "usage : $(basename $0) -i INPUT [-d DRAGEN] [-r DRAGEN_RNA] [-o OUTPUT] [-h]"
     echo -e "Use option -h|--help for more information"
 }
 
 function help {
     usage;
     echo 
-    echo "Create input file for variantalker biomarker pipeline. See https://github.com/zhanyinx/variantalker#input"
+    echo "Create input file for variantalker biomarker pipeline. See https://github.com/zhanyinx/variantalker/blob/main/docs/biomarkers/README.md#input"
     echo "---------------"
     echo "OPTIONS"
     echo

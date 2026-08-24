@@ -2,14 +2,18 @@
 import argparse
 import datetime
 import os
+import sys
 
 from utils_update import (
     FolderType,
     FileType,
+    RunLog,
     check_oncotator,
     check_dna_repair_genes,
     check_oreganno,
     get_version,
+    requested_builds,
+    run_steps,
     update_gencode,
     update_cosmic,
     update_clinvar,
@@ -52,7 +56,7 @@ def _parse_args():
         type=FolderType(),
         default=None,
         required=True,
-        help="Path to the directory containing funcotator germline databases. If not provided, germline databases will not be updated.",
+        help="Path to the directory containing funcotator germline databases.",
     )
     parser.add_argument(
         "-b",
@@ -98,107 +102,134 @@ def main():
 
     with open(outfile, "w") as f:
         f.write("Starting funcotator db update. \n")
-    # Achilles, cancer-gene-census, familial & simple-uniprot (same source dataset, check only)
-    # check_oncotator(outfile)
-    check_dna_repair_genes(outfile)
-    #check_oreganno(outfile)
 
-    # COSMIC update - DISABLED due to format changes in COSMIC database
-    # The COSMIC database has changed its download format and authentication method.
-    # Manual update required. Current version will be logged.
-    build_to_check = "hg38" if args.build in ["hg38", "both"] else "hg19"
-    if os.path.exists(f"{args.somatic_database}/cosmic/{build_to_check}/cosmic.config"):
-        curr_version = get_version(f"{args.somatic_database}/cosmic/{build_to_check}/cosmic.config")
-    else:
-        curr_version = "unknown"
-    with open(outfile, "a") as f:
-        f.write(
-            f"SKIPPED: COSMIC update disabled due to format changes in COSMIC database download. "
-            f"Manual update required. Current version: {curr_version}\n"
-        )
-    # Commented out - uncomment when COSMIC update script is fixed for new format
-    # update_cosmic(
-    #     curr_version=curr_version,
-    #     db_dir=args.somatic_database,
-    #     backup_dir=backup_dir,
-    #     file=outfile,
-    #     scriptdir=scriptdir,
-    #     email=args.cosmic_email,
-    #     password=args.cosmic_password,
-    #     build=args.build,
-    # )
+    run_log = RunLog(outfile)
+    builds = requested_builds(args.build)
 
-    # Update gencode - DISABLED (not working correctly). The database created seems correct but funcotator does not use it properly.
-    build_to_check = "hg38" if args.build in ["hg38", "both"] else "hg19"
-    if os.path.exists(f"{args.somatic_database}/gencode/{build_to_check}/gencode.config"):
-        curr_version = get_version(f"{args.somatic_database}/gencode/{build_to_check}/gencode.config")
-    else:
-        curr_version = None
-    with open(outfile, "a") as f:
-        f.write(
-            f"SKIPPED: GENCODE update disabled due to issues with funcotator using the updated database. "
-            f"Manual update required. Current version: {curr_version}\n"
-        )
-    # update_gencode(
-    #     curr_version=curr_version,
-    #     db_dir=args.somatic_database,
-    #     backup_dir=backup_dir,
-    #     file=outfile,
-    #     scriptdir=scriptdir,
-    #     db_germline_dir=args.germline_database,
-    #     build=args.build,
-    # )
-    
-    # Update clinvar
-    update_clinvar(
-        db_dir=args.somatic_database,
-        backup_dir=backup_dir,
-        file=outfile,
-        scriptdir=scriptdir,
-        db_germline_dir=args.germline_database,
-        build=args.build,
-    )
+    # The version comparisons the two disabled steps report, read from a build that is actually
+    # installed. `build_to_check` used to be "the build that was requested", which is also why no
+    # run ever noticed a missing hg19: once a `--build hg38` run had deleted it, every later
+    # `--build hg38` run looked only at hg38 and found everything in order.
+    def installed_version(root, database, config):
+        for build in builds + ["hg38", "hg19"]:
+            path = f"{root}/{database}/{build}/{config}"
+            if os.path.exists(path):
+                return get_version(path)
+        return None
 
-    # Update hgnc
-    try:
-        update_hgnc(
-            db_dir=args.somatic_database,
-            backup_dir=backup_dir,
-            file=outfile,
-            scriptdir=scriptdir,
-            build=args.build,
-        )
-    except:
-        with open(outfile, "a") as f:
-            f.write(
-                f"FAILED: hgnc updated failed -- There was a problem with the curl download. \n"
-            )
+    cosmic_version = installed_version(args.somatic_database, "cosmic", "cosmic.config")
+    gencode_version = installed_version(args.somatic_database, "gencode", "gencode.config")
+    acmg_version = installed_version(args.germline_database, "acmg_rec", "acmg_rec.config")
 
-    # Update dbsnp
-    update_dbsnp(
-        file=outfile,
-        db_dir=args.somatic_database,
-        backup_dir=backup_dir,
-        scriptdir=scriptdir,
-        db_germline_dir=args.germline_database,
-        build=args.build,
-    )
-  
+    # Every step runs, every step reports its own verdict, and a failure carries on to the next
+    # database instead of aborting the run. That is only safe because a failed step is now a no-op
+    # on the live database: before the staged-database validation landed, carrying on past a
+    # failure risked compounding the damage. The exit code is the machine-readable signal -- the
+    # log itself is for a human, and nothing in this repository parses it.
+    steps = [
+        # Achilles, cancer-gene-census, familial & simple-uniprot (same source dataset, check only)
+        # ("oncotator", lambda: check_oncotator(run_log)),
+        ("dna_repair_genes", lambda: check_dna_repair_genes(run_log)),
+        # ("oreganno", lambda: check_oreganno(run_log)),
+        #
+        # COSMIC update - DISABLED due to format changes in COSMIC database. The COSMIC database
+        # has changed its download format and authentication method, so a manual update is
+        # required and the installed version is logged.
+        (
+            "cosmic",
+            lambda: run_log.skipped(
+                "cosmic",
+                "update disabled - COSMIC changed its download format and authentication method, "
+                f"so a manual update is required. Installed: {cosmic_version or 'unknown'}",
+            ),
+        ),
+        # Commented out - uncomment when COSMIC update script is fixed for new format
+        # (
+        #     "cosmic",
+        #     lambda: update_cosmic(
+        #         curr_version=cosmic_version,
+        #         db_dir=args.somatic_database,
+        #         backup_dir=backup_dir,
+        #         run_log=run_log,
+        #         scriptdir=scriptdir,
+        #         email=args.cosmic_email,
+        #         password=args.cosmic_password,
+        #         build=args.build,
+        #     ),
+        # ),
+        #
+        # GENCODE update - DISABLED (not working correctly). The database created seems correct
+        # but funcotator does not use it properly.
+        (
+            "gencode",
+            lambda: run_log.skipped(
+                "gencode",
+                "update disabled - funcotator does not use the rebuilt database correctly, so a "
+                f"manual update is required. Installed: {gencode_version or 'unknown'}",
+            ),
+        ),
+        # (
+        #     "gencode",
+        #     lambda: update_gencode(
+        #         curr_version=gencode_version,
+        #         db_dir=args.somatic_database,
+        #         backup_dir=backup_dir,
+        #         run_log=run_log,
+        #         scriptdir=scriptdir,
+        #         db_germline_dir=args.germline_database,
+        #         build=args.build,
+        #     ),
+        # ),
+        (
+            "clinvar",
+            lambda: update_clinvar(
+                db_dir=args.somatic_database,
+                backup_dir=backup_dir,
+                run_log=run_log,
+                scriptdir=scriptdir,
+                db_germline_dir=args.germline_database,
+                build=args.build,
+            ),
+        ),
+        # No bare `except:` here any more. It reported "There was a problem with the curl download"
+        # for every possible HGNC failure -- including the `IndexError` from a glob that could
+        # never match, where no download had been attempted. The step now raises failures that say
+        # what was checked, and `run_steps` keeps a backstop that logs type, message and traceback.
+        (
+            "hgnc",
+            lambda: update_hgnc(
+                db_dir=args.somatic_database,
+                backup_dir=backup_dir,
+                run_log=run_log,
+                scriptdir=scriptdir,
+                build=args.build,
+            ),
+        ),
+        (
+            "dbsnp",
+            lambda: update_dbsnp(
+                run_log=run_log,
+                db_dir=args.somatic_database,
+                backup_dir=backup_dir,
+                scriptdir=scriptdir,
+                db_germline_dir=args.germline_database,
+                build=args.build,
+            ),
+        ),
+        (
+            "acmg_rec",
+            lambda: update_acmg_rec(
+                run_log=run_log,
+                db_germline_dir=args.germline_database,
+                backup_dir=backup_dir,
+                current_version=acmg_version,
+                build=args.build,
+            ),
+        ),
+    ]
 
-    # Update acmg_rec
-    build_to_check = "hg38" if args.build in ["hg38", "both"] else "hg19"
-    if os.path.exists(f"{args.germline_database}/acmg_rec/{build_to_check}/acmg_rec.config"):
-        curr_version = get_version(f"{args.germline_database}/acmg_rec/{build_to_check}/acmg_rec.config")
-    else:
-        curr_version = None
-    update_acmg_rec(
-        file=outfile,
-        db_germline_dir=args.germline_database,
-        backup_dir=backup_dir,
-        current_version=curr_version,
-        build=args.build,
-    )
+    return run_steps(steps, run_log, builds)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

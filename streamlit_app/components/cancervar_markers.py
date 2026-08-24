@@ -9,7 +9,7 @@ nothing but comma-separated integers::
 They are **0-based line offsets** into CancerVar's marker table, vendored at
 ``vendor/cancervar_markers.txt``. ``CancerVar.py:193`` reads that file with
 ``list(csv.reader(fh, delimiter="\\t"))`` and never skips a header, so index 0 *is* the
-header row and index 8989 is the 8,990th line. ``:1090`` then indexes straight into the
+header row and index 8989 is the 8,990th line. ``:1091`` then indexes straight into the
 result. Nothing about the mapping is heuristic, and it was measured rather than assumed:
 across 109 real somatic MAFs, **112,328 indices resolved with 0 out of range and 0 whose
 ``Evidence_type`` disagreed with the criterion that cited them.**

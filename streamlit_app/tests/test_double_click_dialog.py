@@ -2,7 +2,7 @@
 
 The dev's request was one sentence — *double-clicking a row should open the variant dialog*
 — and the whole difficulty is in the second half of it: **staying shut afterwards**. Three
-measured facts from ``docs/wayfinder/issue-159/`` decide the shape of what is guarded here,
+measured facts from issue #159 decide the shape of what is guarded here,
 and each of them was reproduced in a real browser because ``AppTest`` never runs
 ``st_aggrid``'s JavaScript at all:
 

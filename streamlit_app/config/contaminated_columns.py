@@ -50,9 +50,8 @@ column                       clean files   max clean fraction     contaminated f
 
 The last row is issue #204's, measured when issue #203's AlphaMissense section wired that column:
 34,279 drawable cells across 180 byte-distinct MAFs, and **not one** equals its own row's
-chromosome (``docs/wayfinder/issue-204/measure204.py``). It is listed because a clean column
-measures clean — the rule is that a table scoring a column asks, not that only dirty columns are
-named.
+chromosome. It is listed because a clean column measures clean — the rule is that a table scoring
+a column asks, not that only dirty columns are named.
 
 Contamination is **all-or-nothing**: in a contaminated file *every* non-missing cell equals the
 chromosome — 15,636 of 15,636 for ``CADD_phred``. So a column-level verdict separates the two

@@ -326,6 +326,29 @@ parity-reference:
 # A target rather than a docs-only script, for the reason parity-reference gives above: a
 # script that is written, measured once and never run again is how a blind spot survives.
 #
+# IN tests/ RATHER THAN UNDER docs/, WHICH IS WHERE IT WAS WRITTEN (issue #345). It ran
+# from `../docs/wayfinder/issue-32/` until the day someone cloned the public repository and
+# found that `.publicignore` strips that whole tree: this target — the one the README calls
+# the quickest evidence a change has not broken the app — stopped with a missing-file
+# traceback in every public clone, while the page advertising it worked everywhere else.
+#
+# The move costs nothing and the two reasons it looked expensive were both false. Neither
+# installer ships it: both copy lists are allow-lists, deny-by-default, and the .dmg also
+# `rm -rf`s tests/ — all of which tests/test_vendor_drift.py's
+# `test_neither_installer_ships_the_test_suite_or_fixtures` already held before this file
+# moved, so no new exclusion and no new guard were needed. And unlike parity-reference
+# above, nothing here is unable to travel: the three fixtures it loads are already in the
+# public tree, and the export gate's own six scan rules find nothing in either file. It was
+# stripped for its address, not for its content.
+#
+# What #345 did need was a guard against the *class*, which is
+# tests/test_makefile_targets_are_runnable.py: no recipe may name a path the export strips,
+# and every script a recipe runs must be present. The two halves fail in different trees —
+# the first here, the second in a public clone — because neither tree can see this bug alone.
+#
+# Not named test_*.py, so pytest does not collect it: it is a script that boots the app six
+# times over ~90s, and `make test` is not where that belongs. The name is the interface.
+#
 # Declared .PHONY here rather than appended to the list at the top of this file. Make
 # accepts any number of .PHONY lines, and keeping this one next to its target means a
 # branch adding a target does not touch a line every other such branch also touches —
@@ -333,7 +356,7 @@ parity-reference:
 .PHONY: app-load-check
 app-load-check:
 	@echo "🖥  Loading a MAF through both of the running app's load paths..."
-	$(PYTHON) ../docs/wayfinder/issue-32/run_app_check.py .
+	$(PYTHON) tests/run_app_check.py .
 
 lint:
 	@echo "🔍 Running code linting..."

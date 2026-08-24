@@ -6,15 +6,16 @@ this first — it is short, and it changes what you should expect after you pres
 ## Where the code comes from
 
 Development happens in a private repository at the European Institute of Oncology, on
-patient data that cannot be published. What you see here is that tree, exported: each
-release arrives as **one squashed commit** that replaces the working tree wholesale, with a
-message naming the internal revision it was cut from.
+patient data that cannot be published. What you see here is that tree, exported: each export
+arrives as **one squashed commit** that replaces the working tree wholesale, with a message
+naming the internal revision it was cut from.
 
-So this repository's history is a list of releases, not a list of changes. `git log` will
-not show you who wrote a line or why, and `git blame` will point at the export rather than
-at the author. That is a deliberate safety property — the internal history holds clinical
-data in past commits, and exporting only the current tree makes it structurally impossible
-for any of it to travel — but it has consequences for you, below.
+Exports are not releases, and there are far more of them — around two hundred commits here
+against seven tagged releases. So this repository's history is a list of exports, not a list of
+changes. `git log` will not show you who wrote a line or why, and `git blame` will point at the
+export rather than at the author. That is a deliberate safety property — the internal history
+holds clinical data in past commits, and exporting only the current tree makes it structurally
+impossible for any of it to travel — but it has consequences for you, below.
 
 ## Issues
 
@@ -45,9 +46,13 @@ carry your authorship.
 
 We therefore credit contributors **manually**, and we would like to get it right:
 
-- The export commit's message names the contributions it carries and who wrote them.
 - Say in the pull request how you want to be named, if it is not your GitHub handle.
 - Tell us if you would rather not be named at all.
+- We will tell you in the pull request thread which export carried your change.
+
+One thing we cannot do, so that you are not looking for it: the credit is not in the commit.
+The export commit's message is written by a script from a fixed one-line template —
+`Sync from <private repo> @ <revision>` and nothing else — with nowhere for a name to go.
 
 If that trade is not one you want to make, please open an issue describing the change
 instead of writing it. A well-described issue is genuinely more useful to us than a patch
@@ -63,7 +68,11 @@ we cannot merge, and it costs you less.
 - **Do not edit `streamlit_app/vendor/`.** It is a byte-for-byte copy of the pipeline's own
   filtering code, kept honest by a drift guard; read `streamlit_app/vendor/README.md` before
   changing anything near filtering.
-- **Format before you push:** `make format` (black + isort).
+- **Format before you push:** `make format` (black + isort) — but read the developer section of
+  [`streamlit_app/README.md`](streamlit_app/README.md) first. That target prints a warning, does
+  nothing and **exits 0** when the tools are not on your `PATH`, so a clean run is not evidence
+  the tree is formatted; and this tree predates the current black, which reformats most of it if
+  you let it loose.
 
 ## The app itself
 

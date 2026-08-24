@@ -80,8 +80,9 @@ def read_maf_without_comment_lines(content) -> pd.DataFrame:
     row is a comment by every convention MAF has, and the alternative is a frame with a
     ``#``-prefixed ``Hugo_Symbol``.
 
-    Pinned by ``tests/test_utils.py::TestTheFallbackPathSharesTheParser``; measured in
-    ``docs/wayfinder/issue-32/``.
+    Pinned by ``tests/test_utils.py::TestTheFallbackPathSharesTheParser``; measured under
+    issue #32 (a private-tree note — the runnable half of it now lives beside its fixtures
+    as ``tests/run_app_check.py``, per issue #345).
     """
     text = content.decode("utf-8") if isinstance(content, bytes) else content
     lines = [line for line in text.strip().split("\n") if not line.startswith("#")]

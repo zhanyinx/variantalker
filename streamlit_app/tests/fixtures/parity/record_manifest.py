@@ -14,7 +14,7 @@ of it.
 
 The manifest carries one claim the tests do not read and the export does:
 ``"provenance": "generator-constructed"`` per MAF, with the sha256 of the bytes it was
-recorded from. ``tools/export_public.py`` refuses to export a MAF that is not recorded that
+recorded from. The public export refuses to export a MAF that is not recorded that
 way in a manifest **in its own directory**, because the bytes that must not travel are, by
 content, indistinguishable from the bytes that must — five of the seven fixtures this set
 replaced passed every content pattern while carrying real calls. A claim about where a file
@@ -42,7 +42,7 @@ sys.path.insert(0, str(STREAMLIT_APP))
 from tests.parity import contract as C  # noqa: E402
 from tests.parity import harness as H  # noqa: E402
 
-#: The one provenance value ``tools/export_public.py`` accepts for a MAF. Spelled here as
+#: The one provenance value the public export accepts for a MAF. Spelled here as
 #: a literal rather than imported: the export tool is outside the app's import path, and a
 #: constant that travels by copy is the point — if the two ever disagree the export fails
 #: loudly rather than passing something through.
@@ -98,7 +98,7 @@ def cell_names(path: Path) -> list[str]:
     the evidence string as ``-2#Tier_IV_benign EVS=[...]``. Read that way, the three
     ``cancervar_evidence_*`` rows lose their ``Otherinfo`` cell and the manifest records
     ``"nan"`` for them — a positional oracle that has quietly stopped naming three of its
-    rows. ``docs/wayfinder/issue-187`` recorded the same trap truncating ``CancerVar`` to
+    rows. Issue #187 recorded the same trap truncating ``CancerVar`` to
     ``1``, and ``read_maf`` avoids it the way this does, by counting the ``#``-prefixed
     lines and passing that as ``header=``.
     """

@@ -1,5 +1,5 @@
 //
-// This file holds several functions specific to the main.nf workflow in the nf-core/variantalker pipeline
+// This file holds several functions specific to the main.nf workflow in the variantalker pipeline
 //
 
 class WorkflowMain {
@@ -9,20 +9,27 @@ class WorkflowMain {
     //
     public static String citation(workflow) {
         return "If you use ${workflow.manifest.name} for your analysis please cite:\n\n" +
-            // TODO nf-core: Add Zenodo DOI for pipeline after first release
+            // TODO: Add a DOI for the pipeline itself once one is minted. Until then the
+            // only thing this asks a user to cite is the framework, which is credited
+            // because it is used -- variantalker is not an nf-core pipeline.
             //"* The pipeline\n" +
             //"  https://doi.org/10.5281/zenodo.XXXXXXX\n\n" +
             "* The nf-core framework\n" +
             "  https://doi.org/10.1038/s41587-020-0439-x\n\n" +
             "* Software dependencies\n" +
-            "  https://github.com/${workflow.manifest.name}/blob/master/CITATIONS.md"
+            // manifest.name is a display label, not an owner/repo path. Build repository
+            // URLs from manifest.homePage, which already carries the owner.
+            "  ${workflow.manifest.homePage}/blob/main/CITATIONS.md"
     }
 
     //
     // Generate help string
     //
     public static String help(workflow, params, log) {
-        def command = "nextflow run ${workflow.manifest.name}/main.nf --input samplesheet.csv --build hg38 --outdir outdir -profile singularity"
+        // The invocation every README documents: a local clone, run under the legacy
+        // parser. The pipeline's config does not parse under Nextflow's default v2
+        // parser, so a command without NXF_SYNTAX_PARSER=v1 cannot be copy-pasted.
+        def command = "NXF_SYNTAX_PARSER=v1 nextflow run main.nf -profile singularity --input samplesheet.csv --build hg38 --outdir results"
         def help_string = ''
         help_string += NfcoreTemplate.logo(workflow, params.monochrome_logs)
         help_string += NfcoreSchema.paramsHelp(workflow, params, command)

@@ -15,7 +15,7 @@ release any more, which is the point of it.
 It lives in `streamlit_app/config/constants.py` as `APP_VERSION`, and every artifact takes
 it from there: the DMG's filename, the `.app` bundle's two `Info.plist` version keys, the
 Windows installer's version and output filename, and the tag a release is cut from. Nothing
-below asks you for a version, and neither build script accepts one (issue #260).
+below asks you for a version, and neither build script accepts one (issue 260).
 
 ```bash
 cd streamlit_app
@@ -25,7 +25,7 @@ make release-tag    # what to hand `git tag` — mafigate-v<version>
 
 Bumping a release is therefore a one-line edit to `APP_VERSION`.
 `streamlit_app/tests/test_installer_version.py` fails if any installer input grows a
-literal of its own, which is the state this tree was in before #260: the app said one
+literal of its own, which is the state this tree was in before issue 260: the app said one
 number and every installer said another.
 
 ## Each build stamps which build it is
@@ -33,8 +33,8 @@ number and every installer said another.
 A version number cannot identify a build: the same `APP_VERSION` reaches a user as a `.dmg`,
 as a Windows `.exe`, or as a clone of the source. So each build script writes a **build
 stamp** before it packages anything — its channel, and the short commit it was cut from — and
-the app's About dialog reports both beside the version (issue #263). With **no update check
-ever** (#229), that dialog is the only thing that tells a user, and therefore you reading
+the app's About dialog reports both beside the version (issue 263). With **no update check
+ever** (issue 229), that dialog is the only thing that tells a user, and therefore you reading
 their bug report, what they are running.
 
 ```bash
@@ -62,7 +62,10 @@ to *can I check this out?*
 
 ## macOS (.dmg)
 
-The DMG bundles a portable Python 3.11 — **users need zero prerequisites** (no Homebrew, no Python install). Works on both Apple Silicon (M1/M2/M3/M4) and Intel Macs.
+The DMG bundles a portable Python — **users need zero prerequisites** (no Homebrew, no Python
+install). Works on both Apple Silicon (M1/M2/M3/M4) and Intel Macs. Which CPython release it
+is, is not written on this page: `build/python_release.env` names it, both builds read it from
+there, and a version restated here is one that goes quietly stale the day the pin moves.
 
 ### Prerequisites (build machine only)
 - macOS with Xcode Command Line Tools (`xcode-select --install`)
@@ -78,12 +81,19 @@ cd streamlit_app/build/mac
 ./build_dmg.sh
 
 # Build for a specific architecture only
-./build_dmg.sh --arch arm64      # Apple Silicon only (~33 MB)
-./build_dmg.sh --arch x86_64     # Intel only (~35 MB)
-./build_dmg.sh --arch universal  # Both architectures (~65 MB, == default)
+./build_dmg.sh --arch arm64      # Apple Silicon only (~35 MB)
+./build_dmg.sh --arch x86_64     # Intel only (~36 MB)
+./build_dmg.sh --arch universal  # Both architectures (~70 MB, == default)
 ```
 
-> There is no version argument. Passing one — how this was called before #260 — now fails
+> Those three are measured, from a build on this tree with `create-dmg` absent — the
+> `hdiutil` fallback, which is also what the CI runner uses. Treat them as the local
+> figures, not as the download: the published universal DMG for this same version is
+> **79 MB**, about 9 MB larger than the same script produces here, with a byte-identical
+> payload. What a user actually downloads is stated on the release page, which reads it off
+> the artifact, and that is the number to quote at anyone.
+
+> There is no version argument. Passing one — how this was called before issue 260 — now fails
 > rather than being ignored, wherever in the command line it appears, because an ignored
 > positional would have built a DMG labelled with a number nobody chose.
 
@@ -104,7 +114,7 @@ what `make version` prints
 4. First launch: automatically installs pip dependencies (~1 min, needs internet)
 5. Browser opens with MAFigate at `http://127.0.0.1:8501`
 
-**No Python installation required.** Python 3.11 is bundled inside the app.
+**No Python installation required.** Python is bundled inside the app.
 
 ### App icon (optional)
 Place an `icon.icns` file at `build/mac/MAFigate.app/Contents/Resources/icon.icns`.
@@ -116,6 +126,17 @@ Generate from PNG: `sips -s format icns icon.png --out icon.icns`
 
 The installer bundles the same portable Python the DMG does — **users need zero
 prerequisites**. x64 only; ARM Windows runs it under emulation.
+
+> **Everything in this section is unverified by execution.** The macOS half of this page was
+> walked command by command for issue 335 — every command run, every size measured — and
+> this half could not be: `build_installer.bat` needs a Windows machine, and there is none in
+> this project's toolchain. Nor can the shipped artifact stand in for one: the published
+> `.exe` is Inno Setup 6.7.0 data, which is newer than any released `innoextract` can unpack,
+> so it cannot be opened on a Mac or a Linux box either. What *is* known to work is the CI
+> path — `windows-latest` builds this installer on every release tag and the last run was
+> green — so the claims below are as good as that run and no better. Read them as the build
+> script's stated intent, not as measurements. Anything here that turns out to be wrong will
+> be found by a person on a Windows box, and that is the only thing that will find it.
 
 ### Prerequisites (build machine only)
 - Windows PC (cross-compilation from Mac is not supported — but a release does not need one,
@@ -152,7 +173,7 @@ build_installer.bat
 4. First launch: automatically installs Python dependencies (~1-2 min, needs internet)
 5. Browser opens with MAFigate at `http://127.0.0.1:8501`
 
-**No Python installation required.** Python 3.11 is bundled inside the installer.
+**No Python installation required.** Python is bundled inside the installer.
 
 ### Uninstalling
 Uninstall removes the app and the environment it built (`~\.mafigate\venv`) and its logs.
@@ -168,7 +189,11 @@ Place an `icon.ico` file at `build/windows/icon.ico`.
 ## How it works
 
 ### macOS
-1. App bundle includes a full portable Python 3.11 (~33 MB)
+1. App bundle includes a full portable Python — **~54 MB on disk per architecture**, after
+   the trim `build_dmg.sh` applies, so ~107 MB in a universal bundle and ~111 MB for the
+   whole installed app. This line used to say ~33 MB, which was the *compressed* single-arch
+   DMG being read as an on-disk size; the Windows entry below had it right all along, and
+   the two halves of this page disagreed by a factor of nearly two
 2. On first launch, creates a virtual environment in `~/.mafigate/venv`
 3. Installs pip dependencies from `requirements.txt`
 4. Starts Streamlit on `127.0.0.1` (localhost only — not network-accessible)
@@ -176,7 +201,7 @@ Place an `icon.ico` file at `build/windows/icon.ico`.
 6. Subsequent launches skip steps 2-3 and start in seconds
 
 ### Windows
-1. The installed app includes a portable Python 3.11 at `<install dir>\python` (~56 MB on
+1. The installed app includes a portable Python at `<install dir>\python` (~56 MB on
    disk, after the same trim the DMG applies — 73 MB untrimmed), and `launch.bat` runs that
    one only: it does not look at `PATH` or at any Python the machine happens to have
 2. Same steps 2-6 as macOS (venv at `%USERPROFILE%\.mafigate\venv`)
@@ -196,32 +221,45 @@ build/
 ├── RELEASES.md               ← which releases have actually been published; a guard reads it
 ├── version.py                ← reads APP_VERSION; the only route from the constant to a build
 ├── build_stamp.py            ← writes ../config/build_stamp.py (channel + commit), gitignored
+├── release_preflight.py      ← `make release-preflight`; step 4 of Cutting a release (issue 328)
 ├── python_release.env        ← the bundled CPython release, pinned once for both builds
+├── .gitignore                ← where every generated file below is actually ignored
 ├── mac/
 │   ├── build_dmg.sh          ← builds the .dmg (downloads + bundles Python)
 │   ├── MAFigateLauncher.swift ← native launcher compiled into the .app
 │   ├── .python_cache/        ← cached Python downloads (auto-created)
+│   ├── staging/              ← the bundle being assembled (auto-created, gitignored)
+│   ├── (MAFigate-<version>-macOS-<arch>.dmg)  ← the build lands here, gitignored
 │   └── MAFigate.app/         ← .app bundle template
 │       └── Contents/
 │           ├── Info.plist    ← version keys are placeholders; build_dmg.sh stamps them
 │           ├── MacOS/
 │           │   └── launch.sh
-│           └── Resources/
-│               └── (icon.icns — add your own)
+│           └── (Resources/icon.icns — add your own; neither exists, create both)
 └── windows/
     ├── build_installer.bat    ← builds the .exe (downloads + stages Python, then compiles)
     ├── .python_cache/         ← cached Python downloads (auto-created)
     ├── python/                ← extracted interpreter, staged for Inno Setup (auto-created)
     ├── installer.iss          ← Inno Setup script
     ├── version.iss            ← generated by version.py, gitignored (never edit)
+    ├── output/                ← the compiled .exe lands here (auto-created, gitignored)
+    ├── (icon.ico — add your own)
     └── launch.bat             ← Windows launcher
 ```
+
+Names in parentheses are **not** in the repository. Both icons are optional and both are
+absent: `installer.iss` guards its three icon references with `#ifexist` and
+`skipifsourcedoesntexist`, and `build_dmg.sh` copies `icon.icns` only if it is there. That
+tolerance was bought the hard way — `SetupIconFile=icon.ico` naming an untracked file aborted
+a rehearsal build rather than falling back to Inno's own icon (issue 265, tag
+`mafigate-v1.0.0-rc2`). On macOS note that `Contents/Resources/` does not exist either, so
+adding an icon means creating the directory as well as the file.
 
 ---
 
 ## Cutting a release
 
-One tag, two runners, one commit. `.github/workflows/mafigate-release.yml` (issue #264) builds
+One tag, two runners, one commit. `.github/workflows/mafigate-release.yml` (issue 264) builds
 the DMG on `macos-latest` and the installer on `windows-latest` and attaches both to a **draft**
 release. Before it existed, a release needed a Mac *and* a physical Windows machine, both driven
 by hand — and when the Windows box was not to hand, Mac users got the new version and Windows
@@ -237,9 +275,11 @@ git push origin "$(make -s release-tag)"
 
 Both artifacts carry the build stamp described above, and a runner's checkout is clean, so About in
 a released app names the tag's commit with no `-dirty` suffix. The workflow does not write the stamp
-itself — the two build scripts do, which is why it does not have to (issue #263).
+itself — the two build scripts do, which is why it does not have to (issue 263).
 
-Then:
+Then these six steps. [RELEASES.md](RELEASES.md) repeats them in short form under *What to do
+when you publish one*, deliberately under the same numbers — the detail is here, and step *n*
+there is step *n* here. Renumber one and renumber the other.
 
 1. Watch the run. `gh run watch <id> --exit-status`, or the Actions tab.
 2. Check the draft. Both files attached, both named from `<version>`, and the notes naming the
@@ -255,7 +295,7 @@ Then:
    has since moved on from. Do not skip it because you only cut the tag an hour ago — that is
    exactly the state it was written for: `mafigate-v1.0.0` was drafted from the tip of `main`,
    sat while twenty-two commits landed, four of which changed code that ships, and came within
-   one click of publishing a known wrong-variant bug under the fixed version's number (#328).
+   one click of publishing a known wrong-variant bug under the fixed version's number (issue 328).
    The draft says nothing about this. It names its commit correctly and reads exactly like a
    fresh one.
 5. Publish it. **CI never does this.** It drafts and stops, so a human decides when a download
@@ -271,6 +311,17 @@ The workflow's first run must not be the one that has to produce a real artifact
 Push the same version with a suffix — `mafigate-v<version>-rc1`, or `-rehearsal1` — and the
 version check accepts it as a **pre-release** instead of a release. Everything else runs
 identically. Delete the draft afterwards; it never was a download.
+
+Step 4 rehearses too, against the suffixed tag rather than the one `APP_VERSION` derives:
+
+```bash
+make release-preflight TAG=mafigate-v<version>-rc1
+```
+
+Worth running once on a rehearsal, because what it does when it *cannot* answer is the part
+worth seeing before you rely on it: with no `gh`, no network, or no such tag it exits **3**
+and says `This is not a pass: nothing was checked.` Exit `0` is the only pass, and the script
+is written so that "I could not check" can never be mistaken for "I checked".
 
 Rehearse in the **public** repository, where both runners are free. macOS runners bill at a
 multiplier on private repositories, which is also why a tag push is this workflow's only
@@ -307,7 +358,9 @@ Share the `.dmg` or `.exe` file via:
 - USB drive
 - Internal file share / NAS
 - Institutional cloud storage (OneDrive, Google Drive, etc.)
-- Email (if file size allows — ~33 MB for macOS)
+- Email (if file size allows — but the macOS default is the **universal** DMG at ~70 MB, over
+  the attachment limit on most mail systems. `--arch arm64` or `--arch x86_64` halves it to
+  ~35 MB, at the cost of a DMG that crashes on the other architecture)
 
 Internet is needed only on first launch to install pip dependencies.
 

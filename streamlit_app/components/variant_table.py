@@ -952,7 +952,7 @@ _AGGRID_INDEX_KEY = "__pandas_index"
 #: ``st_aggrid`` will report *any* AG Grid event named in ``update_on`` — its
 #: ``attachStreamlitRerunToEvents`` calls ``api.addEventListener`` for each one — so
 #: ``rowDoubleClicked`` reaches Python on its own, carrying the row and its index. That is
-#: not enough, and the reason is measured rather than assumed (``docs/wayfinder/issue-159/``):
+#: not enough, and the reason is measured rather than assumed, under issue #159:
 #:
 #: * A component's value **persists across reruns**, so a standing "the last event was a
 #:   double-click" condition re-opens the dialog on every later interaction. Dismissing a

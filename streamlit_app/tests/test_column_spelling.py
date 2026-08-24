@@ -35,7 +35,7 @@ render identically. It does not care how a name reaches a row, so a table-driven
 by the same assertion as a literal one.
 
 Every guard here was made to fail before being trusted, per this repo's standing rule — see
-``docs/wayfinder/issue-212/README.md`` for what each mutation was and what it caught.
+issue #212's notes for what each mutation was and what it caught.
 """
 
 import ast

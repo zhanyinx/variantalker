@@ -2,11 +2,14 @@
 import argparse
 import datetime
 import os
+import sys
 
 from utils_update import (
     FolderType,
     FileType,
+    RunLog,
     get_annovar_databases,
+    run_steps,
     update_all_cancervar,
     update_all_intervar,
 )
@@ -108,7 +111,14 @@ def _parse_args():
 
 
 def main():
-    """bla"""
+    """Update the annovar databases CancerVar and Intervar annotate with.
+
+    Returns:
+        int: the exit code -- 1 if any step failed, else 0. Previously this function had no
+            `try`/`except` anywhere and set no exit code at all, so a `FileExistsError` raised
+            while updating CancerVar's databases meant Intervar was never updated, and a caller
+            checking `$?` saw the same 0 either way.
+    """
     args = _parse_args()
 
     if not args.scriptdir:
@@ -150,23 +160,6 @@ def main():
     else:
         cancervar_script = args.cancervar_script
 
-    with open(logfile, "w") as f:
-        f.write("Starting annovar db update for cancervar. \n")
-    update_all_cancervar(
-        annovar_databases=annovar_databases,
-        annovar_db_path=args.annovar_db_path,
-        annovar_download_script=args.annovar_download_script,
-        cancervar_config_file=cancervar_config_file,
-        cancervar_script=cancervar_script,
-        email=args.cosmic_email,
-        logfile=logfile,
-        not_to_update=not_to_update,
-        password=args.cosmic_password,
-        scriptdir=scriptdir,
-        today=today,
-        vt=args.vt,
-    )
-
     if not args.config_intervar:
         intervar_config_file = (
             f"{os.path.dirname(__file__)}/../../resources/configs/config.init.intervar"
@@ -181,22 +174,61 @@ def main():
     else:
         intervar_script = args.intervar_script
 
-    with open(logfile, "a") as f:
-        f.write("Starting annovar db update for intervar. \n")
+    with open(logfile, "w") as f:
+        f.write("Starting annovar db update for cancervar and intervar. \n")
 
-    update_all_intervar(
-        annovar_databases=annovar_databases,
-        annovar_db_path=args.annovar_db_path,
-        annovar_download_script=args.annovar_download_script,
-        intervar_config_file=intervar_config_file,
-        intervar_script=intervar_script,
-        logfile=logfile,
-        not_to_update=not_to_update,
-        scriptdir=scriptdir,
-        today=today,
-        vt=args.vt,
-    )
+    run_log = RunLog(logfile)
+
+    # One step per route. Each reports its own verdicts and, if it fails, does so without taking
+    # the other down with it -- which is the whole of ruling 3 as it applies here.
+    steps = [
+        (
+            "cancervar",
+            lambda: update_all_cancervar(
+                annovar_databases=annovar_databases,
+                annovar_db_path=args.annovar_db_path,
+                annovar_download_script=args.annovar_download_script,
+                cancervar_config_file=cancervar_config_file,
+                cancervar_script=cancervar_script,
+                email=args.cosmic_email,
+                run_log=run_log,
+                not_to_update=not_to_update,
+                password=args.cosmic_password,
+                scriptdir=scriptdir,
+                today=today,
+                vt=args.vt,
+            ),
+        ),
+        (
+            "intervar",
+            lambda: update_all_intervar(
+                annovar_databases=annovar_databases,
+                annovar_db_path=args.annovar_db_path,
+                annovar_download_script=args.annovar_download_script,
+                intervar_config_file=intervar_config_file,
+                intervar_script=intervar_script,
+                run_log=run_log,
+                not_to_update=not_to_update,
+                scriptdir=scriptdir,
+                today=today,
+                vt=args.vt,
+            ),
+        ),
+    ]
+
+    # This route has no `--build` flag and never asks for one: it discovers each database's builds
+    # from annovar's published table, and the build is a filename prefix rather than a directory,
+    # so nothing here can lose the build it was not asked for (#357). Both builds are named
+    # because both are what a run covers.
+    #
+    # Note what that means for the two rules in `_settle_step`, so nobody reads more into this
+    # than is there: the Annovar verdicts are per DATABASE, not per build -- the annotation
+    # script's `-protocol` list carries no build, so a database's name advances once for both or
+    # not at all. So ruling 5's "skipped every build it was asked for" rule cannot fire on this
+    # route, and the rule doing the work here is the other one: a step that returns without
+    # recording a verdict is a failure.
+    return run_steps(steps, run_log, ["hg19", "hg38"])
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

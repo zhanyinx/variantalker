@@ -4,7 +4,7 @@ WHY THIS EXISTS AT ALL, GIVEN THE FILES WERE ALREADY HAND-WRITTEN. These two MAF
 authored by hand under issue #189 and they are genuinely constructed — round coordinates
 or public hotspot positions, invented read counts, no barcode or patient identifier
 anywhere. What they lacked was any *recorded* claim to that effect, and
-``tools/export_public.py`` refuses to export a MAF that is not recorded as
+the public export refuses to export a MAF that is not recorded as
 ``"provenance": "generator-constructed"`` in a ``MANIFEST.json`` beside it.
 
 That refusal is not bureaucracy. Five of the seven parity fixtures this repo used to ship
@@ -36,7 +36,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-#: The one provenance value ``tools/export_public.py`` accepts for a MAF.
+#: The one provenance value the public export accepts for a MAF.
 CONSTRUCTED = "generator-constructed"
 
 #: The padded spelling, on 121 of the 124 real files that carry the column. The leading

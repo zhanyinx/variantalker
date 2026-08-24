@@ -5,6 +5,13 @@
 ## This software is distributed without any guarantee under the terms of the GNU General
 ## Public License, either Version 2, June 1991 or Version 3, June 2007.
 
+# Stop at the first real failure instead of carrying on. Defence in depth only: the authority on
+# whether the live database is replaced is the Python-side validation in `update_hgnc`. Here the
+# failure that matters is the `curl` below returning nothing, after which `awk` still emits a
+# perfectly well-formed header-only TSV -- a database Funcotator accepts and annotates nothing
+# from.
+set -eo pipefail
+
 
 function usage {
     echo -e "usage : get_new_hgnc.sh [-h]"

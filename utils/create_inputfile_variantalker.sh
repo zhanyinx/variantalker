@@ -14,7 +14,7 @@ function usage {
 function help {
     usage;
     echo 
-    echo "Create input file for variantalker annotation. See https://github.com/zhanyinx/variantalker#input"
+    echo "Create input file for variantalker annotation. See https://github.com/zhanyinx/variantalker#input-format"
     echo "---------------"
     echo "OPTIONS"
     echo

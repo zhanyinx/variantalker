@@ -107,16 +107,16 @@ _ESCAT_COLOR = CLINICAL_ROW[2][2]
 #:   ClinVar's new and old names for the same one-star level, which issue #200 measured; and
 #:   ``no_classification_for_the_single_variant`` (804) and
 #:   ``no_interpretation_for_the_single_variant`` (**50**) are the same pair one level down, which
-#:   it did not — that tenth value was found re-deriving the vocabulary for issue #204
-#:   (``docs/wayfinder/issue-204/``) and was falling through to :data:`_UNRECOGNISED_STATUS`,
-#:   printing its raw string where the stars belong. Both pairs are folded here, because anything
-#:   that orders or colours by these strings would otherwise sort one level two ways.
+#:   it did not — that tenth value was found re-deriving the vocabulary for issue #204, and was
+#:   falling through to :data:`_UNRECOGNISED_STATUS`, printing its raw string where the stars
+#:   belong. Both pairs are folded here, because anything that orders or colours by these
+#:   strings would otherwise sort one level two ways.
 #: * **``practice_guideline`` is unobserved and still handled.** It appears on **0** rows; these
 #:   MAFs were annotated 2022–2024, and unobserved is not impossible. A corpus-driven guard cannot
 #:   reach it, which is why ``tests/test_clinical_badges.py`` names it.
 #: * **The mapping is total over what the corpus holds** — asserted rather than believed, since
-#:   believing it is what missed the tenth value: ``docs/wayfinder/issue-204/measure204.py``
-#:   re-walks every ``.maf`` on disk and reports anything unmapped.
+#:   believing it is what missed the tenth value: issue #204's measurement re-walks every ``.maf``
+#:   on disk and reports anything unmapped.
 #: * **An unmapped value is still reachable and must stay handled.** Two of these ten were
 #:   themselves unmapped a moment ago, which is the argument for :data:`_UNRECOGNISED_STATUS`
 #:   rather than against it.
@@ -254,8 +254,8 @@ def renovo_badge(row: pd.Series) -> Optional[Badge]:
 
     **The score degrades rather than renders empty.** ``RENOVO_pls`` is absent on **6,604 real
     rows across 3 files** — issue #201 measured 6,597 in 2, and a third file has arrived on disk
-    since; re-derived through this function in ``docs/wayfinder/issue-204/measure204.py``, which
-    found **0** badges rendering an empty score across the whole corpus. The two large files are a
+    since; re-derived through this function while resolving issue #204, which found **0** badges
+    rendering an empty score across the whole corpus. The two large files are a
     2022 annotation vintage from before the pipeline carried ``PL_score``, and they are the *only*
     germline rows where the guideline row can draw no verdict at all — so RENOVO's badge is the
     whole of the pathogenicity claim on screen there. It draws ``RENOVO: HP Benign`` on them, never
@@ -283,8 +283,8 @@ def renovo_badge(row: pd.Series) -> Optional[Badge]:
 # ESCAT — one badge per tier, carrying the tumour types it was established in
 # ---------------------------------------------------------------------------
 #
-# Ported from ``docs/wayfinder/issue-214/candidates214.py``, the rendering the dev chose from five
-# drawn against eight real MAF rows. Issue #214's spec says port rather than re-derive, and the
+# Ported from issue #214's prototype, the rendering the dev chose from five drawn against eight
+# real MAF rows. Issue #214's spec says port rather than re-derive, and the
 # names below are that prototype's.
 
 #: Where a tier sits on ESCAT's own ladder. ``ESCAT_OPTIONS`` needs no new ordering and does not

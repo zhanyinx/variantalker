@@ -1,5 +1,7 @@
 //
-// This file holds several functions used within the nf-core pipeline template.
+// This file holds several functions inherited from the nf-core pipeline template,
+// which variantalker is derived from. variantalker is not an nf-core pipeline and
+// has never been in that organisation, so nothing here should claim membership.
 //
 
 import org.yaml.snakeyaml.Yaml
@@ -27,8 +29,7 @@ class NfcoreTemplate {
             log.warn "[$workflow.manifest.name] You are attempting to run the pipeline without any custom configuration!\n\n" +
                     "This will be dependent on your local compute environment but can be achieved via one or more of the following:\n" +
                     "   (1) Using an existing pipeline profile e.g. `-profile docker` or `-profile singularity`\n" +
-                    "   (2) Using an existing nf-core/configs for your Institution e.g. `-profile crick` or `-profile uppmax`\n" +
-                    "   (3) Using your own local custom config e.g. `-c /path/to/your/custom.config`\n\n" +
+                    "   (2) Using your own local custom config e.g. `-c /path/to/your/custom.config`\n\n" +
                     "Please refer to the quick start section and usage docs for the pipeline.\n "
         }
     }
@@ -331,7 +332,10 @@ class NfcoreTemplate {
     }
 
     //
-    // nf-core logo
+    // Pipeline banner. Printed on the first screen of every run, via
+    // WorkflowMain.paramsSummaryLog. The template shipped the nf-core ASCII
+    // wordmark here; this pipeline is a template descendant, not an nf-core
+    // pipeline, so it prints its own name instead of another org's logo.
     //
     public static String logo(workflow, monochrome_logs) {
         Map colors = logColours(monochrome_logs)
@@ -339,11 +343,6 @@ class NfcoreTemplate {
         String.format(
             """\n
             ${dashedLine(monochrome_logs)}
-                                                    ${colors.green},--.${colors.black}/${colors.green},-.${colors.reset}
-            ${colors.blue}        ___     __   __   __   ___     ${colors.green}/,-._.--~\'${colors.reset}
-            ${colors.blue}  |\\ | |__  __ /  ` /  \\ |__) |__         ${colors.yellow}}  {${colors.reset}
-            ${colors.blue}  | \\| |       \\__, \\__/ |  \\ |___     ${colors.green}\\`-._,-`-,${colors.reset}
-                                                    ${colors.green}`._,._,\'${colors.reset}
             ${colors.purple}  ${workflow.manifest.name} ${workflow_version}${colors.reset}
             ${dashedLine(monochrome_logs)}
             """.stripIndent()

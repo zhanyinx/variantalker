@@ -108,7 +108,7 @@ your `PATH` and need not belong to the same Python — on a machine with both Ho
 conda they usually do not. When they disagree, `pip install` succeeds into an interpreter the
 app never runs in, nothing fails, and MAFigate starts up missing pieces of itself: the
 symptom that prompted this was six Summary charts quietly drawing the wrong thing
-(issue #162). `python -m pip` and `python -m streamlit` cannot disagree that way, and both
+(issue 162). `python -m pip` and `python -m streamlit` cannot disagree that way, and both
 scripts read where the environment is from the same file, so they cannot end up in different
 ones.
 
@@ -124,10 +124,13 @@ MAFIGATE_PYTHON=/path/to/python ./setup.sh
 MAFIGATE_PYTHON=/path/to/python ./run_mafigate.sh
 ```
 
-To check an interpreter without installing or launching anything:
+To check an interpreter without installing or launching anything. These two do not check
+the same one, which is the point of running either: each names the interpreter it looked
+at in its first line of output.
 
 ```bash
-make check-deps                                    # or: python3 check_dependencies.py
+make check-deps                # the interpreter make would run the app with
+python3 check_dependencies.py  # whichever python3 is first on your PATH
 ```
 
 ### In an environment you manage yourself
@@ -144,16 +147,25 @@ MAFIGATE_PYTHON=$(command -v python) ./setup.sh
 MAFIGATE_PYTHON=$(command -v python) ./run_mafigate.sh
 ```
 
-Or without the scripts at all:
+Or without the scripts at all — **with that environment activated**, so that `python` is
+its interpreter rather than another one:
 
 ```bash
 python -m pip install -r requirements.txt
-python -m streamlit run MAFigate.py
+python -m streamlit run MAFigate.py --server.address 127.0.0.1
 ```
 
 `python -m` rather than bare `pip` and `streamlit` for the reason given above: inside an
 activated environment they are usually the same thing, and on the day they are not, `-m`
-is the spelling that cannot be wrong.
+is the spelling that cannot be wrong. Outside one, `python` is whatever your `PATH` says,
+and on a machine with conda installed that is usually conda's base environment — so this
+pair of commands would fill the interpreter your other work depends on rather than an
+isolated one, which is the whole thing `setup.sh` exists to avoid. `command -v python`
+first, if you are not certain which you have.
+
+`--server.address 127.0.0.1` because `streamlit run` without it binds **every** interface,
+and this route does not get `run_mafigate.sh`'s flags for free. Left off, anyone who can
+route to this machine on that port can drive MAFigate and open your MAF through it.
 
 ### What it needs
 
@@ -165,8 +177,13 @@ is the spelling that cannot be wrong.
   ten times the file's size on disk, so a 100 MB MAF wants a little over 1 GB free. With
   too little, the process is killed and says nothing about why.
 - **File size** — files arrive through the browser, where the upload limit is 200 MB by
-  default. For a larger MAF, raise it at launch:
-  `python3 -m streamlit run MAFigate.py --server.maxUploadSize 1024`
+  default. For a larger MAF, raise it at launch. `run_mafigate.sh` passes no extra flags
+  through, so this is a direct launch and has to pin the address itself:
+
+  ```bash
+  .venv/bin/python -m streamlit run MAFigate.py \
+      --server.address 127.0.0.1 --server.maxUploadSize 1024
+  ```
 
 ---
 
@@ -233,8 +250,10 @@ Restrict the analysis to a panel or database gene set, or supply your own list:
 
 - **Help & Documentation** in the app covers the parameters, the columns and the common
   questions in more detail than this page.
-- **Port already in use** — launch on another one:
-  `streamlit run MAFigate.py --server.port 8502`
+- **Port already in use** — launch on another one, through the environment rather than a
+  bare `streamlit`, for the reason under **One interpreter, reached as `-m` modules**
+  above:
+  `.venv/bin/python -m streamlit run MAFigate.py --server.address 127.0.0.1 --server.port 8502`
 - **A filter seems to do nothing** — check the missing-column warnings above the report.
   A filter whose column the MAF does not carry cannot cut anything.
 - **Anything else** — please
@@ -246,24 +265,52 @@ Restrict the analysis to a panel or database gene set, or supply your own list:
 
 ## For developers
 
-`make help` lists everything; the ones you will want:
+`make help` lists the common targets — not quite all of them: `test-fast`, `qa`, `dev` and
+`build` are in the Makefile and absent from the help text. The ones you will want:
 
 ```bash
 make install          # install into .venv/ if ./setup.sh built one — it does not build it
 make run              # start the app — binds every interface, unlike ./run_mafigate.sh
-make test             # the test suite (pytest)
+make test             # the test suite (pytest) — needs pytest installed; see below
 make app-load-check   # boot the app and load a MAF through both load paths
-make format           # black + isort (config in pyproject.toml)
+make format           # black + isort (config in pyproject.toml) — see below
 ```
+
+`make app-load-check` needs nothing beyond `requirements.txt`, and is the quickest evidence
+that a change has not broken the app: it boots MAFigate twice through Streamlit's own test
+harness — once per load path — and reports what each one loaded, filtered and drew. It runs
+`tests/run_app_check.py`, which is a script rather than a pytest test, so `make test` does not
+collect it and neither installer ships it. **Every command on this page works from a clone of
+the public repository** — this one did not until issue 345, because the script it ran used to
+live under `docs/`, which the public export strips.
+
+**The development tools are not installed by `setup.sh`.** `requirements.txt` pins what the
+app *runs* on and deliberately nothing else, so a fresh checkout has no pytest, no black, no
+isort and no flake8 — and the targets that want them do not fail alike:
+
+- `make test` fails outright, with `No module named pytest`. Install it into the environment
+  `setup.sh` built: `.venv/bin/python -m pip install pytest`.
+- `make format` and `make lint` print a warning, do nothing, and **exit 0** — so they are
+  green whether or not they ran, and a clean `make format` is not evidence the tree is
+  formatted. They also look for `black`, `isort` and `flake8` on your `PATH` rather than in
+  `.venv/`, so installing them into that environment is not enough on its own: activate it,
+  or call the tool directly, as `.venv/bin/black`.
+
+  Before you let either of them write, know that this tree predates the current black:
+  `black . --line-length 100 --check` reformats **101 of 133 files** on black 26, none of it
+  to do with your change. Format the files you touched and no others —
+  `.venv/bin/black <your files> --line-length 100` — or pin the version the tree was last
+  formatted with. `--check --diff` first, always.
 
 The filtering code under `vendor/` is a byte-for-byte copy of the pipeline's own, kept
 honest by a drift guard — **read [vendor/README.md](vendor/README.md) before changing
 anything near filtering**, and see `make check-vendor` and `make check-params`.
 
 Standalone desktop installers are built from
-[build/BUILD_INSTRUCTIONS.md](build/BUILD_INSTRUCTIONS.md). They are ad-hoc-signed, neither
-notarized nor released yet, and what each route offers today is the table at the top of this
-page rather than anything restated here.
+[build/BUILD_INSTRUCTIONS.md](build/BUILD_INSTRUCTIONS.md), which is also where signing and
+notarization are described. What each route offers a reader, and what it costs them, is the
+table at the top of this page. This line restates none of it on purpose: a status written
+down twice is a status that goes stale in one of the two places the day it changes.
 
 Changes arrive here by a route worth knowing before you send one:
 [CONTRIBUTING.md](../CONTRIBUTING.md).

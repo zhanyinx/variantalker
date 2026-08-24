@@ -14,7 +14,7 @@ answer *"do the computational predictors support pathogenicity"*, and they answe
 reasoning behind it, and a clinician could reasonably add the two together.
 
 Three measurements say why that reading is wrong, all over the real corpus — 188 MAFs, 211,634
-germline and 116,417 somatic rows (``docs/wayfinder/issue-191/``):
+germline and 116,417 somatic rows, under issue #191:
 
 * **Nothing here fed the verdict.** The four columns this table reads are **disjoint** from the
   nine either classifier reads. InterVar's PP3/BP4 read ``MetaSVM_score``, ``GERP++_RS`` and the

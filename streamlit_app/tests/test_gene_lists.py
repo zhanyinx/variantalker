@@ -655,7 +655,7 @@ def test_the_panel_choice_is_never_a_filter_parameter():
 #: A script that renders just the Basic Filters tab, which is where the gene controls
 #: live. Rendering the tab rather than the whole page keeps the run to the widgets under
 #: test and avoids the parameter cache, which otherwise decides the arm from whatever the
-#: developer last configured (see ``docs/wayfinder/issue-32/run_app_check.py``).
+#: developer last configured (see ``tests/run_app_check.py``).
 _GENE_TAB_SCRIPT = """
 import sys
 sys.path.insert(0, {app!r})

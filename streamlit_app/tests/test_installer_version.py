@@ -932,7 +932,7 @@ def test_every_release_tag_named_in_prose_is_the_derived_one():
     The public README tells a reader the installers are "coming with the first
     `mafigate-v1.0.0` release", which is useful copy and a version literal at once. Rather
     than delete the promise, this pins it: bump ``APP_VERSION`` and the sentence goes red
-    until someone rewrites it. ``docs/wayfinder/`` is exempt — a ticket body records what
+    until someone rewrites it. The private notes are exempt — a ticket body records what
     was true when it was charted, and rewriting history to match the present is how the
     map stops being evidence.
 

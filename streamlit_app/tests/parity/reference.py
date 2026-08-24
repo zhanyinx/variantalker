@@ -124,7 +124,7 @@ def resource_root(reference: Path | None = None) -> Path:
     perfectly good alternative to.
 
     It is optional rather than required because the no-argument call has real callers:
-    the measurement scripts under ``docs/wayfinder/`` reach for ``resource_root()``
+    the measurement scripts in the private notes reach for ``resource_root()``
     directly, having no argparse of their own. Read as an unused parameter and deleted,
     that breaks them.
     """

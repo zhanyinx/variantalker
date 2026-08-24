@@ -5,6 +5,20 @@
 ## This software is distributed without any guarantee under the terms of the GNU General
 ## Public License, either Version 2, June 1991 or Version 3, June 2007.
 
+# Stop at the first real failure instead of grinding on. Defence in depth only: the authority on
+# whether the live database is replaced is the Python-side validation in `update_dbsnp`.
+#
+# `pipefail` is what makes this worth adding. The `version=` assignment in each build's block
+# reads the dbSNP build id out of the downloaded VCF with `head | grep | awk`; when the download
+# failed there is nothing to grep, and under `set -e` alone the assignment still succeeds because
+# it takes `awk`'s status. The result is a config that says `version = b` -- a version-shaped
+# string carrying no version. With `pipefail` the pipeline reports `grep`'s failure and the script
+# stops there.
+#
+# This script is also the reason the two cleanup `rm`s below are `rm -f`: under `--build both`
+# they delete the same scratch files twice, which was invisible until exit codes started mattering.
+set -eo pipefail
+
 
 function usage {
     echo -e "usage : update_dbsnp.sh -d db_dir [--build hg19|hg38|both] [-h]"
@@ -175,8 +189,10 @@ end_column =" > dbSNP.config
 
     mv dbSNP.config dbsnp/hg19/
 
-    # cleaning
-    rm appo primary_chromosomes.txt ucsc_primary_chromosomes.txt
+    # cleaning. `-f`, because under `--build both` this block deletes `appo` and the hg38 block
+    # below tries to delete it again without ever recreating it -- which was harmless while
+    # nothing checked exit codes, and would abort a fully SUCCESSFUL run now that `set -e` is on.
+    rm -f appo primary_chromosomes.txt ucsc_primary_chromosomes.txt
     fi
 fi
 fi  # End of hg19 build check
@@ -282,7 +298,7 @@ end_column =" > dbSNP.config
 
     mv dbSNP.config dbsnp/hg38/
 
-    rm list_files appo primary_chromosomes.txt ucsc_primary_chromosomes.txt
+    rm -f list_files appo primary_chromosomes.txt ucsc_primary_chromosomes.txt
     fi
 fi
 fi  # End of hg38 build check

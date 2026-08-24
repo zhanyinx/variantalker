@@ -134,7 +134,7 @@ if(!is.null(variants_somatic)){
 # Whole exome sequencing
 
 The whole exome sequencing data have been processed using Illumina DRAGEN Bio-IT Platform (v.4.2.4). 
-The variants have been annotated and prioritized using [variantalker](https://github.com/zhanyinx/variantalker) v1.4
+The variants have been annotated and prioritized using [variantalker](https://github.com/zhanyinx/variantalker)
 
 The analysed samples are:
 
@@ -327,4 +327,4 @@ Germline:
 
 The variants shown here pass the following list of filters: `r params$annotation_filters`. 
 
-For more info on filters, please have a look [here](https://github.com/zhanyinx/variantalker/tree/dev#output)
+For more info on how these filters are applied, see the pipeline's [filter documentation](https://github.com/zhanyinx/variantalker#default-filters), which describes the current version of the pipeline; the filters applied to this report are the ones listed above.

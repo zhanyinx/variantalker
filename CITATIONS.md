@@ -1,4 +1,8 @@
-# nf-core/variantalker: Citations
+# variantalker: Citations
+
+variantalker is built on the nf-core pipeline template but is not an nf-core
+pipeline; it is developed at <https://github.com/zhanyinx/variantalker>. The
+framework it inherits from is credited below.
 
 ## [nf-core](https://pubmed.ncbi.nlm.nih.gov/32055031/)
 

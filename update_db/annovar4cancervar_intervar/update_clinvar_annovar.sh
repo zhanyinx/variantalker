@@ -5,6 +5,17 @@
 ## This software is distributed without any guarantee under the terms of the GNU General
 ## Public License, either Version 2, June 1991 or Version 3, June 2007.
 
+# Defence in depth, not the authority: the Python caller validates the tables this script
+# produces before it lets either the annotation script or the config start naming them, and that
+# is what decides whether an update is adopted. What this adds is that the script stops at the
+# first real failure instead of grinding on and leaving something that looks plausible.
+#
+# `pipefail` is the half that matters, and `set -e` alone would not have caught the failure this
+# was added for. Both `date=` assignments below take their value from a pipeline, and a
+# pipeline's status is its LAST command's -- so when `zcat` fails on a truncated or absent
+# download, `tr` still succeeds, the assignment succeeds, `$date` is empty, and the script
+# carries on to build `clinvar_hg38_.vcf`. `pipefail` is what surfaces `zcat`'s failure.
+set -eo pipefail
 
 function usage {
     echo -e "usage : update_clinvar_annovar.sh -v VT -o OUTPUT -n name [-h]"
@@ -62,20 +73,22 @@ do
     esac
 done
 
+# These three refusals used to be a bare `exit`, which exits with the status of the last command
+# run -- an `echo` -- so the script reported SUCCESS for having declined to do anything at all.
 if [ $# -lt 6 ]
 then
     usage
-    exit
+    exit 1
 fi
 
 if ! [ -d "$vt" ]; then
     echo "$vt folder does not exist!"
-    exit
+    exit 1
 fi
 
 if ! [ -d "$output" ]; then
     echo "$output folder does not exist! if this is expected, make it first: mkdir -p $output"
-    exit
+    exit 1
 fi
 
 

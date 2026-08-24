@@ -13,7 +13,7 @@ prototype rendered wrongly before the dev chose against it:
   reading as a fourth PP3/BP4 surface after issue #201 refused RENOVO one.
 
 ``tests/test_clinical_badges.py`` holds the other half — that the badge it replaced is drawn
-nowhere. ``docs/wayfinder/issue-204/README.md`` records what each guard here was mutated into.
+nowhere. Issue #204's notes record what each guard here was mutated into.
 """
 
 from __future__ import annotations

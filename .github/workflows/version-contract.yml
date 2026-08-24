@@ -1,0 +1,125 @@
+# Drift guard for the pipeline's version identity.
+#
+# Issue #375, on map #371. `nextflow.config`'s `manifest.version` read the same value at the
+# public `v1.0` release in March 2023 and at public HEAD today, through `v1.1`, `v1.2`, `v1.3`,
+# `v1.4` and `v1.5` — every published release announced itself as the first one, and no test,
+# workflow, review or reader ever failed because of it. Correcting the string without this
+# job reproduces exactly that, one release later.
+#
+# The manifest is its own source of truth: unlike MAFigate, which derives every stamped
+# version from `APP_VERSION` through one reader (#260), there is nothing behind the pipeline's
+# number to compare it *to*. So this guard holds it against the three things that can disagree
+# with it, and `tools/tests/test_version_contract.py` holds all three against trees and tags
+# that must be refused:
+#
+# * **A pushed tag names some other version.** `variantalker-v` + `manifest.version`, exact
+#   string (#372, #374). Fires on tag push only, which is the one moment a human types a
+#   version out.
+#
+# * **The tree sits on a version that has already been released.** Set membership, not
+#   ordering: red when a `variantalker-v<manifest.version>` tag already exists and does not
+#   point at this very commit. This is the assertion that would have fired on every pull
+#   request for two years, and the reason the release act has to end with a bump.
+#
+# * **A second place states a pipeline version.** #373 measured that no document in this tree
+#   states one independently — this keeps that true, which is worth more than it sounds: the
+#   number is read in exactly one place in the codebase (`NfcoreTemplate.version()`), so a
+#   version written anywhere else is a claim nothing can keep honest.
+#
+# Which of three renderings this reads, since one number has three (#373): the raw
+# `manifest.version` string. `NfcoreTemplate.version()` prepends `v` and appends `-g<sha>` when
+# `workflow.commitId` is set, so the banner shows a derived form — derived, not stated, and the
+# sweep is what keeps it that way.
+#
+# **Not in the export gate**, deliberately (#375's ruling). `.github/` is not in
+# `.publicignore`, so this workflow travels with the public export's squash commit and runs on
+# the public repository against the same manifest, exported verbatim. A version check inside
+# the export would compare the same string to the same rule a second time.
+#
+# Nothing here builds or publishes anything. #374 ruled the pipeline's release is a manual
+# export, so this workflow only ever refuses.
+
+name: version contract
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: the version identity holds
+    runs-on: ubuntu-latest
+    steps:
+      # Full history and tags, both required rather than incidental: the already-released
+      # check reads `git tag`, and on a shallow clone with no tags fetched it would pass over
+      # an empty set — the vacuous-guard shape this repository has been bitten by before. The
+      # test asserts the clone is not shallow rather than trusting this line to stay here.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # PyYAML because the module reads this workflow to extract the tag step below and run
+      # it; no pandas, nothing from streamlit_app/requirements.txt. Same interpreter the four
+      # sibling contract jobs ask for.
+      - name: Install the test dependencies
+        run: python -m pip install --upgrade pip pytest pyyaml
+
+      - name: The pipeline's version identity holds
+        run: python -m pytest tools/tests -v
+
+  tag:
+    name: the tag agrees with manifest.version
+    # `on: push` fires for every tag, `mafigate-v*` included, and that tag says nothing about
+    # the pipeline's manifest. Gated on the namespace #374 fixed so the two products' release
+    # tags cannot fail each other.
+    if: startsWith(github.ref, 'refs/tags/variantalker-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Written over $PUSHED_TAG rather than ${{ github.ref_name }} so
+      # tools/tests/test_version_contract.py can run this exact script against the tags it has
+      # to refuse — the discipline mafigate-release.yml's version job follows, and for the same
+      # reason: a check asserted by grepping this file for `exit 1` would pass on an inverted
+      # comparison.
+      - name: Check the pushed tag against manifest.version
+        env:
+          PUSHED_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          version="$(python3 tools/manifest_version.py)"
+          tag="$(python3 tools/manifest_version.py --tag)"
+
+          # Exact, with no suffix allowance. mafigate-release.yml accepts `<tag>-<suffix>` as a
+          # rehearsal because it *builds* two installers and a rehearsal is how you find out
+          # whether they build. Nothing is built here, so there is nothing to rehearse, and a
+          # suffix would only be a way to tag a tree whose manifest disagrees.
+          if [ "${PUSHED_TAG}" != "${tag}" ]; then
+            echo "::error::${PUSHED_TAG} does not name this tree's version. manifest.version is ${version}, so the release tag is ${tag}. A tag naming any other version would point external users, who pin by revision, at a pipeline that announces a different number than the one they asked for."
+            exit 1
+          fi
+
+          echo "${PUSHED_TAG} names manifest.version ${version}"
+
+          {
+            echo "### variantalker ${version}"
+            echo ""
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| tag | \`${PUSHED_TAG}\` |"
+            echo "| manifest.version | \`${version}\` |"
+            echo "| commit | \`$(git rev-parse HEAD)\` |"
+          } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"

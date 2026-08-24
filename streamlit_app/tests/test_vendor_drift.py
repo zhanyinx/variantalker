@@ -160,7 +160,7 @@ def test_cancervar_markers_is_byte_identical_to_the_pipeline_copy():
 
     Not merely tidiness. A MAF's `Therap_list` / `Diag_list` / `Prog_list` cell holds
     **0-based line offsets** into this file — `CancerVar.py:193` reads it with
-    `list(csv.reader(...))`, header included, and `:1090` indexes straight into that
+    `list(csv.reader(...))`, header included, and `:1091` indexes straight into that
     list. So a copy of a different vintage does not fail to resolve: every index after
     an inserted row resolves to the *neighbouring* marker, and the app names a drug the
     file never associated with the variant. There is no cosmetic edit to a data file,

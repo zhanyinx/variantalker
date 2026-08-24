@@ -177,7 +177,7 @@ SWEPT_LITERALS = {
 }
 
 #: The one excluded tree, as a ``git ls-files`` path prefix, and the only exclusion any
-#: sweep here takes. ``docs/wayfinder/`` is the measurement record of the effort itself —
+#: sweep here takes. That tree is the measurement record of the effort itself —
 #: reports written *to* the private tracker, quoting a ticket's acceptance criteria as the
 #: subject of the work rather than as an instruction to a user. Nothing in it is packaged
 #: or rendered. It is also stripped by the public export, so in a public clone this prefix

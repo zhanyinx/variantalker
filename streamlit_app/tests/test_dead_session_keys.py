@@ -55,7 +55,17 @@ APP_ROOT = Path(__file__).resolve().parent.parent
 #: and is guarded against drift by ``test_vendor_drift.py`` — editing it to satisfy this file
 #: would break that one. ``tests/`` drives session state with fakes, where a key written by no
 #: app module is the normal case.
-SKIP_DIRS = {"vendor", "tests", "__pycache__", "parity"}
+#:
+#: ``.venv`` and ``site-packages`` are here because ``./setup.sh`` builds its virtual
+#: environment *inside the checkout* (``MAFIGATE_VENV`` in ``mafigate_python.sh``), which is
+#: the route the README documents and the one a new collaborator takes. Without them this walk
+#: parses Streamlit's own source and reports ``_state``, ``query_params`` and
+#: ``register_widget`` — keys Streamlit writes through machinery no ``st.session_state[...]``
+#: assignment in this tree could ever satisfy — so ``make test`` was red for every developer
+#: who followed the instructions, and green only for one who had installed some other way
+#: (issue #334). Both names are listed: ``.venv`` is the directory this repo builds, and
+#: ``site-packages`` catches an environment kept under any other name.
+SKIP_DIRS = {"vendor", "tests", "__pycache__", "parity", ".venv", "site-packages"}
 
 #: Mapping methods reached *on* ``st.session_state`` itself, so ``st.session_state.get`` is not
 #: mistaken for a read of a key called ``get``. A session key sharing one of these names would

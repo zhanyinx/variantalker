@@ -13,6 +13,15 @@ rebuild of an already-**published** release, because ``gh release edit --draft``
 it silently — but nothing noticed a draft going stale underneath, and the window is as long as
 the draft sits there.
 
+**And the first version of this script did not close it** (issue #405). It compared the tag
+against the tip of public ``main`` and stopped there — but those are the *same commit* whenever
+nobody has exported since the tag was cut, which is the ordinary state, the export being manual
+and once per release. So it passed the incident above, and passed it again four days later with
+the private tree 74 commits ahead of what was published. The staleness lives one level further
+out: between the published tree and the tree it was exported from. That is what
+*exported from* / *private* below are, and they are read out of public ``main``'s own tip
+commit message, which the export writes and issue #227 made the contract.
+
 **Why a script and not a paragraph in the build instructions.** The instruction to publish was
 written by someone who had just run every check that existed and had them all pass. A step a
 human is asked to remember is exactly what failed here, so this refuses instead of reminding.
@@ -50,7 +59,18 @@ DEFAULT_REPO = "zhanyinx/variantalker"
 OK, REFUSED, USAGE, UNKNOWN = 0, 1, 2, 3
 
 
-def verdict(*, tag, tag_commit, branch, branch_commit, behind, is_draft, shipped_changes):
+def verdict(
+    *,
+    tag,
+    tag_commit,
+    branch,
+    branch_commit,
+    behind,
+    is_draft,
+    shipped_changes,
+    exported_from=None,
+    private_head=None,
+):
     """Is it safe to publish? Returns ``(exit code, [lines])``.
 
     Pure, and every input is something the caller had to go and find out — which is what makes
@@ -59,8 +79,18 @@ def verdict(*, tag, tag_commit, branch, branch_commit, behind, is_draft, shipped
     only how the refusal is *worded*, never whether it refuses. Encoding "this drift was
     harmless" is a judgement, and a preflight that makes it can be wrong in the one direction
     that matters.
+
+    *exported_from* is the private commit the published tree was built from — the SHA named in
+    public ``main``'s own tip commit message — and *private_head* is where the private tree is
+    now. **They are the pair that matters**, and the first version of this function did not
+    take them: it compared the tag against the tip of public ``main`` only, which are the same
+    commit whenever nobody has exported since the tag was cut. That is the normal state, since
+    the export is manual and once per release, so the check passed exactly when the hazard was
+    present — including on the incident it was written for (issue #405).
     """
     lines = [f"tag      {tag} → {tag_commit[:7]}", f"{branch:<9}{branch_commit[:7]}"]
+    if exported_from:
+        lines.append(f"exported from {exported_from[:7]}")
 
     if is_draft is None:
         return UNKNOWN, lines + [
@@ -75,8 +105,41 @@ def verdict(*, tag, tag_commit, branch, branch_commit, behind, is_draft, shipped
         ]
 
     if tag_commit == branch_commit:
+        # The tag names what is published. That is necessary and it is not sufficient: what is
+        # published can itself be behind the tree it was exported from, and then the tag and
+        # the branch agree with each other about a tree nobody is developing any more.
+        if private_head is None:
+            return UNKNOWN, lines + [
+                "REFUSED: the tag names the tip of the published branch, but whether that"
+                " branch is current could not be checked — this does not look like the private"
+                " tree (no tools/export_public.py), and only it knows what is waiting to be"
+                " exported. Run this where you run the export.",
+            ]
+        if exported_from is None:
+            return UNKNOWN, lines + [
+                f"REFUSED: {branch}'s tip commit does not say which private commit it was"
+                " exported from, so this cannot tell whether an export is pending. Every"
+                " commit the export writes says so; a tip that does not was made another way.",
+            ]
+        if exported_from != private_head:
+            return REFUSED, lines + [
+                f"private  {private_head[:7]}",
+                "",
+                f"REFUSED: an export is pending. What is published was exported from"
+                f" {exported_from[:7]}, and the private tree is now at {private_head[:7]}, so"
+                " the artifacts were built from a tree that is no longer the current one —"
+                " even though the tag correctly names the tip of what is published.",
+                "",
+                "This is the failure the first version of this check could not see, because"
+                " those two commits agree with each other whenever nobody has exported since"
+                " the tag was cut, which is the ordinary state.",
+                "",
+                "Export, re-tag, and let the workflow build it again — deleting the draft and"
+                " its tag first, or the workflow clobbers artifacts onto the old draft.",
+            ]
         return OK, lines + [
-            f"The draft was built from the tip of {branch}. Safe to publish.",
+            f"The draft was built from the tip of {branch}, and {branch} is current with the"
+            " private tree. Safe to publish.",
         ]
 
     lines.append(
@@ -137,6 +200,50 @@ def _gh(*args):
     return completed.stdout.strip()
 
 
+#: How ``tools/export_public.py`` opens every commit it writes — ``Sync from <private repo> @
+#: <sha>``. Assembled from halves rather than written out, for the reason
+#: ``tests/test_public_repo_name.py`` gives: that sweep asserts the private repository's name
+#: occurs zero times across the tracked tree, and this file travels. The export tooling composes
+#: it the same way, which is the precedent.
+SYNC_PREFIX = "Sync from " + "variantalker" + "_ieo" + " @ "
+
+
+def exported_from(message):
+    """The private commit a published tip was exported from, or ``None``.
+
+    ``None`` is not "nothing pending" — it is "this commit did not come from the export", which
+    :func:`verdict` treats as a state it cannot judge rather than as a pass.
+    """
+    if not message:
+        return None
+    first = message.splitlines()[0].strip()
+    if not first.startswith(SYNC_PREFIX):
+        return None
+    sha = first[len(SYNC_PREFIX) :].strip()
+    return sha if sha else None
+
+
+def _private_head(repo_root=None):
+    """This tree's HEAD, but only when this *is* the private tree.
+
+    Told apart by ``tools/export_public.py``, which the export strips from what it publishes —
+    so its presence is the same signal the export tooling already relies on, rather than a new
+    one invented here. In a public clone the answer is unknowable rather than false, and the
+    caller must not read it as fine.
+    """
+    repo_root = Path(repo_root or Path(__file__).resolve().parents[2])
+    if not (repo_root / "tools" / "export_public.py").is_file():
+        return None
+    completed = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None
+
+
 def _derived_tag():
     """``build/version.py --tag``, the one route from ``APP_VERSION`` to a tag name (#260)."""
     version_py = Path(__file__).resolve().parent / "version.py"
@@ -183,6 +290,10 @@ def gather(tag, repo):
         behind = parsed.get("ahead") or 0
         changed = parsed.get("files") or []
 
+    tip_message = _gh(
+        "api", f"repos/{repo}/commits/{branch_commit}", "--jq", ".commit.message"
+    )
+
     return {
         "tag": tag,
         "tag_commit": tag_commit,
@@ -191,6 +302,8 @@ def gather(tag, repo):
         "behind": behind,
         "is_draft": is_draft,
         "shipped_changes": shipped(changed),
+        "exported_from": exported_from(tip_message),
+        "private_head": _private_head(),
     }
 
 

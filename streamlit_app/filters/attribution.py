@@ -21,9 +21,9 @@ would mean recomputing the clauses here, which is the re-implementation
 divergences in, the largest worth 540 rows.
 
 **The cost of that shape is parity, not memory**, which is worth recording because the
-ticket priced it the other way round. Measured over 161 real MAFs
-(``docs/wayfinder/issue-147/measure147.py``), the per-clause masks are **0.26%** of the
-frame typically and **3.6%** worst case — against a frame :func:`~filters.variant_filters.
+ticket priced it the other way round. Measured over 161 real MAFs while resolving issue #147,
+the per-clause masks are **0.26%** of the frame typically and **3.6%** worst case — against a
+frame :func:`~filters.variant_filters.
 _label`'s ``assign`` already duplicates in full on every run.
 
 So this module asks the shipped filter instead. Every claim it makes is

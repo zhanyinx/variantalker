@@ -4,14 +4,14 @@ The tree's record of which releases have actually been **published** — not whi
 be built, and not which ones are drafted. One line per release, newest first.
 
 This file exists because a promise in the README is only true once a download exists, and
-something checkable had to answer *does it?*. Issue #264 re-keyed that switch onto this
+something checkable had to answer *does it?*. Issue 264 re-keyed that switch onto this
 file: the guard in `tests/test_delivery_channels_copy.py` reads the entries below, and while
 there are none the README may not link to a release artifact and must say the installers are
 not available yet. Adding an entry here flips it, in both directions.
 
 Before this, the switch keyed on whether a release workflow existed in `.github/workflows`.
 That is a **capability**, not an event, and it was wrong by exactly the window between the
-workflow landing (#264) and the first release being cut (#265): the workflow's own arrival
+workflow landing (issue 264) and the first release being cut (issue 265): the workflow's own arrival
 would have made the guard skip — not fail, *skip* — leaving both wrong states unguarded in
 the one window where a README could link to a 404. A record of the event cannot be wrong
 that way. The cost is that the record is written by hand, which is the same cost every
@@ -21,7 +21,7 @@ other prose guard in this suite carries.
 
 **No release has been published yet.** The workflow that builds the installers exists
 (`.github/workflows/mafigate-release.yml`) and drafts a release on a `mafigate-v*` tag, but a
-draft is not a download. Issue #265 cuts the first one.
+draft is not a download. Issue 265 cuts the first one.
 
 That sentence is load-bearing: the guard demands the ledger say one of its two states out
 loud, so a file that lost its entries — or never grew any — cannot read as *not published
@@ -46,16 +46,25 @@ yet* by accident. Delete the sentence when the first entry lands.
 
 ## What to do when you publish one
 
-1. `cd streamlit_app && make release-tag` — that is the tag, derived from `APP_VERSION`.
-2. Push it. The workflow builds the DMG on macOS and the installer on Windows, from the one
-   commit the tag names, and attaches both to a draft release.
+First the tag. `cd streamlit_app && make release-tag` prints it, derived from `APP_VERSION`;
+push it, and the workflow builds the DMG on macOS and the installer on Windows from the one
+commit the tag names, attaching both to a **draft** release.
+
+Then these six steps — the same six, in the same order and under the same numbers, as
+`build/BUILD_INSTRUCTIONS.md` lists under *Cutting a release*. They are deliberately
+parallel, so that a step remembered by its number from one page is that step on the other.
+That page carries the detail; if the two ever disagree, it is the one to trust.
+
+1. Watch the run. `gh run watch <id> --exit-status`, or the Actions tab.
+2. Check the draft. Both files attached, both named from `<version>`, and the notes naming
+   the commit and each file's sha256.
 3. Read the release page. Its copy is `build/RELEASE_PAGE.md` and the workflow has already
-   assembled it into the draft (issue #265) — you read it here, you do not write it here.
+   assembled it into the draft (issue 265) — you read it here, you do not write it here.
 4. **`make release-preflight`.** It refuses a draft built from a tree the repository has since
    moved on from. This step is not a formality: `mafigate-v1.0.0` was drafted from the tip of
    `main`, sat while twenty-two commits landed, and came within one click of publishing a known
-   wrong-variant bug under the fixed version's number (#328). Nothing about the draft showed it.
-5. Publish it.
+   wrong-variant bug under the fixed version's number (issue 328). Nothing about the draft showed it.
+5. Publish it. CI never does — it drafts and stops, so a human decides when a download exists.
 6. Add the line here, and update the channel table in `streamlit_app/README.md` — the guard
    will hold you to it, and until step 5 it holds you to the opposite.
 

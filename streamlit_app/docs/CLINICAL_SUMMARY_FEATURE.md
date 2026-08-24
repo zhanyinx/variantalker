@@ -31,13 +31,13 @@ Below the ladder, ordered by the term table's own "clinical relevance for filter
 And, outside the hierarchy because it is not a classification:
 
 - **🔍 No Clinical Data** - **no source annotated this variant at all.** Said of nothing else.
-  Until issue #98 it was also said of a variant whose annotation the app could not read,
+  Until issue 98 it was also said of a variant whose annotation the app could not read,
   which is a different thing and false of it — that case is now item 13.
 
 A low-penetrance class ranks directly below its full-penetrance counterpart: the term table
 calls both "keep, but flag separately" and warns they must not be read as equivalent.
 
-**The glyph is the class, in both clinical columns** (issue #104). `Pathogenicity_Overview`
+**The glyph is the class, in both clinical columns** (issue 104). `Pathogenicity_Overview`
 draws these same glyphs, one per annotation source, so 🔵 means Benign whether it is read in
 a summary label or at a position in the circle strip. Three pairs share a glyph, and the
 words are what tell them apart: each low-penetrance class draws its full-penetrance
@@ -52,7 +52,7 @@ The clinical summary reads five annotation columns. **No source outranks another
 is the strongest class *any* of them asserts, which is what the Logic section below describes.
 This list used to be introduced as "in order of priority", and there was never a priority —
 `generate_clinical_summary` carried a 1-to-5 number per column that nothing read, deleted at
-issue #108. The order below is the pipeline's, and it is presentation only.
+issue 108. The order below is the pipeline's, and it is presentation only.
 
 One consequence worth stating: because the strongest class wins, reading one more source can
 only move a label *up* the ladder or leave it, never down.
@@ -107,7 +107,7 @@ only move a label *up* the ladder or leave it, never down.
    `CLINICAL_VALUE_MAPPING` is the only copy, and the copy that used to sit here had drifted
    from it. `tests/test_clinical_summary.py` holds the six against RENOVO's score order.
 
-   Until issue #108 this section described a mapping that decided nothing on any real file:
+   Until issue 108 this section described a mapping that decided nothing on any real file:
    the function read `filter_renovo`, a filter *parameter* name, so RENOVO reached this column
    on no row ever rendered.
 
@@ -117,7 +117,7 @@ only move a label *up* the ladder or leave it, never down.
    from their own scale in `_CIVIC_LEVEL_CLASSES` rather than through `CLINICAL_VALUE_MAPPING`.
    **No level maps to a benign class**: `A` → Pathogenic, `B` → Likely Pathogenic, and `C`, `D`
    and `E` all → Uncertain Significance, because `E` means the only evidence is indirect, which
-   is an absence of strong evidence rather than a benign call (issue #109).
+   is an absence of strong evidence rather than a benign call (issue 109).
 
    This section said `E` → Benign until then, and kept saying it for one commit after the code
    changed — the copy that is now a pointer rather than a transcription, as above.
@@ -133,10 +133,10 @@ only move a label *up* the ladder or leave it, never down.
 The annotation workflow runs `bin/generate_clinical_summary.py` as a process of its own and
 writes its verdict into the MAF as `variantalker_naive`. That column survives filtering, so it
 is in every filtered frame beside `Clinical_Summary`. The two are the same question asked twice,
-and from issue #108 they agree: `tests/test_clinical_summary.py` compares them row for row on
+and from issue 108 they agree: `tests/test_clinical_summary.py` compares them row for row on
 the committed germline reference.
 
-**The report shows one of them** (issue #117). Measured over 176 annotated real MAFs, the two
+**The report shows one of them** (issue 117). Measured over 176 annotated real MAFs, the two
 hold identical words on every somatic row and on 51 of the 52 germline files that carry both;
 the one file where they part had its column written before the pipeline read RENOVO, so there
 the app is the current reading. `config.columns.PIPELINE_COLUMNS_THE_APP_REPLACES` therefore
@@ -144,10 +144,10 @@ leaves the pipeline's copy out of the default view — the grid's *Show all colu
 it, the column reference still describes it, and the row-for-row comparison still reads it.
 
 Two differences are deliberate. The pipeline pools ClinVar's non-standard terms into two buckets
-where the app gives them six classes from the institute's term table (issue #98); and CIViC's
+where the app gives them six classes from the institute's term table (issue 98); and CIViC's
 level `E` reads as Uncertain Significance here where the pipeline reads it as Benign, because a
 level meaning *the only evidence is indirect* is an absence of strong evidence rather than a
-benign call (issue #109). The first is excluded from the row-for-row comparison explicitly; the
+benign call (issue 109). The first is excluded from the row-for-row comparison explicitly; the
 second no committed fixture can show, neither reference MAF carrying a CIViC column.
 
 ### Benefits

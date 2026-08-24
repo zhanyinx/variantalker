@@ -13,7 +13,16 @@ load-bearing:
   one cannot leave a row behind that reads as coverage;
 * the instrument is one of the four the rule allows;
 * the table's ``needs bin/`` column agrees with what the module actually does, read off its
-  own ``skipif`` reasons.
+  own ``skipif`` reasons;
+* the one exemption to the first of those — the modules the public export strips, which
+  this table names and a published clone does not have — is itself checked rather than
+  taken on trust, wherever there is a tree that can check it.
+
+That last bullet is issue #348, and the failure it fixes was in the *published* repository
+rather than this one: a row for a stripped module read to this file as a deleted one, so a
+clone of what we publish failed two of its own tests. The fix is not a softer first bullet.
+A row for a deleted file really is coverage that is not there, and that assertion keeps its
+teeth for every module but the named few — which have to go on proving they are stripped.
 
 That last one is the one with teeth, and issue #24 is why. A module-level
 ``skipif(not PIPELINE_AVAILABLE)`` silently removed the entire parity suite from every
@@ -32,9 +41,47 @@ import pytest
 
 TESTS_DIR = Path(__file__).resolve().parent
 README = TESTS_DIR / "README.md"
+REPO_ROOT = TESTS_DIR.parents[1]
+DENY_LIST = REPO_ROOT / ".publicignore"
 
 #: The four instruments.
 INSTRUMENTS = {"harness", "net", "unit", "guard"}
+
+#: The modules this table names that a **published** clone does not have, **by name**.
+#:
+#: This table travels and the one-way public export does not carry everything the table
+#: names, so in an exported tree a row here points at a file that is not on disk. Before
+#: issue #348 that made the published repository's own ``make test`` red — two failures,
+#: 2942 passing — which is the first thing a contributor checks and the worst possible
+#: first impression. The guard was *right*: a row for an absent module really is coverage
+#: that is not there. So the answer is not to soften it into silence but to teach it the
+#: one shape of absence that is deliberate, and to keep it strict about every other.
+#:
+#: Named rather than derived — the same argument as
+#: :data:`MODULES_ALLOWED_TO_NEED_THE_PIPELINE` above it, and for the same reason: an
+#: exemption a module could infer from how it is filed is an exemption every module can
+#: take. Adding a name here is a deliberate act and should be argued for in the commit
+#: that does it.
+#:
+#: An exemption granted on trust is the vacuous guard this suite keeps finding, so this
+#: one is **checked wherever it can be**:
+#:
+#: * in this repository, where ``.publicignore`` is present,
+#:   :func:`test_every_declared_exemption_is_real` requires each name below to be matched
+#:   by a real deny-list rule *and* to exist on disk. So the exemption goes red the moment
+#:   it stops being true in either direction — the deny-list stops naming the module, or
+#:   the module is simply deleted and the row left behind, which is the failure the whole
+#:   check exists for;
+#: * in an exported tree, where ``.publicignore`` is itself stripped, the absence cannot
+#:   be re-derived from anything that travels, so exactly these names may be missing and
+#:   nothing else can be.
+#:
+#: One name. ``test_public_export.py`` is the export's own proof: it performs real exports
+#: from a private checkout, reading the export script and ``.publicignore``, both
+#: of which the deny-list also strips. It cannot travel, and its own docstring says so.
+MODULES_STRIPPED_FROM_THE_PUBLIC_TREE = {
+    "test_public_export.py",
+}
 
 #: The modules allowed to need the pipeline, **by name**. Named rather than derived from
 #: the instrument, so that no module can exempt itself by how it is filed — the first
@@ -206,7 +253,14 @@ def test_the_readme_table_is_readable_at_all():
 
 
 def test_every_module_has_a_home_and_every_home_has_a_module():
-    """No test file without an instrument; no instrument without a test file."""
+    """No test file without an instrument; no instrument without a test file.
+
+    With one exemption in the second direction, for the modules the public export
+    deliberately does not carry: see :data:`MODULES_STRIPPED_FROM_THE_PUBLIC_TREE`, and
+    :func:`test_every_declared_exemption_is_real` for what stops it becoming a hiding
+    place. The exemption is subtracted rather than added — a row that is *not* on the
+    list and *not* on disk still fails, which is every ordinary deleted file.
+    """
     on_disk = _modules_on_disk()
     listed = set(TABLE)
 
@@ -216,10 +270,90 @@ def test_every_module_has_a_home_and_every_home_has_a_module():
         "compares against it live), net (has a counterpart, asserted without bin/), unit "
         "(no counterpart), guard (a copy held against its source) — and add the row."
     )
-    assert not (listed - on_disk), (
-        f"tests/README.md names modules that do not exist: {sorted(listed - on_disk)}. A "
-        "row for a deleted file reads as coverage that is not there."
+    missing = listed - on_disk - MODULES_STRIPPED_FROM_THE_PUBLIC_TREE
+    assert not missing, (
+        f"tests/README.md names modules that do not exist: {sorted(missing)}. A row for a "
+        "deleted file reads as coverage that is not there. If the module is absent because "
+        "the public export strips it, name it in MODULES_STRIPPED_FROM_THE_PUBLIC_TREE — "
+        "which then has to prove the strip is real."
     )
+
+
+def _deny_list_rules() -> list[str]:
+    """``.publicignore``'s rules — its non-comment, non-blank lines."""
+    return [
+        line.strip()
+        for line in DENY_LIST.read_text().splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
+
+
+def _is_denied(rules: list[str], path: str) -> bool:
+    """Whether some rule in ``rules`` covers ``path``, relative to the repository root.
+
+    Deliberately the *narrow* half of ``.publicignore``'s stated grammar — a rule ending
+    in ``/`` strips that directory and everything under it, any other rule names one exact
+    file — and not an import of the real matcher, because the real matcher lives in
+    the export script, which the deny-list also strips. A check that has to hold
+    in the exported tree cannot import something the exported tree does not have.
+
+    That makes this a copy, which the house rule in ``README.md`` forbids where the
+    original is reachable. It is tolerable only because the copy is doing strictly less:
+    it answers "does a rule name this path" and never decides what to strip. The full
+    grammar, and the claim that every rule still matches something tracked, stay with
+    ``test_public_export.py`` — which reads the real matcher, in the tree that has it.
+    """
+    return any(
+        path == rule.lstrip("/")
+        if not rule.endswith("/")
+        else path.startswith(rule.lstrip("/"))
+        for rule in rules
+    )
+
+
+def test_every_declared_exemption_is_real():
+    """An exemption that cannot go red is not an exemption, it is a hole.
+
+    :data:`MODULES_STRIPPED_FROM_THE_PUBLIC_TREE` lets a row name a module that is not on
+    disk, which is precisely the thing the sibling check above exists to refuse. So in the
+    one tree that can tell — this one, the private checkout, which is also the only tree
+    anyone edits — the exemption has to earn itself in both directions:
+
+    * the deny-list really does name the module. A name left here after the rule went away
+      would exempt a module nothing strips, and the row would then be false in the public
+      tree as well as here;
+    * the module really is on disk. This is the direction that matters most, because it is
+      the ordinary failure the whole check protects: someone deletes the test, leaves the
+      row, and the exemption quietly absorbs it as though it had been stripped.
+
+    In an exported tree neither can be asked — ``.publicignore`` is stripped along with
+    the module — so this skips there rather than passing vacuously.
+    """
+    if not DENY_LIST.exists():
+        pytest.skip(
+            "no .publicignore in this tree: it is stripped along with the modules it "
+            "names, so the strip cannot be re-derived here"
+        )
+
+    rules = _deny_list_rules()
+    assert rules, (
+        f"{DENY_LIST} parsed to no rules at all, so both assertions below would be "
+        "quantified over nothing and pass whatever the exemption said."
+    )
+
+    for module in sorted(MODULES_STRIPPED_FROM_THE_PUBLIC_TREE):
+        tracked_path = f"streamlit_app/tests/{module}"
+        assert _is_denied(rules, tracked_path), (
+            f"{module} is named in MODULES_STRIPPED_FROM_THE_PUBLIC_TREE, but no "
+            f".publicignore rule covers {tracked_path}. Either the rule was renamed — in "
+            "which case the module is travelling under a new name and the deny-list is "
+            "the thing to fix — or the exemption has outlived it and should go."
+        )
+        assert (TESTS_DIR / module).exists(), (
+            f"{module} is exempted as stripped-by-the-export, but it does not exist in "
+            "this tree either. An exemption is not a way to retire a module: delete the "
+            "row in tests/README.md, the .publicignore rule and this name together."
+        )
 
 
 @pytest.mark.parametrize("module", sorted(TABLE))
@@ -244,6 +378,14 @@ def test_the_needs_bin_column_matches_what_the_module_does(module):
     assert declared in {"yes", "no"}, (
         f"{module}: the 'needs bin/' cell reads {declared!r}, not 'yes' or 'no'"
     )
+
+    # The cell is still checked for legality above, because that is a claim about the
+    # table and the table travels. What cannot be checked is the half read off the
+    # module's own source, there being no source here to read: in an exported tree this
+    # parametrisation used to raise an uncaught FileNotFoundError (issue #348).
+    if not (TESTS_DIR / module).exists():
+        assert module in MODULES_STRIPPED_FROM_THE_PUBLIC_TREE  # the check above
+        pytest.skip(f"{module} is not in this tree — the public export strips it")
 
     actual = _is_pipeline_gated(module)
     assert actual == (declared == "yes"), (

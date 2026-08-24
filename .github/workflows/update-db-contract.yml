@@ -1,0 +1,87 @@
+# Contract guard for the annotation-database update tooling.
+#
+# Five properties of `update_db/`, every one of which can be checked with no network, no Docker and
+# no emulated image — which is what makes them a guard rather than a documented procedure:
+#
+# * `tests/test_failure_contract.py` — the shared failure-contract primitives (issue #360): a
+#   staged database is inspected before anything destructive runs, every verdict is derived from
+#   that inspection rather than from reaching a line of code, and the run exits non-zero if any
+#   step failed. The defect behind all of it: a failed ClinVar update replaced both the somatic
+#   and the germline database with an empty directory and logged `SUCCESS` at exit 0 (#339).
+#
+# * `tests/test_funcotator_route.py` — the Funcotator steps under that contract (issue #353),
+#   measured against a POPULATED database rather than an empty one: a failed step leaves both the
+#   somatic and germline databases byte-identical, and a `--build hg38` run leaves hg19
+#   byte-identical. Empty fixtures are how this survived — with nothing installed, the run that
+#   destroys everything and the run that works look the same. Uses `bash` and `gzip`, which every
+#   runner that can host this job has.
+#
+# * `tests/test_annovar_contract.py` — the same contract on the Annovar route (issue #354), where
+#   the risk is a different one. That route cannot destroy a database: the build is a filename
+#   prefix and the version is part of the name, so every write lands on a new file. What it can do
+#   is move the two names that put a database into use — the annotation script's `-protocol` list
+#   and the config's `database_names` line — to a table that was never written, or fail to move
+#   them while reporting that it did, or move one without the other.
+#
+# * `tests/test_shell_interpreters.py` — no script that requires bash is invoked through `sh`.
+#   Every `.sh` file under `update_db/` declares bash; the tooling runs inside an Ubuntu image
+#   where `/bin/sh` is dash, so handing one to `sh` kills it on a syntax error. **This half is
+#   static on purpose.** macOS `/bin/sh` is GNU bash 3.2 and accepts the bashisms at issue, so
+#   the bug class is invisible on a developer's machine and manifests only in the container;
+#   checking it statically runs everywhere, including the machines where it cannot be reproduced.
+#
+# * `tests/test_platform_support.py` — the manual route is Linux-only, and `update_db/README.md`
+#   says so with numbers that stay true (issue #370). macOS `zcat` is the `compress`-era tool and
+#   cannot open a `.gz` at all; `sed -i EXPR` is a BSD/GNU split that exits 1 and changes nothing.
+#   Those were ruled **won't-fix** — the databases need at least 500 GB, so a laptop is out on disk
+#   whatever its userland does — which makes the README's declaration the deliverable, and a README
+#   sentence with a count in it is exactly what rots. Static, like the interpreter half above, and
+#   for the same reason: the defect is invisible on Linux, where all these spellings work.
+#
+# **Why this cannot be folded into an existing job.** There is no root `Makefile`. `make test`
+# exists only inside `streamlit_app/`, where both the target and `streamlit_app/pytest.ini` name
+# an explicit `tests/` path — so it cannot collect `update_db/tests/` no matter what, and neither
+# can the three sibling workflows, every one of which runs named files from
+# `working-directory: streamlit_app`. This job runs from the repository **root** instead.
+#
+# **What it costs.** `pytest pandas` and nothing else, which is the set the sibling guards already
+# install; `update_db/scripts/utils_update.py` also imports `bs4` and `requests`, which are
+# declared as dependencies nowhere in this repository, so the suite stubs them and the stubs raise
+# if a code path under test ever reaches them. Around a second, no network.
+#
+# **There is no longer a known-failing test here, and that is recent.**
+# `test_no_update_db_script_is_invoked_through_sh` shipped from #360 as a strict `xfail` naming
+# seven call sites that hand a bash script to a POSIX shell — deliberately ahead of the fix, because
+# swapping the interpreter on its own was measured to make the ClinVar failure *subtler* rather than
+# absent. So each site changed together with its route's validation: #353 took the four Funcotator
+# ones, #354 the three Annovar ones. **Both have landed, the marker is deleted, and this guard is
+# now simply green.** If it ever fails again, a new `sh` call site has appeared.
+
+name: update_db contract
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  update-db-contract:
+    name: no update_db run reports success for work that did not happen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Deliberately narrow, and unpinned, in the style of `vendor-drift.yml`: kept to the two
+      # packages the suite genuinely needs so that nobody is tempted to skip it.
+      - name: Install the test dependencies
+        run: python -m pip install --upgrade pip pytest pandas
+
+      # From the repository root, not from streamlit_app/ — see the note above.
+      - name: Run the update_db contract guards
+        run: python -m pytest update_db/tests -v

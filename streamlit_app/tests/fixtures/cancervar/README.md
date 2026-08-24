@@ -1,14 +1,14 @@
 # CancerVar evidence fixtures
 
-Two small MAFs carrying CancerVar's `CancerVar and Evidence` column, added by issue #189. Before
+Two small MAFs carrying CancerVar's `CancerVar and Evidence` column, added by issue 189. Before
 them no fixture in `streamlit_app/tests/` carried a CancerVar evidence string at all, so every guard
 about the somatic CBP section would have had to hand-build the column name — and the column name is
 one of the things that can go wrong.
 
 ## What is real and what is not
 
-The **evidence strings are real**, byte for byte, lifted from somatic MAFs on the dev machine via
-`docs/wayfinder/issue-188/cbp_shapes.json`. Everything else is synthetic: the gene symbols are
+The **evidence strings are real**, byte for byte, lifted from somatic MAFs on the dev machine and
+recorded in the private notes for issue 188. Everything else is synthetic: the gene symbols are
 real gene names but the positions are round numbers, the read counts are invented, and no sample
 barcode, patient identifier or original filename appears anywhere. An evidence string is twelve
 small integers and a tier — it carries no patient data — which is why it can be checked in while
@@ -30,13 +30,13 @@ column *name* and every *value*. It sits on an interior column in both files so 
 whitespace-trimming tool can quietly repair it.
 
 The second file also has **no `CancerVar` column**, which is the state **15 of the 109** real files
-carrying an evidence vector are in (16 of 124 when #189 counted; issue #210 re-read the corpus with
+carrying an evidence vector are in (16 of 124 when issue 189 counted; issue 210 re-read the corpus with
 the repo's own fixtures excluded from it — including this directory, whose `test_sample.maf` sibling
 had been counted as a real file). On those files the tier exists only inside the evidence string,
-which is what `render_cbp_evidence` badges and what issue #189 reworded `_classification_absences`
+which is what `render_cbp_evidence` badges and what issue 189 reworded `_classification_absences`
 to point at rather than deny.
 
-Issue #210 grew that file by two rows, because the state it was built for is not the only one a
+Issue 210 grew that file by two rows, because the state it was built for is not the only one a
 file with no `CancerVar` column reaches — and on the other one the caption above the section was
 **false**. See the row list below.
 
@@ -44,7 +44,7 @@ file with no `CancerVar` column reaches — and on the other one the caption abo
 
 `somatic_cancervar_evidence.maf`, in order:
 
-1. **PRDM16** — the single commonest vector in the corpus (15,313 of 114,053 rows in #185): in
+1. **PRDM16** — the single commonest vector in the corpus (15,313 of 114,053 rows in issue 185): in
    COSMIC and ICGC, in a cancer gene, and ClinVar calls it benign. The row that proves a
    positive-only table would be wrong.
 2. **SNRNP200** — all twelve zero, the section's empty state (7.4% of real rows).
@@ -57,13 +57,13 @@ file with no `CancerVar` column reaches — and on the other one the caption abo
    for it rather than badging a tier with no evidence behind it, and here the guideline row still
    shows the tier from the `CancerVar` column — because *this file has one*.
 
-   Issue #210 found that the 73 real cells in this state **do not**: they are all in one file
+   Issue 210 found that the 73 real cells in this state **do not**: they are all in one file
    with no `CancerVar` column, so on the real rows the tier is drawn nowhere at all, which is a
    different state from the one this row models. The real one is row 3 of the dotted file below.
    The state this row models — the column present *and* the cell unparseable — has **0 rows in
    the corpus**, which is worth keeping and worth knowing.
 8. **BRAF** — both columns present, both cells `.`. The variant-level absence, and rarer than
-   #187 recorded: **1 row of the 107,296 carrying `CancerVar`, and 0 of the 211,634 carrying
+   issue 187 recorded: **1 row of the 107,296 carrying `CancerVar`, and 0 of the 211,634 carrying
    `InterVar`**.
 
 `somatic_cancervar_dotted_no_column.maf`, in order — no `CancerVar` column on any of them:
@@ -72,13 +72,13 @@ file with no `CancerVar` column reaches — and on the other one the caption abo
    points at it.
 2. **PIK3CA** — a genuine Tier I from the string alone.
 3. **KRAS** — a tier and a sum with **no vector**, on a file with no `CancerVar` column: the
-   73-row state exactly, and the one the caption used to lie about. Added by issue #210.
+   73-row state exactly, and the one the caption used to lie about. Added by issue 210.
 4. **EGFR** — evidence cell `.`, on a file with no `CancerVar` column. **0 real rows** are in this
    state, but the branch is reachable and its sentence has to be true, so it is pinned. Added by
-   issue #210.
+   issue 210.
 5. **BRAF** — a vector summing to **zero** with a real tier printed beside it
    (`0#Tier_IV_benign`), and no `CancerVar` column: **2,115 real rows in 13 files**. Added by issue
-   #210 because a mutation survived without it — reading the verdict from the parsed *sum* instead
+   210 because a mutation survived without it — reading the verdict from the parsed *sum* instead
    of the *tier* passes every other guard here, and `0 or ""` is `""`, so a drawn Tier IV would be
    captioned as no tier at all.
 

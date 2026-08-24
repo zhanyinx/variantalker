@@ -426,7 +426,7 @@ def _dmg_copy_list(dmg: str) -> tuple[list[str], str]:
     stays falsifiable.
 
     This script is read by two other places for their own purposes: ``test_vendor_drift.py``
-    wants the names alone, and ``tools/export_public.py`` scans the copy list for offenders.
+    wants the names alone, and the public export scans the copy list for offenders.
     Each keeps its own reading and its own anchor assertion, and this one needs a shape
     neither has — the destination as well as the names, since where the config lands is the
     question. A shared parser returning the union of three shapes would be the abstraction

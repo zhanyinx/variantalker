@@ -81,7 +81,7 @@ GENES_SOMATIC_MIXED_CASE = [
 
 BLANKS = ("", ".")
 
-#: The one provenance value ``tools/export_public.py`` accepts for a MAF. Spelled out here
+#: The one provenance value the public export accepts for a MAF. Spelled out here
 #: rather than imported, and so is the copy in each generator: the export tool sits outside
 #: the app's import path, and a constant that travels by copy is what makes a disagreement
 #: between them fail the export loudly instead of passing something through.
@@ -305,7 +305,7 @@ def test_the_gene_lists_carry_over_verbatim(name, expected):
 
 @pytest.mark.parametrize("name", FIXTURES)
 def test_the_manifest_records_provenance_and_the_committed_bytes(name):
-    """What ``tools/export_public.py`` refuses an export without.
+    """What the public export refuses an export without.
 
     Content patterns provably cannot separate a constructed MAF from a real one — five of
     the seven files this set replaced passed every one of them while carrying real calls —
@@ -329,7 +329,7 @@ def test_the_manifest_names_every_row(name):
     a line**, and this set carries ``#`` inside cell values on purpose — CancerVar writes
     its tier into the evidence string as ``-2#Tier_IV_benign``. Three rows lost their
     ``Otherinfo`` and the manifest recorded ``"nan"`` for them, while every other test
-    stayed green. ``docs/wayfinder/issue-187`` had already recorded the same option
+    stayed green. Issue #187 had already recorded the same option
     truncating ``CancerVar`` to ``1``.
     """
     manifest = json.loads((FIXTURE_DIR / "MANIFEST.json").read_text())

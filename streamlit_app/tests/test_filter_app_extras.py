@@ -163,7 +163,7 @@ def test_the_layer_composes_on_top_of_the_pipeline_verdict(arm, request):
     115 of the 136 disputed reference rows in the report — the union re-admits them through
     pathogenic rescue — while masking the union with no exemption drops a genuinely
     pathogenic low-penetrance allele along with the polymorphisms. Only the equation tells
-    those three apart. The reference measurement is in ``docs/wayfinder/issue-37/``.
+    those three apart. The reference measurement is issue #37's.
     """
     maf = request.getfixturevalue(arm)
     threshold = 0.01

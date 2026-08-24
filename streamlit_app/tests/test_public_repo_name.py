@@ -19,8 +19,9 @@ The claim here is a **zero**, over ``git ls-files`` rather than a walk of the fi
 that untracked scratch files and the ignored trees cannot fail it and — more importantly — so
 that a file cannot escape the sweep by being new.
 
-**One exclusion, and only one:** ``docs/wayfinder/``. That tree is the measurement record of
-the effort itself: reports written *to* the private tracker, quoting its issue numbers as the
+**One exclusion, and only one:** the private notes tree, spelled once as ``EXCLUDED_PREFIX``
+below rather than named here. That tree is the measurement record of the effort
+itself: reports written *to* the private tracker, quoting its issue numbers as the
 subject of the work rather than as a citation inside shipped code. Nothing in it is packaged,
 rendered, or read by a user. No other exemption exists — in particular there is no test-tree
 exemption, though 30 of the 51 provenance links sat in test and fixture READMEs no user reads.
@@ -150,7 +151,7 @@ def test_the_sweep_reads_a_real_tree(swept):
 def test_the_matcher_can_actually_find_the_literal(tmp_path):
     """And the other half of the vacuity check: that ``_hits`` reports a hit it is shown.
 
-    Asserted against a fabricated file rather than against ``docs/wayfinder/`` — where the
+    Asserted against a fabricated file rather than against the excluded tree — where the
     literal genuinely occurs hundreds of times — so that this stays true if that tree is
     ever rewritten too, and so that the machinery is proved by something this test controls.
     """
