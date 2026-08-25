@@ -63,19 +63,22 @@ casts a wide net and keeps uncertain calls for review; Stringent keeps a short l
 
 ## How to get it
 
-Two routes, and right now they are not equivalent: **clone + `setup.sh` works today**, and
-the desktop installers are still being built. The table below is the canonical statement of
-what each route asks of you and what happens to your file on it — everything else on this
-page, and elsewhere in the repo, points here rather than repeating it.
+Two routes, and both work today: a **desktop installer** for macOS and Windows, and
+**clone + `setup.sh`**. The table below is the canonical statement of what each route asks of
+you and what happens to your file on it — everything else on this page, and elsewhere in the
+repo, points here rather than repeating it.
+
+You will need an annotated MAF from the pipeline either way: MAFigate reads variant files and
+does not produce them, and it ships with no example one.
 
 |  | **Clone + `setup.sh`** | **Desktop installers** (`.dmg`, `.exe`) |
 | --- | --- | --- |
-| **Status** | **Works today.** The route described below, and the only one there is at the moment. | **Not built yet** — coming with the first `mafigate-v1.0.0` release. There is nothing to download until then, and no release page to send you to. |
+| **Status** | **Works today.** The route described below. | **Works today.** [Download the `.dmg` or the `.exe`](https://github.com/zhanyinx/variantalker/releases/latest) — both are built by CI from one commit, and the release page states what your machine needs before you spend the download. |
 | **Who it is for** | Collaborators on **Linux**, and anyone extending the code. Linux is not a fallback here: neither installer will target it, so this is the Linux route for good. | Everyone else — clinicians and the molecular tumour board, readers of the paper, and collaborators on macOS or Windows who would rather not open a terminal. Either way you will need an annotated MAF from the pipeline before there is anything to look at. |
 | **What you get** | The full app, with no reduction — and the source, which is the other reason to choose this route. | The full app, with no reduction. The same code, packaged. |
-| **What you need** | `git`, a `python3`, and a POSIX shell. Linux and macOS have all three; Windows only through a bash (Git Bash or WSL). Internet once, while `setup.sh` fills the virtual environment it builds inside the checkout — your own Python is used to build it and is not otherwise touched. | Nothing, once they ship: each brings its own Python — both the same pinned release. Internet once, on first launch, while it builds its environment. |
-| **Where your file goes** | **Your MAF: nowhere — nothing leaves your machine.** It is read from your own disk, and MAFigate makes no network request of its own — the ClinVar and gnomAD links in the variant view open in your browser, they are not lookups the app performs. Streamlit's own anonymous usage reporting is off as well: the `.streamlit/config.toml` this repo ships sits beside the app, where every launch route resolves it. | Will be identical to the clone route: the same code, reading your file on your own machine, with the same config carried into the bundle. |
-| **When it goes wrong** | A `python3` that cannot build a virtual environment: Debian and Ubuntu ship that separately, as `python3-venv`, and `setup.sh` stops and names it. Little else — both scripts install into and launch from that one environment, so `pip` and `streamlit` resolving to different interpreters, which used to start the app with pieces missing rather than failing outright, cannot happen. | Unsigned artifacts will be blocked on first open until you allow them, and no internet on first launch means the install completes but the app does not start. |
+| **What you need** | `git`, a `python3`, and a POSIX shell. Linux and macOS have all three; Windows only through a bash (Git Bash or WSL). Internet once, while `setup.sh` fills the virtual environment it builds inside the checkout — your own Python is used to build it and is not otherwise touched. | Nothing: each brings its own Python, both the same pinned release. Internet once, on first launch, while it builds its environment. |
+| **Where your file goes** | **Your MAF: nowhere — nothing leaves your machine.** It is read from your own disk, and MAFigate makes no network request of its own — the ClinVar and gnomAD links in the variant view open in your browser, they are not lookups the app performs. Streamlit's own anonymous usage reporting is off as well: the `.streamlit/config.toml` this repo ships sits beside the app, where every launch route resolves it. | Identical to the clone route: the same code, reading your file on your own machine, with the same config carried into the bundle — verified in the built artifact, not assumed. |
+| **When it goes wrong** | A `python3` that cannot build a virtual environment: Debian and Ubuntu ship that separately, as `python3-venv`, and `setup.sh` stops and names it. Little else — both scripts install into and launch from that one environment, so `pip` and `streamlit` resolving to different interpreters, which used to start the app with pieces missing rather than failing outright, cannot happen. | Neither artifact is signed, so both are blocked on first open until you allow them; no internet on first launch means the install completes but the app does not start; and a MAF larger than about a tenth of your free memory stops the app with no message. The release page covers all three. |
 
 ### Clone and run it
 

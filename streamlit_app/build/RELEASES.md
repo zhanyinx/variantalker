@@ -19,13 +19,43 @@ other prose guard in this suite carries.
 
 ## Releases
 
-**No release has been published yet.** The workflow that builds the installers exists
-(`.github/workflows/mafigate-release.yml`) and drafts a release on a `mafigate-v*` tag, but a
-draft is not a download. Issue 265 cuts the first one.
+- mafigate-v1.0.0 — published 2026-08-25 — commit b086d27
 
-That sentence is load-bearing: the guard demands the ledger say one of its two states out
-loud, so a file that lost its entries — or never grew any — cannot read as *not published
-yet* by accident. Delete the sentence when the first entry lands.
+     The first MAFigate release. The commit is the public repository's, which is what the
+     tag names and what the release page prints; the private tree it was exported from is
+     recorded in that commit's own message.
+
+     Three rehearsal tags were needed to get a build at all, each finding a defect no test
+     here could see, because all three lived in files no Python imports and one of them only
+     existed for a compiler: a check that passed and exited non-zero anyway, a `LicenseFile`
+     two levels up where the licence is three, and `{userprofile}`, which Inno Setup does not
+     define. Each is guarded now. See `BUILD_INSTRUCTIONS.md` on rehearsing, and rehearse.
+
+     It was cut four times, and the reason is the more useful thing recorded on this line.
+     Every draft after the first was replaced because the tree moved on underneath it while
+     the draft sat there naming its own commit correctly and reading exactly as a fresh one
+     reads — first under twenty-two commits including the fix for a dialog that opened the
+     *wrong variant*, then under seventy-four more. `make release-preflight` exists because
+     of the first of those, and step 4 is not optional.
+
+     It did not catch the second. The check compared the tag against the tip of what is
+     published, and those are the same commit whenever nobody has exported since the tag was
+     cut — the ordinary state. Issue 405 moved it one level out, onto the private commit the
+     published tree says it was exported from. A release cut from a tree with a pending
+     export is now refused.
+
+     And publishing was not the end of it: this tag went live twice. The first publish,
+     2026-08-24, lasted under an hour — the first external mac users hit a second launch
+     that died, because the venv had pinned the bundled interpreter at the ephemeral path
+     the app held on first launch, and an app that had moved left that pin dangling
+     (issue 411). Every rehearsal, human and scripted alike, had only ever exercised first
+     launches — and first launches all work. Every download of the retracted build was a
+     test download, so the release was re-drafted, the tag deleted, and the number reused
+     rather than bumped (issue 415). The relaunch is guarded twice now: the
+     launcher-contract workflow runs the launcher's venv mechanism against a moved
+     interpreter on every push (issue 414), and the release route gained a manual
+     move-then-relaunch rehearsal step — launch, quit, move the `.app` by hand, launch
+     again (issue 418).
 
 <!-- One list item per published release, newest first, in this form:
 
