@@ -162,18 +162,26 @@ The image's `WORKDIR` is `/workspace`, so this drops you straight into the mount
 ```bash
 docker run --rm \
   -v $(pwd):/workspace \
-  -v /path/to/funcotator_somatic:/somatic_db \
-  -v /path/to/funcotator_germline:/germline_db \
+  -v /path/to/hg38/funcotator_somatic:/somatic_db \
+  -v /path/to/hg38/funcotator_germline:/germline_db \
   -v /path/to/backup:/backup \
   yinxiu/variantalker_db:latest \
   bash -c "cd /workspace && python3 update_db/scripts/update_funcotator.py \
     -sd /somatic_db \
     -gd /germline_db \
-    -b /backup"
+    -b /backup \
+    --build hg38"
 ```
 
-`update_funcotator.py` also accepts `--build hg19`, `--build hg38` or `--build both` (default
-`both`); append it to the `python3` line to restrict the update to one genome build.
+**One run updates one genome build, and `--build` has to name it.** The bind mounts are that
+build's data-source directories — the pipeline keeps a separate Funcotator pair per build
+(`<database_dir>/<build>/funcotator_dataSources.v1.8.2024{s,g}`) — so update the other build by
+running the same command again with the hg19 directories mounted and `--build hg19`.
+
+`--build` still accepts `both`, and `both` is still its default, so a command that omits the flag
+asks for a build whose databases are not in the mounted tree. That default is wrong rather than
+merely unhelpful; it is filed as issue 424, and until it moves, leaving `--build` off is a mistake
+the script will not report.
 
 ### Run Annovar update
 ```bash
@@ -282,14 +290,15 @@ singularity shell \
 ```bash
 singularity exec \
   --bind $(pwd):/workspace \
-  --bind /path/to/funcotator_somatic:/somatic_db \
-  --bind /path/to/funcotator_germline:/germline_db \
+  --bind /path/to/hg38/funcotator_somatic:/somatic_db \
+  --bind /path/to/hg38/funcotator_germline:/germline_db \
   --bind /path/to/backup:/backup \
   variantalker_db.sif \
   bash -c "cd /workspace && python3 update_db/scripts/update_funcotator.py \
     -sd /somatic_db \
     -gd /germline_db \
-    -b /backup"
+    -b /backup \
+    --build hg38"
 ```
 
 ### Run Annovar update
@@ -359,14 +368,15 @@ docker pull yinxiu/variantalker_db:latest
 # Run Funcotator update
 docker run --rm \
   -v $(pwd):/workspace \
-  -v /path/to/funcotator_somatic:/somatic_db \
-  -v /path/to/funcotator_germline:/germline_db \
+  -v /path/to/hg38/funcotator_somatic:/somatic_db \
+  -v /path/to/hg38/funcotator_germline:/germline_db \
   -v /path/to/backup:/backup \
   yinxiu/variantalker_db:latest \
   bash -c "cd /workspace && python3 update_db/scripts/update_funcotator.py \
     -sd /somatic_db \
     -gd /germline_db \
-    -b /backup"
+    -b /backup \
+    --build hg38"
 
 # Run Annovar update
 docker run --rm \
@@ -394,14 +404,15 @@ singularity pull variantalker_db.sif docker://yinxiu/variantalker_db:latest
 # Run Funcotator update
 singularity exec \
   --bind $(pwd):/workspace \
-  --bind /path/to/funcotator_somatic:/somatic_db \
-  --bind /path/to/funcotator_germline:/germline_db \
+  --bind /path/to/hg38/funcotator_somatic:/somatic_db \
+  --bind /path/to/hg38/funcotator_germline:/germline_db \
   --bind /path/to/backup:/backup \
   variantalker_db.sif \
   bash -c "cd /workspace && python3 update_db/scripts/update_funcotator.py \
     -sd /somatic_db \
     -gd /germline_db \
-    -b /backup"
+    -b /backup \
+    --build hg38"
 
 # Run Annovar update
 singularity exec \

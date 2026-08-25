@@ -259,27 +259,33 @@ Both commands below are run from the `update_db` directory the clone step left y
 
 Funcotator update
 
-```bash
-# Update all databases for both genome builds (default)
-python3 scripts/update_funcotator.py \
-  -sd /path/to/funcotator_dataSources.v1.7.20200521s \
-  -gd /path/to/funcotator_dataSources.v1.7.20200521g \
-  -b /path/to/backup
+**One run updates one genome build.** That is a property of the data sources, not a limitation
+of the script: the pipeline keeps a separate Funcotator data-source directory per build —
+`<database_dir>/<build>/funcotator_dataSources.v1.8.2024s` and its germline twin, the layout the
+root README's database table describes — so `-sd` and `-gd` always name *one* build's
+directories. Update the other build by running the command again against that build's own pair.
 
-# Update only hg38 databases
+```bash
+# hg38: this build's own data-source directories, and --build naming it
 python3 scripts/update_funcotator.py \
-  -sd /path/to/funcotator_dataSources.v1.7.20200521s \
-  -gd /path/to/funcotator_dataSources.v1.7.20200521g \
+  -sd /path/to/hg38/funcotator_dataSources.v1.8.2024s \
+  -gd /path/to/hg38/funcotator_dataSources.v1.8.2024g \
   -b /path/to/backup \
   --build hg38
 
-# Update only hg19 databases
+# hg19: a second run, against the hg19 copies
 python3 scripts/update_funcotator.py \
-  -sd /path/to/funcotator_dataSources.v1.7.20200521s \
-  -gd /path/to/funcotator_dataSources.v1.7.20200521g \
+  -sd /path/to/hg19/funcotator_dataSources.v1.8.2024s \
+  -gd /path/to/hg19/funcotator_dataSources.v1.8.2024g \
   -b /path/to/backup \
   --build hg19
 ```
+
+**Pass `--build` every time.** The option still accepts `both`, and `both` is still its default,
+so a command that omits it asks for something this layout cannot give: the run would look for the
+other build's databases inside the directories of the build you pointed it at. The default is
+wrong rather than merely unhelpful and is filed as issue 424; until it moves, `--build` is
+effectively required even though argument parsing does not say so.
 
 `-b/--backup` is not optional in practice: its default is a directory on the
 institutional cluster that will not exist on your machine, and the script creates the

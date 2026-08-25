@@ -4,11 +4,12 @@ Every release of **variantalker**, the Nextflow pipeline in this repository — 
 one section per version, saying what changed under that number.
 
 This file exists because the pipeline prints a version number on the first screen of every
-run and there was no written account of it anywhere. A reader who saw `1.2.0` had no way to
-learn what it succeeded, what moved, or whether the number meant anything at all — and the
-honest answer, for the two releases before it, was that it did not: `manifest.version` read
-`1.0.0` at both of them, so neither number ever reached the software that carried it. A
-number nobody can account for is worse than no number, and this is the account.
+run and there was no written account of it anywhere. A reader who saw a number on that banner
+had no way to learn what it succeeded, what moved, or whether it meant anything at all — and
+for the two releases of the old shared line the honest answer was that it did not:
+`manifest.version` read the same string at both of them, so neither bare number ever reached
+the software that carried it. A number nobody can account for is worse than no number, and
+this is the account.
 
 It lives **in the tree** rather than only on a release page so that it travels: a clone reads
 its own history without needing a web page, and there is one text to keep true instead of two
@@ -45,23 +46,33 @@ releases never carried: the manifest read `1.0.0` at both. Re-labelling them as 
 releases is precisely the ambiguity this file was written to end, so the shape is left visible
 instead of tidied away.
 
-Pipeline releases from `1.2.0` onward name the pipeline in their own tag; the shared line
-stops at `1.1`.
+The pipeline's own line starts at `1.0.0` and names the pipeline in its own tag; the shared
+line stops at `1.1`. **The two lines therefore both contain a `1.0`, and that is deliberate.**
+The dev's call, taken when the first pipeline release was cut: this release is the version the
+manuscript describes, so it is the pipeline's `1.0.0` rather than a continuation of a numbering
+the pipeline never really had. The namespaces keep the two apart where it matters — the shared
+line's tags were bare (`v1.0`, `v1.1`, since deleted), this line's are `variantalker-v1.0.0` —
+so nothing collides, and the earlier entries stay below as history under their own numbers. An
+earlier draft of this file argued the opposite, that re-using `1.0` would assert a pipeline
+version those releases never carried. That reasoning is recorded here rather than deleted,
+because it is the honest account of what was weighed: the ambiguity is real, and it was
+accepted knowingly in exchange for a first release whose number means something to a reader of
+the paper.
 
 ## Versions
 
-### 1.2.0 — unreleased
+### 1.0.0 — 2026-08-25
 
-The first release cut as the pipeline's own, rather than as half of the shared line. The
-number is a minor step from `1.1`.
+The first release cut as the pipeline's own, rather than as half of the shared line, and the
+version the manuscript describes. The number restarts the count deliberately — see the note on
+the shared line above.
 
 **Read the scope of this entry before trusting it.** It is derived from the commit range since
 `1.1` — 32 commits touching the pipeline's own code between 2026-05-19 and 2026-08-21 — and
 every item below was checked against the tree rather than taken from a commit message. It is
 **not** the result of a compatibility audit: nothing here has been tested for whether it breaks
-an existing invocation, and the minor number reflects that absence of evidence rather than a
-finding of compatibility. Where a change alters behaviour for an unchanged command line, it
-says so.
+an existing invocation, and no part of the number should be read as a finding of compatibility.
+Where a change alters behaviour for an unchanged command line, it says so.
 
 #### New and changed parameters
 

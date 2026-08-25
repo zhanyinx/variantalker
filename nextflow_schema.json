@@ -127,13 +127,13 @@
                 "funcotator_germline_db": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Path to the folder containing funcotator germline databases. e.g. funcotator_dataSources.v1.7.20200521g",
+                    "description": "Path to the folder containing funcotator germline databases. e.g. funcotator_dataSources.v1.8.2024g",
                     "fa_icon": "fas fa-folder-anno-db"
                 },
                 "funcotator_somatic_db": {
                     "type": "string",
                     "format": "directory-path",
-                    "description": "Path to the folder containing funcotator somatic databases. e.g. funcotator_dataSources.v1.7.20200521s",
+                    "description": "Path to the folder containing funcotator somatic databases. e.g. funcotator_dataSources.v1.8.2024s",
                     "fa_icon": "fas fa-folder-anno-db"
                 },
                 "transcript_selection": {
