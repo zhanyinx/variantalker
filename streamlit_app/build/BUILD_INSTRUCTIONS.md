@@ -277,7 +277,7 @@ Both artifacts carry the build stamp described above, and a runner's checkout is
 a released app names the tag's commit with no `-dirty` suffix. The workflow does not write the stamp
 itself — the two build scripts do, which is why it does not have to (issue 263).
 
-Then these six steps. [RELEASES.md](RELEASES.md) repeats them in short form under *What to do
+Then these seven steps. [RELEASES.md](RELEASES.md) repeats them in short form under *What to do
 when you publish one*, deliberately under the same numbers — the detail is here, and step *n*
 there is step *n* here. Renumber one and renumber the other.
 
@@ -298,9 +298,19 @@ there is step *n* here. Renumber one and renumber the other.
    one click of publishing a known wrong-variant bug under the fixed version's number (issue 328).
    The draft says nothing about this. It names its commit correctly and reads exactly like a
    fresh one.
-5. Publish it. **CI never does this.** It drafts and stops, so a human decides when a download
+5. **Rehearse a second launch, on a real Mac** (issue 418). Download the DMG from the draft,
+   mount it, and move the app by hand — drag it to Applications, or an explicit `mv`. Do
+   **not** count on Gatekeeper translocation to be the move: it is version-sensitive and can
+   silently not happen, and a rehearsal that moved nothing passes vacuously. Launch the app,
+   quit it, move the `.app` somewhere else by hand, and launch it again. A first launch
+   proves almost nothing — every one of them ever tried worked, every preflight before the
+   first publish only ever exercised first launches, and what died in the field the day a
+   release went out was the second launch of an app that had moved (issue 411). The CI guard
+   (issue 414) runs the launcher's venv mechanism against a moved interpreter on every push;
+   this one human minute is the only thing that sees the real `.app`, really moved.
+6. Publish it. **CI never does this.** It drafts and stops, so a human decides when a download
    exists.
-6. Record it in [RELEASES.md](RELEASES.md), and update the channel table in
+7. Record it in [RELEASES.md](RELEASES.md), and update the channel table in
    `streamlit_app/README.md`. That ledger is what the README's installer copy is held against,
    in both directions: until you record the release, a guard refuses a README that links to a
    download; once you do, it refuses one that still calls the installers unavailable.
@@ -322,6 +332,10 @@ Worth running once on a rehearsal, because what it does when it *cannot* answer 
 worth seeing before you rely on it: with no `gh`, no network, or no such tag it exits **3**
 and says `This is not a pass: nothing was checked.` Exit `0` is the only pass, and the script
 is written so that "I could not check" can never be mistaken for "I checked".
+
+Step 5 rehearses identically — the pre-release draft's DMG is as real as the release's — and
+the rehearsal is the right place for its first walk: a moved-app relaunch that dies there
+costs a deleted draft, not a retraction.
 
 Rehearse in the **public** repository, where both runners are free. macOS runners bill at a
 multiplier on private repositories, which is also why a tag push is this workflow's only

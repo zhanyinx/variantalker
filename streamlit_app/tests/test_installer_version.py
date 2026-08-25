@@ -846,12 +846,55 @@ def test_no_build_file_spells_a_mafigate_version_out():
     )
 
 
+#: What opens a *full-line* comment in each kind of file the sweep reads, by suffix
+#: (files with no suffix — the Makefile, ``.gitignore`` — are ``#`` files too, matched
+#: by name below). A version literal on such a line cannot reach an artifact: no build
+#: reads it, and no worked example points a human at it. Markdown and the plist are
+#: deliberately absent — ``#`` in markdown is a heading, and prose read by humans is
+#: exactly where a stale copy does its damage — so in those files every line stays swept.
+FULL_LINE_COMMENT_MARKERS = {
+    ".yml": ("#",),
+    ".yaml": ("#",),
+    ".sh": ("#",),
+    ".py": ("#",),
+    ".env": ("#",),
+    ".swift": ("//",),
+    ".iss": (";",),
+    ".bat": ("rem ", "::"),
+}
+
+
+def _is_full_line_comment(path: Path, line: str) -> bool:
+    """Whether *line* is a comment from its first character, in *path*'s own syntax."""
+    if path.name in {"Makefile", ".gitignore"}:
+        markers = ("#",)
+    else:
+        markers = FULL_LINE_COMMENT_MARKERS.get(path.suffix, ())
+    stripped = line.lstrip().lower()
+    return any(stripped.startswith(marker) for marker in markers)
+
+
+def _todays_version_lines(path: Path, text: str) -> list[str]:
+    """The lines of *text* that repeat today's ``APP_VERSION`` outside a comment.
+
+    *path* is consulted for its name alone — which comment syntax applies — so the
+    vacuity check below can hold the exemption's boundary on planted lines without
+    writing files.
+    """
+    return [
+        line.strip()
+        for line in TAG_SHAPED.sub("", text).splitlines()
+        if re.search(rf"(?<!\d){re.escape(APP_VERSION)}(?!\d)", line)
+        and not _is_full_line_comment(path, line)
+    ]
+
+
 def test_no_build_file_repeats_todays_version():
     """The companion sweep, and it catches what the shape-based one cannot.
 
     :data:`VERSION_IN_PROSE` finds a version only next to the word *MAFigate*, so a bare
-    ``1.0.0`` in a build file — a worked example, a comment, a message — is invisible to it.
-    This one looks for today's ``APP_VERSION`` anywhere in those files instead.
+    ``1.0.0`` in a build file — a worked example, a message — is invisible to it. This one
+    looks for today's ``APP_VERSION`` anywhere in those files instead.
 
     The two are deliberately complementary rather than redundant. A sweep pinned to the
     current number goes blind the moment the number is bumped, which is why it is not the
@@ -860,24 +903,82 @@ def test_no_build_file_repeats_todays_version():
     whenever it is next read.
 
     Nothing else in these files is a dotted number equal to the app version — the bundled
-    Python is 3.11.x, the macOS deployment target 10.15 — so this needs no allow-list, and
-    an allow-list is what it must never grow: an exempted path is a copy with permission.
+    Python is 3.11.x, the macOS deployment target 10.15 — so this needs no allow-list of
+    *paths*, and that is what it must never grow: an exempted path is a copy with
+    permission. What issue #422 did exempt is a kind of **line**: a full-line comment, in
+    the file's own comment syntax. The launcher fix left the tree remembering which release
+    died — ``v1.0.0`` in ``launch.sh``'s and ``launcher-contract.yml``'s comments, naming
+    the failure those files exist to prevent — and rewriting that to ``<version>`` would
+    delete the one thing the sentence is for. It is the ``build/RELEASES.md`` reasoning one
+    level down: a record of history is not an instruction to a builder, and a comment is
+    the one shape of line no build and no worked example reads. Everything else still
+    fails: a literal in code, in markdown prose, or beside code on the same line — held so
+    by the planted sweep below.
     """
     offenders = {}
     for path in _build_and_docs_files():
-        text = TAG_SHAPED.sub("", path.read_text(encoding="utf-8", errors="replace"))
-        hits = [
-            line.strip()
-            for line in text.splitlines()
-            if re.search(rf"(?<!\d){re.escape(APP_VERSION)}(?!\d)", line)
-        ]
+        hits = _todays_version_lines(
+            path, path.read_text(encoding="utf-8", errors="replace")
+        )
         if hits:
             offenders[path.relative_to(REPO_ROOT).as_posix()] = hits
 
     assert not offenders, (
         f"a build file repeats {APP_VERSION}, which is today's APP_VERSION: {offenders}. "
-        "Derive it — `make version`, build/version.py — or write `<version>`."
+        "Derive it — `make version`, build/version.py — or write `<version>`. A record of "
+        "a past release may stay only as a full-line comment."
     )
+
+
+#: The exemption's boundary, driven from both sides. Left: lines the sweep must still
+#: fail on — assignments, values, a make variable, markdown (which has no comment to be
+#: in), and the mixed case, code with a trailing comment, because code with a comment on
+#: it is code. Right: the one exempt shape, a full-line comment, in every comment syntax
+#: the swept tree actually contains.
+PLANTED_VERSION_LINES = (
+    ("still_caught", "planted.sh", 'VERSION="{v}"'),
+    ("still_caught", "planted.sh", 'build_dmg "{v}"  # a worked example'),
+    ("still_caught", "planted.yml", "    version: {v}"),
+    ("still_caught", "Makefile", "VERSION ?= {v}"),
+    ("still_caught", "planted.md", "# MAFigate {v} release notes"),
+    ("still_caught", "planted.md", "run the {v} installer"),
+    ("still_caught", "planted.bat", "set MAFIGATE_VERSION={v}"),
+    ("exempt", "planted.sh", "# which is how v{v}'s second launch died"),
+    ("exempt", "planted.yml", "  # v{v} shipped without this"),
+    ("exempt", "planted.py", "# the v{v} incident"),
+    ("exempt", "planted.bat", "REM the v{v} installer did this"),
+    ("exempt", "planted.iss", "; the v{v} installer did this"),
+    ("exempt", "planted.swift", "// the v{v} launcher did this"),
+    ("exempt", "Makefile", "# the v{v} recipe was wrong"),
+)
+
+
+@pytest.mark.parametrize(
+    "expectation,name,template",
+    PLANTED_VERSION_LINES,
+    ids=[f"{case[0]}-{case[1]}-{index}" for index, case in enumerate(PLANTED_VERSION_LINES)],
+)
+def test_the_version_sweep_exempts_comments_and_nothing_else(expectation, name, template):
+    """Vacuity check for the sweep above: relaxed for comments, and only for comments.
+
+    A guard relaxed until it passes is this repository's recurring failure mode, so the
+    comment exemption is not taken on trust: every planted *code* line has to go on
+    failing, and only the full-line comment shape may be passed over. Driven through the
+    same helper the real sweep calls, so the two cannot drift apart.
+    """
+    line = template.format(v=APP_VERSION)
+    hits = _todays_version_lines(Path(name), line)
+
+    if expectation == "still_caught":
+        assert hits, (
+            f"the sweep no longer notices {line!r} in {name} — the comment exemption "
+            "has swallowed a line a build or a reader can still be pointed at"
+        )
+    else:
+        assert not hits, (
+            f"{line!r} in {name} is a full-line comment, the one shape that cannot "
+            "reach an artifact; the exemption is not being applied"
+        )
 
 
 def test_the_shipped_examples_carry_the_derived_version():

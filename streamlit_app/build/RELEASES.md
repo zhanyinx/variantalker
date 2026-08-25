@@ -50,7 +50,7 @@ First the tag. `cd streamlit_app && make release-tag` prints it, derived from `A
 push it, and the workflow builds the DMG on macOS and the installer on Windows from the one
 commit the tag names, attaching both to a **draft** release.
 
-Then these six steps — the same six, in the same order and under the same numbers, as
+Then these seven steps — the same seven, in the same order and under the same numbers, as
 `build/BUILD_INSTRUCTIONS.md` lists under *Cutting a release*. They are deliberately
 parallel, so that a step remembered by its number from one page is that step on the other.
 That page carries the detail; if the two ever disagree, it is the one to trust.
@@ -64,9 +64,13 @@ That page carries the detail; if the two ever disagree, it is the one to trust.
    moved on from. This step is not a formality: `mafigate-v1.0.0` was drafted from the tip of
    `main`, sat while twenty-two commits landed, and came within one click of publishing a known
    wrong-variant bug under the fixed version's number (issue 328). Nothing about the draft showed it.
-5. Publish it. CI never does — it drafts and stops, so a human decides when a download exists.
-6. Add the line here, and update the channel table in `streamlit_app/README.md` — the guard
-   will hold you to it, and until step 5 it holds you to the opposite.
+5. Rehearse a second launch on a real Mac: install the draft's DMG by moving the app — drag
+   to Applications or an explicit `mv`, never Gatekeeper translocation, which can silently
+   not happen — launch, quit, move the `.app` again by hand, and launch again. First
+   launches all pass; a moved app's second launch is what died in the field (issue 418).
+6. Publish it. CI never does — it drafts and stops, so a human decides when a download exists.
+7. Add the line here, and update the channel table in `streamlit_app/README.md` — the guard
+   will hold you to it, and until step 6 it holds you to the opposite.
 
 `build/BUILD_INSTRUCTIONS.md` has the rest of the release route, including how to rehearse
 the workflow on a throwaway pre-release tag without publishing anything.

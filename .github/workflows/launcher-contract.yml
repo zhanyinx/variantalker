@@ -1,0 +1,53 @@
+# Contract guard for the mac launcher's virtual environment.
+#
+# One subject: `streamlit_app/build/mac/MAFigate.app/Contents/MacOS/launch.sh` must
+# leave a working venv behind when the app's own path changes between launches.
+# v1.0.0 shipped without this: Gatekeeper translocation gives the app a fresh path
+# per launch, the venv's symlinks pinned the first launch's path, and the recreate
+# branch for a missing interpreter didn't clear the stale venv — so every second
+# launch on a mac died in ensurepip (issues #411, #412, #414).
+#
+# `tests/test_mac_launcher.py` drives the launcher's own `ensure_venv()` through the
+# `MAFIGATE_LAUNCH_LIB` sourcing seam, against a movable copy of the job's Python.
+# The guard itself needs nothing beyond the standard library; pandas is installed
+# only because `tests/__init__.py` — the package every test module loads through —
+# imports it unconditionally, the same reason vendor-drift.yml installs it. The
+# interpreter must come from actions/setup-python, not the image's /usr python:
+# the tests stage a movable copy of `sys.base_prefix`, which has to be a
+# self-contained tree, not the operating system's prefix.
+#
+# The matrix runs macos-latest because that is the platform the launcher actually
+# runs on (BSD userland included), and ubuntu-latest so the mechanism is guarded on
+# the cheap runner too. This is the narrowest member of the one-subject-one-workflow
+# fleet and must not grow into a general suite runner.
+
+name: launcher contract
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  launcher-contract:
+    name: a relaunch after the app moves still boots
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest (and the pandas the tests package imports)
+        run: python -m pip install --upgrade pip pytest pandas
+
+      - name: Run the launcher contract guard
+        working-directory: streamlit_app
+        run: python -m pytest tests/test_mac_launcher.py -v

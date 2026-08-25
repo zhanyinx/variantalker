@@ -12,6 +12,7 @@ RESOURCES_DIR="${BUNDLE_DIR}/Contents/Resources"
 APP_DIR="${RESOURCES_DIR}/streamlit_app"
 PYTHON_DIR="${RESOURCES_DIR}/python"
 VENV_DIR="${HOME}/.mafigate/venv"
+BASE_PYTHON_DIR="${HOME}/.mafigate/python"
 LOG_DIR="${HOME}/.mafigate/logs"
 REQUIREMENTS="${APP_DIR}/requirements.txt"
 PORT=8501
@@ -98,42 +99,114 @@ find_python() {
     return 1
 }
 
+# --- Keep a stable copy of the bundled interpreter ---
+# The .app's own path is ephemeral on macOS: Gatekeeper translocation, running
+# from the DMG, and a drag to /Applications all move the bundle between
+# launches, and a venv built straight from the bundle pins that path in its
+# symlinks and in pyvenv.cfg — which is how v1.0.0's second launch died. So
+# the bundled runtime is copied once to a path only this user's home controls,
+# and the venv is built from the copy. The copy is staged and moved into place
+# atomically, health-probed on every launch, and replaced from the bundle
+# (always present) whenever it is broken or belongs to a different build.
+ensure_stable_python() {
+    local bundle_python="$1"
+    local source_stamp="$2"
+    local bundle_root="${bundle_python%/bin/python3}"
+    local stamp_file="${BASE_PYTHON_DIR}/.source_stamp"
+
+    if [ -x "${BASE_PYTHON_DIR}/bin/python3" ] \
+        && "${BASE_PYTHON_DIR}/bin/python3" -c "import sys" >/dev/null 2>&1 \
+        && [ "$(cat "${stamp_file}" 2>/dev/null)" = "${source_stamp}" ]; then
+        return 0
+    fi
+
+    log "Copying the bundled Python runtime to ${BASE_PYTHON_DIR}..."
+    show_notification "Setting up the ${APP_NAME} runtime..."
+    # A leftover .tmp from an interrupted copy is deleted before the next one.
+    rm -rf "${BASE_PYTHON_DIR}" "${BASE_PYTHON_DIR}.tmp"
+    mkdir -p "${HOME}/.mafigate"
+    if ! cp -R "${bundle_root}" "${BASE_PYTHON_DIR}.tmp" >> "${LOG_FILE}" 2>&1; then
+        rm -rf "${BASE_PYTHON_DIR}.tmp"
+        show_error "Failed to copy the Python runtime.\n\nCheck the log file at:\n${LOG_FILE}"
+    fi
+    echo "${source_stamp}" > "${BASE_PYTHON_DIR}.tmp/.source_stamp"
+    mv "${BASE_PYTHON_DIR}.tmp" "${BASE_PYTHON_DIR}"
+}
+
+# --- Set up virtual environment ---
+# Recreate the venv when the interpreter's version OR architecture changes,
+# when the base interpreter it was built from moved, or when the existing venv
+# is broken. The architecture check matters because a venv left behind by a
+# different machine/arch (e.g. a synced home directory) points at an
+# interpreter that won't run here and would crash on launch.
+#
+# Every branch that decides to recreate clears the stale venv first: creating
+# a venv over a stale directory skips existing symlinks — dangling ones
+# included — and then dies executing them (the v1.0.0 second-launch failure).
+#
+# Reads ${PYTHON} (set by the caller from find_python) and the path constants
+# defined at the top of this file.
+ensure_venv() {
+    PYTHON_STAMP_FILE="${VENV_DIR}/.python_stamp"
+    local interpreter_stamp
+    interpreter_stamp=$("${PYTHON}" -c 'import sys, platform; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}-{platform.machine()}")')
+
+    # Build the venv from the stable copy whenever the interpreter came out of
+    # the bundle. A system Python does not move with the app and is used as-is.
+    local base_python="${PYTHON}"
+    case "${PYTHON}" in
+        "${BUNDLE_DIR}"/*)
+            ensure_stable_python "${PYTHON}" "${interpreter_stamp}"
+            base_python="${BASE_PYTHON_DIR}/bin/python3"
+            ;;
+    esac
+
+    # The stamp carries the base interpreter's path as well as its version and
+    # architecture, so every venv built before the stable copy existed
+    # (v1.0.0 stamps: version-arch only) mismatches and rebuilds whole.
+    CURRENT_STAMP="${interpreter_stamp}:${base_python}"
+
+    NEED_NEW_VENV=false
+    if [ ! -x "${VENV_DIR}/bin/python" ]; then
+        rm -rf "${VENV_DIR}"
+        NEED_NEW_VENV=true
+    elif [ ! -f "${PYTHON_STAMP_FILE}" ] || [ "$(cat "${PYTHON_STAMP_FILE}" 2>/dev/null)" != "${CURRENT_STAMP}" ]; then
+        log "Python interpreter changed, recreating virtual environment..."
+        rm -rf "${VENV_DIR}"
+        NEED_NEW_VENV=true
+    elif ! "${VENV_DIR}/bin/python" -c "import sys" >/dev/null 2>&1; then
+        log "Existing virtual environment is broken, recreating..."
+        rm -rf "${VENV_DIR}"
+        NEED_NEW_VENV=true
+    fi
+
+    if [ "${NEED_NEW_VENV}" = true ]; then
+        log "Creating virtual environment (first launch, please wait)..."
+        show_notification "Setting up ${APP_NAME} (first launch)..."
+        if ! "${base_python}" -m venv "${VENV_DIR}" >> "${LOG_FILE}" 2>&1; then
+            show_error "Failed to create the Python environment.\n\nCheck the log file at:\n${LOG_FILE}"
+        fi
+        echo "${CURRENT_STAMP}" > "${PYTHON_STAMP_FILE}"
+        # Fresh environment -> force a dependency (re)install below.
+        rm -f "${VENV_DIR}/.deps_installed"
+    fi
+}
+
+# --- Library seam ---
+# Sourcing this file with MAFIGATE_LAUNCH_LIB set loads the definitions above
+# and stops here, so the launcher's venv logic can be exercised directly
+# without booting the app. Everything below this line only runs when the
+# bundle executes the script for real.
+if [ -n "${MAFIGATE_LAUNCH_LIB:-}" ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
 PYTHON=$(find_python) || show_error "Python was not found in the application bundle or on the system.\n\nThis should not happen. Please reinstall MAFigate or contact support."
 
 log "Using Python: ${PYTHON}"
 log "Python version: $("${PYTHON}" --version 2>&1)"
 
-# --- Set up virtual environment ---
-# Recreate the venv when the interpreter's version OR architecture changes, or
-# when the existing venv is broken. The architecture check matters because a
-# venv left behind by a different machine/arch (e.g. a synced home directory)
-# points at an interpreter that won't run here and would crash on launch.
-PYTHON_STAMP_FILE="${VENV_DIR}/.python_stamp"
-CURRENT_STAMP=$("${PYTHON}" -c 'import sys, platform; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}-{platform.machine()}")')
-
-NEED_NEW_VENV=false
-if [ ! -x "${VENV_DIR}/bin/python" ]; then
-    NEED_NEW_VENV=true
-elif [ ! -f "${PYTHON_STAMP_FILE}" ] || [ "$(cat "${PYTHON_STAMP_FILE}" 2>/dev/null)" != "${CURRENT_STAMP}" ]; then
-    log "Python version/architecture changed, recreating virtual environment..."
-    rm -rf "${VENV_DIR}"
-    NEED_NEW_VENV=true
-elif ! "${VENV_DIR}/bin/python" -c "import sys" >/dev/null 2>&1; then
-    log "Existing virtual environment is broken, recreating..."
-    rm -rf "${VENV_DIR}"
-    NEED_NEW_VENV=true
-fi
-
-if [ "${NEED_NEW_VENV}" = true ]; then
-    log "Creating virtual environment (first launch, please wait)..."
-    show_notification "Setting up ${APP_NAME} (first launch)..."
-    if ! "${PYTHON}" -m venv "${VENV_DIR}" >> "${LOG_FILE}" 2>&1; then
-        show_error "Failed to create the Python environment.\n\nCheck the log file at:\n${LOG_FILE}"
-    fi
-    echo "${CURRENT_STAMP}" > "${PYTHON_STAMP_FILE}"
-    # Fresh environment -> force a dependency (re)install below.
-    rm -f "${VENV_DIR}/.deps_installed"
-fi
+ensure_venv
 
 VENV_PYTHON="${VENV_DIR}/bin/python"
 VENV_PIP="${VENV_DIR}/bin/pip"
