@@ -51,7 +51,8 @@ line stops at `1.1`. **The two lines therefore both contain a `1.0`, and that is
 The dev's call, taken when the first pipeline release was cut: this release is the version the
 manuscript describes, so it is the pipeline's `1.0.0` rather than a continuation of a numbering
 the pipeline never really had. The namespaces keep the two apart where it matters — the shared
-line's tags were bare (`v1.0`, `v1.1`, since deleted), this line's are `variantalker-v1.0.0` —
+line's tags were bare (`v1.0`, `v1.1`, since deleted), this line's carry a `variantalker-v`
+prefix —
 so nothing collides, and the earlier entries stay below as history under their own numbers. An
 earlier draft of this file argued the opposite, that re-using `1.0` would assert a pipeline
 version those releases never carried. That reasoning is recorded here rather than deleted,

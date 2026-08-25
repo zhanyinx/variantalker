@@ -315,6 +315,14 @@ there is step *n* here. Renumber one and renumber the other.
    in both directions: until you record the release, a guard refuses a README that links to a
    download; once you do, it refuses one that still calls the installers unavailable.
 
+   **Point that link at this release's tag, never at `/releases/latest`.** Two independent
+   release lines share the public repository — MAFigate's `mafigate-v*` and the pipeline's
+   `variantalker-v*` — so `/releases/latest` resolves to whichever was published most recently,
+   regardless of which product it belongs to. It was written as `/releases/latest` at the first
+   MAFigate release and pointed at the pipeline's release the same day, sending a clinician
+   following the download link to a page with no installers on it. The guard accepts
+   `/releases/tag/mafigate-v`, which is the form that cannot drift onto the other product.
+
 ### Rehearsing it
 
 The workflow's first run must not be the one that has to produce a real artifact for clinicians.

@@ -100,7 +100,11 @@ That page carries the detail; if the two ever disagree, it is the one to trust.
    launches all pass; a moved app's second launch is what died in the field (issue 418).
 6. Publish it. CI never does — it drafts and stops, so a human decides when a download exists.
 7. Add the line here, and update the channel table in `streamlit_app/README.md` — the guard
-   will hold you to it, and until step 6 it holds you to the opposite.
+   will hold you to it, and until step 6 it holds you to the opposite. **The table's download
+   link names this release's tag**, not `/releases/latest`: two independent release lines
+   share the public repository, so "latest" is whichever of MAFigate and the pipeline was
+   published most recently, and it stopped being MAFigate's within hours the first time. Move
+   the link with the version.
 
 `build/BUILD_INSTRUCTIONS.md` has the rest of the release route, including how to rehearse
 the workflow on a throwaway pre-release tag without publishing anything.
